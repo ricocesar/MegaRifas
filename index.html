@@ -1,0 +1,1506 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<script src="https://cdn.tailwindcss.com"></script>
+<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+<style>
+  :root { --gold:#FFC107; --gold-dark:#F59E0B; }
+  * { -webkit-tap-highlight-color: transparent; }
+  body { background:#F5F7FA; color:#1F2937; font-family: var(--fuente-custom, system-ui, sans-serif); margin:0; overflow-x:hidden; }
+  .card { background:#FFF; border-radius:1rem; padding:.85rem; box-shadow:0 1px 3px rgba(0,0,0,.04), 0 4px 12px rgba(0,0,0,.03); }
+  .subcard { background:#F9FAFB; border-radius:.75rem; padding:.65rem; }
+  .inp { width:100%; background:#FFF; border:1.5px solid #E5E7EB; border-radius:.7rem; padding:.7rem .8rem; color:#111827; font-size:.85rem; outline:none; transition:.15s; }
+  .inp:focus { border-color:var(--gold); box-shadow:0 0 0 3px rgba(255,193,7,.15); }
+  .inp-ok { border-color:#10B981 !important; background:#ECFDF5 !important; }
+  .lbl { display:block; font-size:.72rem; font-weight:700; color:#4B5563; margin-bottom:.3rem; }
+  .lbl-req::after { content:" *"; color:#EF4444; font-weight:900; }
+  .btn-primary { background:linear-gradient(135deg,#FFC107,#F59E0B); color:#111827; font-weight:800; border-radius:.75rem; padding:.75rem 1.1rem; font-size:.85rem; cursor:pointer; transition:.15s; border:none; box-shadow:0 4px 12px rgba(255,193,7,.35); }
+  .btn-primary:active { transform:scale(.97); }
+  .btn-primary:disabled { opacity:.6; cursor:not-allowed; }
+  .btn-secondary { background:#F3F4F6; color:#374151; font-weight:700; border-radius:.75rem; padding:.75rem 1.1rem; font-size:.85rem; cursor:pointer; border:none; }
+  .btn-danger { background:linear-gradient(135deg,#EF4444,#DC2626); color:#FFF; font-weight:800; border-radius:.75rem; padding:.75rem 1.1rem; font-size:.85rem; cursor:pointer; transition:.15s; border:none; box-shadow:0 4px 12px rgba(239,68,68,.35); }
+  .btn-danger:active { transform:scale(.97); }
+  .num-grid { display:grid; gap:2px; }
+  .num-btn { height:1.9rem; border-radius:.4rem; font-weight:700; font-size:9px; display:flex; align-items:center; justify-content:center; transition:all .15s; cursor:pointer; border:1.5px solid transparent; font-family:ui-monospace,monospace; letter-spacing:-.5px; padding:0; }
+  .num-DISPONIBLE { background:#FFF; border-color:#E5E7EB; color:#374151; }
+  .num-SELECCIONADO { background:linear-gradient(135deg,#FFC107,#F59E0B); color:#111827; font-weight:900; box-shadow:0 2px 8px rgba(255,193,7,.5); transform:scale(1.06); border-color:#D97706; }
+  .num-RESERVADO { background:#3B82F6; color:#FFF; border-color:#2563EB; opacity:.9; cursor:not-allowed; }
+  .num-ESPERA { background:linear-gradient(135deg,#A855F7,#8B5CF6); color:#FFF; border-color:#7C3AED; }
+  .num-PAGADO { background:#1F2937; color:#9CA3AF; cursor:not-allowed; opacity:.85; border-color:#111827; }
+  .m-bg { position:fixed; inset:0; background:rgba(15,23,42,.75); backdrop-filter:blur(4px); z-index:9000; display:flex; align-items:flex-end; justify-content:center; padding:0; animation:fadeIn .2s; }
+  .m-bg-front { z-index:12000 !important; }
+  .m-box { background:#FFF; width:100%; max-width:32rem; border-radius:1.75rem 1.75rem 0 0; padding:1.15rem; max-height:95vh; overflow-y:auto; color:#1F2937; animation:slideUp .25s cubic-bezier(.16,1,.3,1); }
+  .m-box::before { content:''; display:block; width:40px; height:4px; background:#D1D5DB; border-radius:4px; margin:0 auto .9rem; }
+  .m-full { max-width:100% !important; height:100vh !important; max-height:100vh !important; border-radius:0 !important; }
+  @keyframes slideUp { from{transform:translateY(100%);}to{transform:translateY(0);} }
+  @keyframes fadeIn { from{opacity:0;}to{opacity:1;} }
+  @keyframes slideDown { from{opacity:0;transform:translateY(-15px);}to{opacity:1;transform:translateY(0);} }
+  @keyframes spin { to{transform:rotate(360deg);} }
+  .hidden { display:none !important; }
+  .toast-wrap { position:fixed; top:1rem; left:50%; transform:translateX(-50%); z-index:99999; width:92%; max-width:24rem; pointer-events:none; }
+  .toast { background:#111827; color:#FFF; border-radius:.85rem; padding:.85rem 1rem; font-size:.78rem; font-weight:600; box-shadow:0 10px 25px rgba(0,0,0,.25); margin-bottom:.5rem; pointer-events:auto; animation:slideDown .25s; display:flex; align-items:center; gap:.5rem; }
+  .toast.success { background:#059669; } .toast.error { background:#DC2626; } .toast.info { background:#2563EB; }
+  .loading-overlay { position:fixed; inset:0; background:rgba(255,255,255,.9); z-index:99998; display:flex; align-items:center; justify-content:center; flex-direction:column; gap:1rem; }
+  .spinner { width:44px; height:44px; border:4px solid #E5E7EB; border-top-color:var(--gold); border-radius:50%; animation:spin .8s linear infinite; }
+  .chip { display:inline-flex; align-items:center; gap:.3rem; padding:.35rem .6rem; border-radius:.55rem; font-size:.72rem; font-weight:800; font-family:ui-monospace,monospace; cursor:pointer; transition:.15s; border:1.5px solid #E5E7EB; background:#FFF; color:#374151; }
+  .chip.on { background:linear-gradient(135deg,#FFC107,#F59E0B); color:#111827; border-color:#D97706; box-shadow:0 2px 8px rgba(255,193,7,.4); }
+  .chip.reserved { background:#EFF6FF; color:#1D4ED8; border-color:#BFDBFE; }
+  .chip.reserved.on { background:linear-gradient(135deg,#FFC107,#F59E0B); color:#111827; border-color:#D97706; }
+  .chip.esp { background:#F3E8FF; color:#7C3AED; border-color:#DDD6FE; cursor:default; }
+  .chip.paid { background:#ECFDF5; color:#047857; border-color:#A7F3D0; cursor:default; }
+  .tab-btn { padding:.5rem; border-radius:.6rem; font-weight:800; font-size:.68rem; transition:.15s; cursor:pointer; border:none; }
+  .tab-on { background:#111827; color:#FFF; } .tab-off { background:#F3F4F6; color:#4B5563; }
+  .tab-danger-on { background:#DC2626; color:#FFF; } .tab-danger-off { background:#FEE2E2; color:#DC2626; }
+  .tab-warn-on { background:#D97706; color:#FFF; } .tab-warn-off { background:#FEF3C7; color:#92400E; }
+  .logo-img { max-width:150px; height:auto; max-height:50px; object-fit:contain; }
+  .pay-method { padding:.6rem .4rem; border-radius:.7rem; border:1.5px solid #E5E7EB; background:#FFF; font-size:.65rem; font-weight:700; cursor:pointer; transition:.15s; display:flex; flex-direction:column; align-items:center; gap:.25rem; }
+  .pay-method.on { border-color:var(--gold); background:#FFFBEB; box-shadow:0 2px 8px rgba(255,193,7,.3); }
+  .pay-method i { font-size:.95rem; }
+  .ticker-wrap { overflow:hidden; white-space:nowrap; background:linear-gradient(90deg,#111827 0%,#1F2937 100%); border-radius:.75rem; padding:.45rem 0; position:relative; }
+  .ticker-content { display:inline-flex; animation:ticker 45s linear infinite; padding-left:100%; }
+  .ticker-content > span { padding-right:2.5rem; color:#FFC107; font-size:.72rem; font-weight:800; }
+  @keyframes ticker { 0%{transform:translateX(0);} 100%{transform:translateX(-100%);} }
+  .ticker-wrap::before, .ticker-wrap::after { content:''; position:absolute; top:0; bottom:0; width:18px; z-index:2; pointer-events:none; }
+  .ticker-wrap::before { left:0; background:linear-gradient(90deg,#111827,transparent); }
+  .ticker-wrap::after { right:0; background:linear-gradient(270deg,#111827,transparent); }
+  .feed-wrap { overflow:hidden; white-space:nowrap; background:#FFF; border:1.5px solid #E5E7EB; border-radius:.75rem; padding:.4rem 0; position:relative; }
+  .feed-content { display:inline-flex; animation:ticker 60s linear infinite; padding-left:100%; }
+  .feed-content > span { padding-right:2rem; color:#374151; font-size:.68rem; font-weight:700; display:inline-flex; align-items:center; gap:.3rem; }
+  .feed-content .feed-num { color:#1D4ED8; font-family:ui-monospace,monospace; }
+  .feed-content .feed-time { color:#9CA3AF; font-size:.6rem; font-weight:600; }
+  .feed-wrap::before, .feed-wrap::after { content:''; position:absolute; top:0; bottom:0; width:18px; z-index:2; pointer-events:none; }
+  .feed-wrap::before { left:0; background:linear-gradient(90deg,#FFF,transparent); }
+  .feed-wrap::after { right:0; background:linear-gradient(270deg,#FFF,transparent); }
+  .feed-label { display:flex; align-items:center; gap:.3rem; font-size:.6rem; font-weight:900; color:#059669; text-transform:uppercase; letter-spacing:.5px; padding:0 .5rem; }
+  .progress-bar { width:100%; background:#E5E7EB; border-radius:999px; height:12px; overflow:hidden; }
+  .progress-fill { height:12px; border-radius:999px; background:linear-gradient(90deg,#FFC107,#F59E0B); transition:width .8s cubic-bezier(.16,1,.3,1); }
+  .top-mini { display:flex; align-items:center; gap:.35rem; padding:.4rem .55rem; background:#F9FAFB; border-radius:.55rem; border:1px solid #F3F4F6; }
+  .wa-preview { background:#DCF8C6; padding:.7rem; border-radius:.75rem; font-size:.72rem; color:#111827; line-height:1.5; font-family:system-ui; white-space:pre-wrap; word-break:break-word; }
+  .pin-display { display:flex; justify-content:center; gap:.5rem; margin-bottom:.9rem; }
+  .pin-dot { width:14px; height:14px; border-radius:50%; background:#E5E7EB; border:1.5px solid #D1D5DB; transition:.15s; }
+  .pin-dot.on { background:var(--gold); border-color:var(--gold-dark); box-shadow:0 0 8px rgba(255,193,7,.5); }
+</style>
+</head>
+<body class="pb-24">
+
+<div id="toastWrap" class="toast-wrap"></div>
+<div id="loadingOverlay" class="loading-overlay hidden"><div class="spinner"></div><b class="text-gray-700 text-sm">Cargando...</b></div>
+
+<header class="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-gray-100">
+  <div class="max-w-md mx-auto px-3 py-2 flex items-center justify-between">
+    <div class="flex items-center gap-2">
+      <img id="logoHeader" class="logo-img hidden" src="" alt="">
+      <div id="logoText">
+        <div class="text-sm font-black text-gray-900 leading-tight">MEGA RIFAS</div>
+        <div class="text-[9px] font-bold text-amber-600 tracking-wide">JUEGA Y GANA</div>
+      </div>
+    </div>
+    <div class="text-right">
+      <div id="badgePrecioBs" class="text-sm font-black text-gray-900">Bs --</div>
+      <div class="text-[9px] text-gray-500 font-semibold">por boleto</div>
+    </div>
+  </div>
+</header>
+
+<main class="max-w-md mx-auto px-3 pt-2.5 space-y-2.5">
+  <section class="ticker-wrap"><div id="tickerContent" class="ticker-content"><span>Cargando...</span></div></section>
+
+  <section class="card !p-2.5">
+    <div class="flex items-center gap-2">
+      <div class="text-xl">🏆</div>
+      <div class="flex-1 min-w-0">
+        <div class="text-[9px] font-black text-amber-600 tracking-wide">PREMIO MAYOR</div>
+        <div id="txtPremiosHeader" class="text-[11px] font-black text-gray-900 leading-snug">Cargando...</div>
+      </div>
+      <div id="alertaSorteo" class="hidden text-[9px] font-black text-amber-700 bg-amber-100 px-2 py-1 rounded-full shrink-0"></div>
+    </div>
+    <p id="txtNoticiasDisplay" class="text-[10px] text-gray-600 leading-snug mt-1.5 pt-1.5 border-t border-gray-100"></p>
+  </section>
+
+  <section class="card">
+    <div class="flex items-center gap-2 mb-2">
+      <div class="w-7 h-7 rounded-lg bg-blue-100 flex items-center justify-center text-blue-600 text-xs"><i class="fa-solid fa-magnifying-glass"></i></div>
+      <div class="flex-1">
+        <h3 class="text-[11px] font-black text-gray-900 leading-tight">Mis Boletos</h3>
+        <p class="text-[9px] text-gray-500 font-semibold leading-tight">Consulta con tu cédula</p>
+      </div>
+    </div>
+    <div class="flex gap-2">
+      <input type="tel" id="inputCedulaConsulta" placeholder="Ej: 12345678" class="inp flex-1 !py-2 !text-sm" onkeydown="if(event.key==='Enter')consultarParticipante()">
+      <button type="button" onclick="consultarParticipante()" class="btn-primary !px-3.5 !py-2"><i class="fa-solid fa-search text-xs"></i></button>
+    </div>
+    <div id="resultadoConsultaParticipante" class="hidden mt-2"></div>
+  </section>
+
+  <section class="card">
+    <div class="flex items-center justify-between mb-2">
+      <div class="flex items-center gap-2">
+        <div class="w-7 h-7 rounded-lg bg-amber-100 flex items-center justify-center text-amber-600 text-xs"><i class="fa-solid fa-table-cells"></i></div>
+        <div>
+          <h3 class="text-[11px] font-black text-gray-900 leading-tight">Elige tus Números</h3>
+          <p class="text-[9px] text-gray-500 font-semibold leading-tight">Toca los que quieras jugar</p>
+        </div>
+      </div>
+      <button type="button" onclick="seleccionarAzar()" class="bg-blue-600 text-white text-[9px] font-black px-2 py-1.5 rounded-lg">
+        <i class="fa-solid fa-wand-magic-sparkles"></i> Azar
+      </button>
+    </div>
+    <div id="gridTablero" class="num-grid" style="grid-template-columns:repeat(10, minmax(0,1fr));"></div>
+    <div class="grid grid-cols-5 gap-1 mt-2 pt-2 border-t border-gray-100 text-[8px] font-bold text-gray-600">
+      <div class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded border border-gray-300 bg-white"></span> Libre</div>
+      <div class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded" style="background:#3B82F6"></span> Reserva</div>
+      <div class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded" style="background:#A855F7"></span> Revisión</div>
+      <div class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded" style="background:#FFC107"></span> Tuyo</div>
+      <div class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded" style="background:#1F2937"></span> Vendido</div>
+    </div>
+  </section>
+
+  <section class="card">
+    <div class="flex items-center justify-between mb-1.5">
+      <div class="flex items-center gap-1.5">
+        <span class="text-base">🎯</span>
+        <span class="text-[11px] font-black text-gray-800">Progreso del Sorteo</span>
+      </div>
+      <span id="txtPorcentajeGeneral" class="text-base font-black" style="color:var(--gold-dark);">0%</span>
+    </div>
+    <div class="progress-bar"><div id="barraProgreso" class="progress-fill" style="width:0%;"></div></div>
+    <div class="flex justify-between mt-1.5 text-[9px] font-bold">
+      <span id="txtProgresoDetalle" class="text-gray-500">Cargando...</span>
+      <span id="txtProgresoUrgente" class="text-amber-600"></span>
+    </div>
+  </section>
+
+  <section class="card">
+    <div class="flex items-center gap-1.5 mb-2">
+      <span class="text-sm">👑</span>
+      <h3 class="text-[10px] font-black text-gray-900">Top 3 Compradores</h3>
+    </div>
+    <div id="listaTopCompradores" class="text-center"><span class="text-gray-400 text-[10px]">Cargando...</span></div>
+  </section>
+
+  <section class="card text-center">
+    <p class="text-[11px] font-black text-gray-700 mb-2">¿Necesitas ayuda?</p>
+    <div id="contenedorBotonesSoporte" class="flex flex-wrap justify-center gap-2"></div>
+  </section>
+
+  <!-- FEED ÚLTIMAS COMPRAS -->
+  <section id="feedSection" style="display:none">
+    <div class="feed-label"><span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span> Últimas compras en vivo</div>
+    <div class="feed-wrap mt-1">
+      <div id="feedContent" class="feed-content"></div>
+    </div>
+  </section>
+
+  <div class="text-center pt-1 pb-2">
+    <button type="button" onclick="abrirModalAdminSeguro()" class="text-[10px] text-gray-400 underline font-semibold">
+      <i class="fa-solid fa-shield-halved mr-1"></i> Admin
+    </button>
+  </div>
+</main>
+
+<div id="stickyTopBtn" class="fixed top-[46px] left-0 right-0 z-30 hidden">
+  <div class="max-w-md mx-auto px-3 pt-1.5">
+    <button type="button" onclick="abrirModalCheckout('PAGAR')" class="w-full btn-primary !py-2.5 !text-xs shadow-lg flex items-center justify-center gap-1.5">
+      <i class="fa-solid fa-arrow-right"></i> Continuar con <b id="stickyTopCant">0</b> · <span id="stickyTopTotal">Bs 0</span>
+    </button>
+  </div>
+</div>
+
+<div id="barraAccionFlotante" class="fixed bottom-0 left-0 right-0 z-50 hidden">
+  <div class="max-w-md mx-auto p-2.5">
+    <div class="bg-gray-900 text-white rounded-2xl p-2.5 flex items-center justify-between shadow-2xl border border-gray-800">
+      <div class="flex items-center gap-2.5">
+        <div class="w-9 h-9 rounded-xl flex items-center justify-center font-black text-xs" style="background:linear-gradient(135deg,#FFC107,#F59E0B); color:#111827;">
+          <span id="txtCantSeleccionadosBadge">0</span>
+        </div>
+        <div>
+          <div class="text-[9px] text-gray-400 font-bold">TOTAL</div>
+          <b id="txtTotalBsBottom" class="text-xs">Bs 0</b>
+        </div>
+      </div>
+      <div class="flex gap-1.5">
+        <button type="button" id="btnReservarFlotante" onclick="abrirModalCheckout('RESERVADO')" class="bg-white/10 text-white px-2.5 py-1.5 rounded-lg text-[10px] font-bold">Reservar</button>
+        <button type="button" onclick="abrirModalCheckout('PAGAR')" class="btn-primary !py-1.5 !px-2.5 !text-[10px]">Pagar</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="modalCheckout" class="m-bg hidden">
+  <div class="m-box">
+    <div class="flex justify-between items-center mb-3">
+      <div><h3 id="tituloModalCheckout" class="text-base font-black text-gray-900">Confirmar</h3><p class="text-[10px] text-gray-500 font-semibold" id="subtituloCheckout">Completa los datos</p></div>
+      <button type="button" onclick="cerrarModal('modalCheckout')" class="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center text-gray-600"><i class="fa-solid fa-xmark"></i></button>
+    </div>
+    <div class="subcard mb-3">
+      <div class="flex justify-between items-center mb-1">
+        <span class="text-[10px] font-bold text-gray-500">NÚMEROS</span>
+        <span id="chkCantidad" class="text-[10px] font-black text-gray-700"></span>
+      </div>
+      <div id="chkNumerosTxt" class="text-xs font-mono font-bold text-blue-600 leading-relaxed mb-2 break-all"></div>
+      <div class="flex justify-between items-center pt-2 border-t border-gray-200">
+        <span class="text-xs font-black text-gray-700">Total:</span>
+        <div class="text-right">
+          <b id="chkTotalBs" class="text-base font-black text-gray-900"></b>
+          <div id="chkTotalUSD" class="text-[10px] text-gray-500 font-mono hidden"></div>
+        </div>
+      </div>
+    </div>
+    <div class="space-y-2.5 mb-3">
+      <div>
+        <label class="lbl lbl-req">Cédula</label>
+        <input type="tel" id="chkCedula" class="inp" placeholder="Ej: 12345678" inputmode="numeric" oninput="this.value=this.value.replace(/[^\d]/g,'')">
+        <div id="avisoCedula" class="hidden mt-1.5"></div>
+      </div>
+      <div><label class="lbl lbl-req">Nombre y apellido</label><input type="text" id="chkNombre" class="inp" placeholder="Tu nombre completo"></div>
+      <div><label class="lbl lbl-req">Teléfono WhatsApp</label><input type="tel" id="chkTelefono" class="inp" placeholder="Ej: 04141234567"></div>
+      <div><label class="lbl lbl-req">Correo electrónico</label><input type="email" id="chkCorreo" class="inp" placeholder="tucorreo@email.com"></div>
+    </div>
+    <div id="bloqueDatosPago" class="space-y-3 pt-3 border-t border-gray-100">
+      <div>
+        <label class="lbl">Método de pago</label>
+        <div class="grid grid-cols-3 gap-1.5">
+          <button type="button" onclick="cambiarMetodoPago('PM')" id="pmPM" class="pay-method on"><i class="fa-solid fa-mobile-screen text-blue-600"></i><span>Pago Móvil</span></button>
+          <button type="button" onclick="cambiarMetodoPago('TR')" id="pmTR" class="pay-method"><i class="fa-solid fa-building-columns text-gray-700"></i><span>Transfer.</span></button>
+          <button type="button" onclick="cambiarMetodoPago('BZ')" id="pmBZ" class="pay-method"><i class="fa-brands fa-bitcoin text-amber-500"></i><span>Binance</span></button>
+          <button type="button" onclick="cambiarMetodoPago('ZP')" id="pmZP" class="pay-method"><i class="fa-solid fa-z text-purple-600"></i><span>Zelle</span></button>
+          <button type="button" onclick="cambiarMetodoPago('EF')" id="pmEF" class="pay-method"><i class="fa-solid fa-money-bill-wave text-emerald-600"></i><span>Efectivo</span></button>
+          <button type="button" onclick="cambiarMetodoPago('US')" id="pmUS" class="pay-method"><i class="fa-solid fa-coins text-emerald-500"></i><span>USDT</span></button>
+        </div>
+      </div>
+      <div id="datosPagoVisual" class="subcard text-[11px] text-gray-700 font-medium leading-relaxed"></div>
+      <div id="bloqueWhatsAppSoporte" class="hidden">
+        <a id="btnWhatsAppSoporte" href="#" target="_blank" class="w-full bg-emerald-500 text-white font-black py-3 rounded-xl text-xs flex items-center justify-center gap-2">
+          <i class="fa-brands fa-whatsapp text-base"></i> Escribir a soporte por WhatsApp
+        </a>
+        <p class="text-[9px] text-gray-500 text-center mt-1.5">Coordina el pago directamente con soporte</p>
+      </div>
+      <div id="bloqueRefComprobante" class="space-y-3">
+        <div><label class="lbl lbl-req">Referencia (4 dígitos)</label><input type="tel" id="chkReferencia" class="inp" placeholder="Ej: 1234" maxlength="4" inputmode="numeric" pattern="[0-9]*" oninput="this.value=this.value.replace(/\D/g,'').slice(0,4)"></div>
+        <div><label class="lbl">Comprobante (opcional)</label><input type="file" id="chkArchivo" accept="image/*" class="inp !py-2 text-xs"></div>
+      </div>
+    </div>
+    <div class="flex gap-2 mt-4">
+      <button type="button" onclick="cerrarModal('modalCheckout')" class="btn-secondary flex-1">Cancelar</button>
+      <button type="button" id="btnEjecutarCheckout" onclick="ejecutarCheckout()" class="btn-primary flex-1">Confirmar</button>
+    </div>
+  </div>
+</div>
+
+<div id="modalPinAdmin" class="m-bg hidden m-bg-front">
+  <div class="m-box !max-w-xs !rounded-3xl !mb-auto !mt-auto">
+    <div class="text-center">
+      <div class="w-14 h-14 rounded-2xl bg-amber-100 flex items-center justify-center text-2xl mx-auto mb-3"><i class="fa-solid fa-shield-halved text-amber-600"></i></div>
+      <b class="text-base block text-gray-900 mb-1">Acceso Admin</b>
+      <p class="text-[11px] text-gray-500 mb-3">Ingresa tu PIN de 6 dígitos</p>
+      <div class="pin-display">
+        <div class="pin-dot" id="dotAdm0"></div><div class="pin-dot" id="dotAdm1"></div><div class="pin-dot" id="dotAdm2"></div><div class="pin-dot" id="dotAdm3"></div><div class="pin-dot" id="dotAdm4"></div><div class="pin-dot" id="dotAdm5"></div>
+      </div>
+      <input type="password" id="inputPinRifa" maxlength="6" inputmode="numeric" pattern="[0-9]*" placeholder="••••••" class="inp text-center text-2xl tracking-widest font-mono !py-3" oninput="actualizarDots('inputPinRifa','dotAdm');this.value=this.value.replace(/\D/g,'').slice(0,6)" onkeydown="if(event.key==='Enter')verificarPinAdmin()">
+      <button type="button" onclick="verificarPinAdmin()" class="btn-primary w-full mt-3">Acceder</button>
+      <button type="button" onclick="cerrarModal('modalPinAdmin')" class="text-xs text-gray-400 mt-3 font-semibold">Cancelar</button>
+    </div>
+  </div>
+</div>
+
+<div id="modalConfirm" class="m-bg hidden m-bg-front">
+  <div class="m-box !max-w-sm !rounded-3xl !mb-auto !mt-auto">
+    <div class="text-center">
+      <div id="confirmIcon" class="w-14 h-14 rounded-2xl bg-amber-100 flex items-center justify-center text-2xl mx-auto mb-3"><i id="confirmIconI" class="fa-solid fa-question text-amber-600"></i></div>
+      <b id="confirmTitulo" class="text-base block text-gray-900 mb-1">¿Confirmar?</b>
+      <p id="confirmTexto" class="text-[12px] text-gray-600 mb-4 leading-relaxed"></p>
+      <div class="flex gap-2">
+        <button type="button" onclick="cerrarConfirm(false)" class="btn-secondary flex-1">Cancelar</button>
+        <button type="button" id="confirmBtnOk" onclick="cerrarConfirm(true)" class="btn-primary flex-1">Aceptar</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="modalPinAccion" class="m-bg hidden m-bg-front">
+  <div class="m-box !max-w-xs !rounded-3xl !mb-auto !mt-auto">
+    <div class="text-center">
+      <div class="w-14 h-14 rounded-2xl bg-rose-100 flex items-center justify-center text-2xl mx-auto mb-3"><i class="fa-solid fa-lock text-rose-600"></i></div>
+      <b id="pinAccionTitulo" class="text-base block text-gray-900 mb-1">Acción protegida</b>
+      <p id="pinAccionTexto" class="text-[11px] text-gray-500 mb-3 leading-relaxed">Ingresa tu PIN para confirmar</p>
+      <div class="pin-display">
+        <div class="pin-dot" id="dotAcc0"></div><div class="pin-dot" id="dotAcc1"></div><div class="pin-dot" id="dotAcc2"></div><div class="pin-dot" id="dotAcc3"></div><div class="pin-dot" id="dotAcc4"></div><div class="pin-dot" id="dotAcc5"></div>
+      </div>
+      <input type="password" id="inputPinAccion" maxlength="6" inputmode="numeric" pattern="[0-9]*" placeholder="••••••" class="inp text-center text-2xl tracking-widest font-mono !py-3" oninput="actualizarDots('inputPinAccion','dotAcc');this.value=this.value.replace(/\D/g,'').slice(0,6)" onkeydown="if(event.key==='Enter')confirmarPinAccion()">
+      <div class="flex gap-2 mt-3">
+        <button type="button" onclick="cerrarModal('modalPinAccion')" class="btn-secondary flex-1">Cancelar</button>
+        <button type="button" id="btnPinAccionOk" onclick="confirmarPinAccion()" class="btn-primary flex-1">Confirmar</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="modalPanelAdmin" class="m-bg hidden">
+  <div class="m-box m-full">
+    <div class="flex justify-between items-center mb-3 pb-3 border-b border-gray-100">
+      <div class="flex items-center gap-2">
+        <div class="w-9 h-9 rounded-xl bg-gray-900 flex items-center justify-center text-amber-400"><i class="fa-solid fa-gears"></i></div>
+        <div><b class="text-sm font-black text-gray-900 block">Panel Admin</b><p class="text-[10px] text-gray-500 font-semibold">Gestión completa</p></div>
+      </div>
+      <button type="button" onclick="cerrarModal('modalPanelAdmin')" class="w-9 h-9 rounded-full bg-gray-100 flex items-center justify-center text-gray-600"><i class="fa-solid fa-xmark"></i></button>
+    </div>
+    <div class="grid grid-cols-5 gap-1 mb-3">
+      <button type="button" onclick="cambiarTabAdmin('val')" id="adminTabVal" class="tab-btn tab-on">⏳ Pagos</button>
+      <button type="button" onclick="cambiarTabAdmin('vnc')" id="adminTabVnc" class="tab-btn tab-warn-off">⏰ Venc.</button>
+      <button type="button" onclick="cambiarTabAdmin('his')" id="adminTabHis" class="tab-btn tab-off">📋 Hist.</button>
+      <button type="button" onclick="cambiarTabAdmin('cfg')" id="adminTabCfg" class="tab-btn tab-off">⚙️ Config</button>
+      <button type="button" onclick="cambiarTabAdmin('nue')" id="adminTabNue" class="tab-btn tab-danger-off">🔄 Reset</button>
+    </div>
+    <div id="adminViewVal" class="space-y-2 max-h-[75vh] overflow-y-auto pb-6"></div>
+    <div id="adminViewVnc" class="space-y-2 max-h-[75vh] overflow-y-auto pb-6 hidden"></div>
+    <div id="adminViewHis" class="space-y-2 max-h-[75vh] overflow-y-auto pb-6 hidden"></div>
+    <div id="adminViewCfg" class="space-y-3 max-h-[75vh] overflow-y-auto hidden pb-6">
+      <div><label class="lbl">Título de la Rifa</label><input type="text" id="cfgTitulo" class="inp"></div>
+      <div class="grid grid-cols-2 gap-2">
+        <div><label class="lbl">Total Números</label><input type="number" id="cfgTotal" class="inp"></div>
+        <div><label class="lbl">Precio ($)</label><input type="number" step="0.01" id="cfgPrecio" class="inp"></div>
+      </div>
+      <div><label class="lbl">Premios</label><input type="text" id="cfgPremios" class="inp"></div>
+      <div><label class="lbl">📢 Noticias (tarjeta)</label><textarea id="cfgNoticias" rows="2" class="inp"></textarea></div>
+      <div><label class="lbl">📺 Ticker (separa con |)</label><textarea id="cfgTickerNoticias" rows="2" class="inp"></textarea></div>
+      <div class="bg-blue-50 border border-blue-200 rounded-xl p-3">
+        <div class="text-[11px] font-black text-blue-900 mb-2">💱 TASA BCV</div>
+        <div><label class="lbl">Tasa Manual (vacío = auto)</label><input type="number" step="0.01" id="cfgTasaManual" class="inp"></div>
+      </div>
+      <div class="bg-amber-50 border border-amber-200 rounded-xl p-3">
+        <div class="text-[11px] font-black text-amber-900 mb-2">🖼️ LOGOTIPO</div>
+        <div><label class="lbl">Logo activo</label>
+          <select id="cfgLogoVersion" class="inp"><option value="OSCURU">Oscuro</option><option value="CLARU">Claro</option></select>
+        </div>
+        <div class="mt-2"><label class="lbl">URL Logo Oscuro</label><input type="text" id="cfgLogoUrlOscuro" class="inp !text-xs"></div>
+        <div class="mt-2"><label class="lbl">URL Logo Claro</label><input type="text" id="cfgLogoUrlClaro" class="inp !text-xs"></div>
+      </div>
+      <div class="grid grid-cols-2 gap-2">
+        <div><label class="lbl">Fecha Sorteo</label><input type="text" id="cfgFechaSorteo" class="inp" placeholder="dd/mm/aaaa"></div>
+        <div><label class="lbl">Días p/ pagar</label><input type="number" id="cfgDiasPago" class="inp"></div>
+      </div>
+      <div><label class="lbl">Días antes del sorteo p/ bloquear reservas</label><input type="number" id="cfgDiasBloqueo" class="inp"></div>
+      <div class="grid grid-cols-2 gap-2">
+        <div><label class="lbl">Tipografía</label><select id="cfgFuente" class="inp"><option value="system-ui, sans-serif">Moderna</option><option value="Georgia, serif">Elegante</option><option value="Courier New, monospace">Mono</option></select></div>
+        <div><label class="lbl">Color Principal</label><input type="color" id="cfgColorPrin" class="inp !p-1 !h-10"></div>
+      </div>
+      <div><label class="lbl">Color Acento</label><input type="color" id="cfgColorAce" class="inp !p-1 !h-10"></div>
+      <div class="bg-gray-50 border border-gray-200 rounded-xl p-3 space-y-2">
+        <div class="text-[11px] font-black text-gray-900">💳 DATOS DE PAGO</div>
+        <div><label class="lbl">Pago Móvil</label><input type="text" id="cfgPM" class="inp !text-xs"></div>
+        <div><label class="lbl">Transferencia</label><input type="text" id="cfgTR" class="inp !text-xs"></div>
+        <div><label class="lbl">Binance</label><input type="text" id="cfgBZ" class="inp !text-xs"></div>
+        <div><label class="lbl">Zelle</label><input type="text" id="cfgZP" class="inp !text-xs"></div>
+        <div><label class="lbl">Efectivo</label><input type="text" id="cfgEF" class="inp !text-xs"></div>
+        <div><label class="lbl">USDT</label><input type="text" id="cfgUS" class="inp !text-xs"></div>
+      </div>
+      <div><label class="lbl">Instagram</label><input type="text" id="cfgIG" class="inp"></div>
+      <div class="grid grid-cols-3 gap-1.5">
+        <div><label class="lbl">WA 1</label><input type="tel" id="cfgWA1" class="inp !text-xs"></div>
+        <div><label class="lbl">WA 2</label><input type="tel" id="cfgWA2" class="inp !text-xs"></div>
+        <div><label class="lbl">WA 3</label><input type="tel" id="cfgWA3" class="inp !text-xs"></div>
+      </div>
+      <div><label class="lbl">Nuevo PIN (6 dígitos, opcional)</label><input type="password" id="cfgNuevoPin" maxlength="6" inputmode="numeric" class="inp"></div>
+      <button type="button" onclick="guardarConfigAdmin()" class="btn-primary w-full">Guardar Cambios</button>
+    </div>
+    <div id="adminViewNue" class="space-y-3 max-h-[75vh] overflow-y-auto hidden text-center pt-4">
+      <div class="w-14 h-14 rounded-2xl bg-rose-100 flex items-center justify-center text-2xl mx-auto"><i class="fa-solid fa-triangle-exclamation text-rose-500"></i></div>
+      <p class="text-xs text-gray-600 font-semibold">Reiniciar borrará todo el tablero y los pagos.</p>
+      <input type="password" id="pinReiniciarRifa" placeholder="PIN (6 dígitos)" maxlength="6" inputmode="numeric" class="inp text-center tracking-widest font-mono !w-40 mx-auto">
+      <button type="button" onclick="ejecutarNuevaRifa()" class="btn-danger w-full">⚠️ Reiniciar Rifa</button>
+    </div>
+  </div>
+</div>
+
+<div id="modalImagen" class="m-bg hidden m-bg-front" onclick="cerrarModal('modalImagen')">
+  <div class="m-box !max-w-3xl" onclick="event.stopPropagation()">
+    <div class="flex justify-between items-center mb-3">
+      <b class="text-sm font-black">Comprobante</b>
+      <button type="button" onclick="cerrarModal('modalImagen')" class="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center"><i class="fa-solid fa-xmark"></i></button>
+    </div>
+    <img id="imgComprobante" src="" class="w-full rounded-xl" alt="Comprobante">
+  </div>
+</div>
+
+<div id="modalWA" class="m-bg hidden m-bg-front">
+  <div class="m-box !max-w-md">
+    <div class="flex justify-between items-center mb-3">
+      <div class="flex items-center gap-2">
+        <div class="w-9 h-9 rounded-full bg-emerald-500 flex items-center justify-center text-white"><i class="fa-brands fa-whatsapp"></i></div>
+        <div><b class="text-sm font-black text-gray-900 block">Enviar WhatsApp</b><p class="text-[10px] text-gray-500 font-semibold">Notificar al cliente</p></div>
+      </div>
+      <button type="button" onclick="cerrarModal('modalWA')" class="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center"><i class="fa-solid fa-xmark"></i></button>
+    </div>
+    <div class="space-y-3">
+      <div>
+        <label class="lbl">Teléfono WhatsApp</label>
+        <input type="tel" id="waTelefono" class="inp" placeholder="Ej: 584121234567" inputmode="numeric" oninput="this.value=this.value.replace(/[^\d]/g,'')">
+        <p class="text-[9px] text-gray-500 mt-1">Sin + ni espacios. Ej: 584121234567</p>
+      </div>
+      <div>
+        <label class="lbl">Vista previa del mensaje</label>
+        <div id="waPreview" class="wa-preview"></div>
+      </div>
+      <div class="flex gap-2">
+        <button type="button" onclick="cerrarModal('modalWA')" class="btn-secondary flex-1">Omitir</button>
+        <button type="button" onclick="enviarWAConfirmado()" class="flex-1 text-white font-black rounded-xl py-3" style="background:linear-gradient(135deg,#10B981,#059669);">
+          <i class="fa-brands fa-whatsapp mr-1"></i> Enviar
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="modalEditar" class="m-bg hidden m-bg-front">
+  <div class="m-box !max-w-md">
+    <div class="flex justify-between items-center mb-3">
+      <b class="text-sm font-black">✏️ Editar</b>
+      <button type="button" onclick="cerrarModal('modalEditar')" class="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center"><i class="fa-solid fa-xmark"></i></button>
+    </div>
+    <input type="hidden" id="editFila">
+    <div class="space-y-3">
+      <div><label class="lbl">Estatus</label>
+        <select id="editEstatus" class="inp">
+          <option value="DISPONIBLE">DISPONIBLE</option>
+          <option value="RESERVADO">RESERVADO</option>
+          <option value="ESPERA">ESPERA</option>
+          <option value="PAGADO">PAGADO</option>
+        </select>
+      </div>
+      <div><label class="lbl">Cédula</label><input type="text" id="editCedula" class="inp"></div>
+      <div><label class="lbl">Nombre</label><input type="text" id="editNombre" class="inp"></div>
+      <div><label class="lbl">Teléfono</label><input type="text" id="editTelefono" class="inp"></div>
+      <div><label class="lbl">PIN (6 dígitos)</label><input type="password" id="editPin" maxlength="6" inputmode="numeric" class="inp"></div>
+      <button type="button" onclick="guardarEdicion()" class="btn-primary w-full">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ==========================================
+// CONEXIÓN A LA API DE GOOGLE APPS SCRIPT
+// ==========================================
+const API_URL = 'https://script.google.com/macros/s/AKfycbw7Qw_1BdX1--qWnIJjhDIDt_H_OJdPjuCpSTU6gIp3Z4IMMc7RK6ZvD7t-onA6XmAd/exec';
+
+async function apiCall(action, data = {}) {
+  const response = await fetch(API_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+    body: JSON.stringify({ action: action, data: data })
+  });
+  if (!response.ok) throw new Error('Error de red o servidor');
+  return await response.json();
+}
+// ==========================================
+
+var $ = function(id) { return document.getElementById(id); };
+var datosMegaGlobal = null;
+var seleccionados = [];
+var modoCheckoutActual = 'RESERVADO';
+var metodoPagoActual = 'PM';
+var participanteConsultado = null;
+var historialFiltro = 'TODOS';
+var METODOS_USD = ['BZ','ZP','EF','US'];
+var _waData = null;
+var _cedulaVerificada = null;
+var _debounceTimer = null;
+var _confirmCallback = null;
+var _pinCallback = null;
+
+function fmt(n) {
+  if (isNaN(n) || n === undefined || n === null) return "0,00";
+  var p = Number(n).toFixed(2).split('.');
+  p[0] = p[0].replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+  return p.join(',');
+}
+function safe(v, def) { if (v === undefined || v === null || v === '') return def; return v; }
+function abrirModal(id) { var el = $(id); if (!el) return; el.classList.remove('hidden'); document.body.style.overflow='hidden'; }
+function cerrarModal(id) { var el = $(id); if (!el) return; el.classList.add('hidden'); document.body.style.overflow=''; }
+
+function actualizarDots(inputId, prefix) {
+  var val = ($(inputId).value || '').length;
+  for (var i = 0; i < 6; i++) {
+    var dot = $(prefix + i);
+    if (dot) { if (i < val) dot.classList.add('on'); else dot.classList.remove('on'); }
+  }
+}
+
+function notificar(msg, tipo) {
+  tipo = tipo || 'info';
+  var wrap = $('toastWrap');
+  var t = document.createElement('div');
+  t.className = 'toast ' + tipo;
+  var icono = 'fa-circle-info';
+  if (tipo === 'success') icono = 'fa-circle-check';
+  if (tipo === 'error') icono = 'fa-circle-exclamation';
+  t.innerHTML = '<i class="fa-solid ' + icono + '"></i><span>' + msg + '</span>';
+  wrap.appendChild(t);
+  setTimeout(function() {
+    t.style.transition = 'opacity .3s'; t.style.opacity = '0';
+    setTimeout(function() { if (t.parentNode) t.parentNode.removeChild(t); }, 300);
+  }, 6000);
+}
+function mostrarCargando(show) { $('loadingOverlay').classList.toggle('hidden', !show); }
+
+function mostrarConfirm(titulo, texto, icono, callback, peligroso) {
+  $('confirmTitulo').innerText = titulo;
+  $('confirmTexto').innerHTML = texto;
+  $('confirmIconI').className = 'fa-solid ' + (icono || 'fa-question') + ' ' + (peligroso ? 'text-rose-600' : 'text-amber-600');
+  $('confirmIcon').className = 'w-14 h-14 rounded-2xl ' + (peligroso ? 'bg-rose-100' : 'bg-amber-100') + ' flex items-center justify-center text-2xl mx-auto mb-3';
+  $('confirmBtnOk').className = peligroso ? 'btn-danger flex-1' : 'btn-primary flex-1';
+  _confirmCallback = callback;
+  abrirModal('modalConfirm');
+}
+
+function cerrarConfirm(ok) {
+  cerrarModal('modalConfirm');
+  var cb = _confirmCallback;
+  _confirmCallback = null;
+  if (cb) cb(ok);
+}
+
+function pedirPin(titulo, texto, callback) {
+  $('pinAccionTitulo').innerText = titulo;
+  $('pinAccionTexto').innerText = texto;
+  $('inputPinAccion').value = '';
+  actualizarDots('inputPinAccion', 'dotAcc');
+  _pinCallback = callback;
+  abrirModal('modalPinAccion');
+  setTimeout(function() { $('inputPinAccion').focus(); }, 300);
+}
+
+function confirmarPinAccion() {
+  var p = $('inputPinAccion').value.trim();
+  if (!p || p.length < 6) { notificar('Ingresa el PIN de 6 dígitos', 'error'); return; }
+  mostrarCargando(true);
+  apiCall('verificarPinMegaAdmin', { pin: p })
+    .then(res => {
+      mostrarCargando(false);
+      if (res && res.success) {
+        window._adminPin = p;
+        cerrarModal('modalPinAccion');
+        var cb = _pinCallback;
+        _pinCallback = null;
+        if (cb) cb(p);
+      } else {
+        notificar('PIN incorrecto', 'error');
+        $('inputPinAccion').value = '';
+        actualizarDots('inputPinAccion', 'dotAcc');
+      }
+    })
+    .catch(err => { mostrarCargando(false); notificar('Error: ' + err.message, 'error'); });
+}
+
+function cargarDatos() {
+  mostrarCargando(true);
+  apiCall('obtenerInicioMega')
+    .then(r => {
+      mostrarCargando(false);
+      if (!r) { notificar('Sin respuesta del servidor', 'error'); return; }
+      if (!r.success) { notificar('Error: ' + (r.error || 'desconocido'), 'error'); return; }
+      aplicarDatos(r);
+    })
+    .catch(err => { mostrarCargando(false); notificar('Fallo: ' + err.message, 'error'); });
+}
+
+function recargarSilencioso(callback) {
+  apiCall('obtenerInicioMega')
+    .then(r => {
+      if (r && r.success) {
+        datosMegaGlobal = r;
+        var est = r.estadisticas || {};
+        $('txtPorcentajeGeneral').innerText = (est.porcentajeGeneral || 0) + '%';
+        $('barraProgreso').style.width = (est.porcentajeGeneral || 0) + '%';
+        $('txtProgresoDetalle').innerText = (est.ocupados || 0) + ' de ' + (est.total || 100) + ' boletos';
+        var restantes = (est.total || 100) - (est.ocupados || 0);
+        var urgente = $('txtProgresoUrgente');
+        if (restantes <= 0) urgente.innerText = '¡AGOTADO!';
+        else if (restantes <= 10) urgente.innerText = '🔥 ¡Quedan ' + restantes + '!';
+        else if (restantes <= 30) urgente.innerText = '⚡ Quedan ' + restantes;
+        else urgente.innerText = '✅ ' + restantes + ' disponibles';
+        renderizarTop(r.topCompradores);
+        renderizarTablero();
+        renderizarFeed(r.feedCompras);
+      }
+      if (callback) callback(r);
+    })
+    .catch(() => { if (callback) callback(null); });
+}
+
+function aplicarDatos(r) {
+  datosMegaGlobal = r;
+  seleccionados = [];
+  actualizarBarraFlotante();
+
+  $('badgePrecioBs').innerText = 'Bs ' + fmt(r.precioTicketBs);
+  $('txtPremiosHeader').innerText = safe(r.premios, 'Premios por anunciar');
+  $('txtNoticiasDisplay').innerText = safe(r.noticias, '');
+
+  var ticker = safe(r.tickerNoticias, '');
+  if (!ticker) ticker = safe(r.noticias, '¡Bienvenidos a Mega Rifas!');
+  var items = ticker.split('|').map(function(s) { return s.trim(); }).filter(function(s) { return s; });
+  if (!items.length) items = [ticker];
+  var htmlTicker = '';
+  for (var k = 0; k < 2; k++) for (var i = 0; i < items.length; i++) htmlTicker += '<span>• ' + items[i] + '</span>';
+  $('tickerContent').innerHTML = htmlTicker;
+
+  var logoUrl = (r.logoVersion === 'CLARU') ? safe(r.logoUrlClaro, safe(r.logoUrlOscuro, '')) : safe(r.logoUrlOscuro, safe(r.logoUrlClaro, ''));
+  if (logoUrl && logoUrl.length > 10) {
+    $('logoHeader').src = logoUrl;
+    $('logoHeader').classList.remove('hidden');
+    $('logoText').classList.add('hidden');
+    $('logoHeader').onerror = function() { $('logoHeader').classList.add('hidden'); $('logoText').classList.remove('hidden'); };
+  } else {
+    $('logoHeader').classList.add('hidden');
+    $('logoText').classList.remove('hidden');
+  }
+
+  document.documentElement.style.setProperty('--color-principal', safe(r.colorPrincipal, '#111827'));
+  document.documentElement.style.setProperty('--color-acento', safe(r.colorAcento, '#FFC107'));
+  document.documentElement.style.setProperty('--fuente-custom', safe(r.tipografia, 'system-ui, sans-serif'));
+
+  var alerta = $('alertaSorteo');
+  if (r.diasSorteo !== null && r.diasSorteo !== undefined) {
+    alerta.classList.remove('hidden');
+    if (r.diasSorteo <= 0) alerta.innerText = '🎉 HOY';
+    else alerta.innerText = r.diasSorteo + 'd';
+  } else alerta.classList.add('hidden');
+
+  var btnR = $('btnReservarFlotante');
+  if (r.permiteReservar !== false) btnR.classList.remove('hidden');
+  else btnR.classList.add('hidden');
+
+  var est = r.estadisticas || {};
+  $('txtPorcentajeGeneral').innerText = (est.porcentajeGeneral || 0) + '%';
+  $('barraProgreso').style.width = (est.porcentajeGeneral || 0) + '%';
+  $('txtProgresoDetalle').innerText = (est.ocupados || 0) + ' de ' + (est.total || 100) + ' boletos';
+  var restantes = (est.total || 100) - (est.ocupados || 0);
+  var urgente = $('txtProgresoUrgente');
+  if (restantes <= 0) urgente.innerText = '¡AGOTADO!';
+  else if (restantes <= 10) urgente.innerText = '🔥 ¡Quedan ' + restantes + '!';
+  else if (restantes <= 30) urgente.innerText = '⚡ Quedan ' + restantes;
+  else urgente.innerText = '✅ ' + restantes + ' disponibles';
+
+  renderizarTop(r.topCompradores);
+  renderizarSoporte(r.waList);
+  renderizarTablero();
+  renderizarFeed(r.feedCompras);
+}
+
+function renderizarFeed(feed) {
+  if (!feed || !feed.length) { $('feedSection').style.display = 'none'; return; }
+  $('feedSection').style.display = 'block';
+  var html = '';
+  for (var k = 0; k < 2; k++) {
+    for (var i = 0; i < feed.length; i++) {
+      var it = feed[i];
+      var emoji = it.estatus === 'PAGADO' ? '🟢' : '🟣';
+      var hace = haceTiempo(it.ts);
+      html += '<span>' + emoji + ' <b>' + it.nombre + '</b> compró <span class="feed-num">#' + it.numero + '</span> <span class="feed-time">· ' + hace + '</span></span>';
+    }
+  }
+  $('feedContent').innerHTML = html;
+}
+
+function haceTiempo(ts) {
+  if (!ts) return 'hace poco';
+  var diff = Date.now() - ts;
+  var min = Math.floor(diff / 60000);
+  if (min < 1) return 'ahora';
+  if (min < 60) return 'hace ' + min + ' min';
+  var hrs = Math.floor(min / 60);
+  if (hrs < 24) return 'hace ' + hrs + ' h';
+  return 'hace ' + Math.floor(hrs / 24) + ' d';
+}
+
+function renderizarTop(top) {
+  var c = $('listaTopCompradores');
+  if (!top || !top.length) {
+    c.className = 'text-center';
+    c.innerHTML = '<span class="text-gray-400 text-[10px]">Aún sin compradores.</span>';
+    return;
+  }
+  c.className = 'space-y-1';
+  var med = ['🥇','🥈','🥉'];
+  var html = '';
+  for (var i = 0; i < top.length; i++) {
+    var t = top[i];
+    var partes = (t.nombre || '').split(' ');
+    var corto = partes[0] + (partes[1] ? ' ' + partes[1].charAt(0) + '.' : '');
+    html += '<div class="top-mini"><span class="text-sm">' + med[i] + '</span><span class="text-[10px] font-black text-gray-800 truncate flex-1">' + corto + '</span><span class="text-[10px] font-black text-amber-600">' + t.cantidad + ' 🎟️</span></div>';
+  }
+  c.innerHTML = html;
+}
+
+function renderizarTablero() {
+  var grid = $('gridTablero');
+  var total = Number(datosMegaGlobal.totalNumeros) || 100;
+  var digitos = total >= 1000 ? 3 : 2;
+  var tablero = datosMegaGlobal.tablero || {};
+  var html = '';
+  for (var i = 0; i < total; i++) {
+    var numStr = String(i);
+    while (numStr.length < digitos) numStr = '0' + numStr;
+    var info = tablero[numStr] || { estatus: 'DISPONIBLE' };
+    var clase = 'num-' + info.estatus;
+    if (seleccionados.indexOf(numStr) > -1 && info.estatus === 'DISPONIBLE') clase = 'num-SELECCIONADO';
+    var disabled = (info.estatus === 'PAGADO' || info.estatus === 'ESPERA' || info.estatus === 'RESERVADO') ? 'disabled' : '';
+    html += '<button type="button" ' + disabled + ' onclick="tocarNumero(\'' + numStr + '\',\'' + info.estatus + '\')" class="num-btn ' + clase + '">' + numStr + '</button>';
+  }
+  grid.innerHTML = html;
+}
+
+function tocarNumero(num, est) {
+  if (est === 'PAGADO') { notificar('Ya fue pagado', 'error'); return; }
+  if (est === 'ESPERA') { notificar('En revisión', 'error'); return; }
+  if (est === 'RESERVADO') { notificar('Ese número ya está reservado', 'error'); return; }
+  var idx = seleccionados.indexOf(num);
+  if (idx > -1) seleccionados.splice(idx, 1);
+  else seleccionados.push(num);
+  renderizarTablero();
+  actualizarBarraFlotante();
+  if (participanteConsultado) renderizarResultadoConsulta(participanteConsultado);
+}
+
+function actualizarBarraFlotante() {
+  var barra = $('barraAccionFlotante');
+  var sticky = $('stickyTopBtn');
+  if (seleccionados.length > 0) {
+    var precioUSD = Number(datosMegaGlobal && datosMegaGlobal.precioTicketUSD) || 2;
+    var tasa = Number(datosMegaGlobal && datosMegaGlobal.tasa) || 982;
+    var totalBs = seleccionados.length * precioUSD * tasa;
+    barra.classList.remove('hidden');
+    sticky.classList.remove('hidden');
+    $('txtCantSeleccionadosBadge').innerText = seleccionados.length;
+    $('txtTotalBsBottom').innerText = 'Bs ' + fmt(totalBs);
+    $('stickyTopCant').innerText = seleccionados.length;
+    $('stickyTopTotal').innerText = 'Bs ' + fmt(totalBs);
+  } else {
+    barra.classList.add('hidden');
+    sticky.classList.add('hidden');
+  }
+}
+
+function seleccionarAzar() {
+  var disp = [];
+  var total = Number(datosMegaGlobal.totalNumeros) || 100;
+  var dig = total >= 1000 ? 3 : 2;
+  var tablero = datosMegaGlobal.tablero || {};
+  for (var i = 0; i < total; i++) {
+    var s = String(i);
+    while (s.length < dig) s = '0' + s;
+    var inf = tablero[s] || { estatus: 'DISPONIBLE' };
+    if (inf.estatus === 'DISPONIBLE' && seleccionados.indexOf(s) === -1) disp.push(s);
+  }
+  if (!disp.length) { notificar('No hay disponibles', 'error'); return; }
+  tocarNumero(disp[Math.floor(Math.random() * disp.length)], 'DISPONIBLE');
+}
+
+function consultarParticipante() {
+  var ced = $('inputCedulaConsulta').value.trim();
+  if (!ced) { notificar('Ingresa una cédula', 'error'); return; }
+  mostrarCargando(true);
+  apiCall('consultarParticipanteMega', { cedula: ced })
+    .then(res => {
+      mostrarCargando(false);
+      if (!res || !res.success) { notificar('Error: ' + ((res && res.error) || ''), 'error'); return; }
+      participanteConsultado = res;
+      renderizarResultadoConsulta(res);
+    })
+    .catch(err => { mostrarCargando(false); notificar('Error: ' + err.message, 'error'); });
+}
+
+function renderizarResultadoConsulta(res) {
+  var box = $('resultadoConsultaParticipante');
+  box.classList.remove('hidden');
+  if (!res.registrado) {
+    box.innerHTML = '<div class="subcard text-center text-xs text-gray-500 py-2"><i class="fa-solid fa-user-slash mr-1"></i> Sin registros.</div>';
+    return;
+  }
+  var p = res.participante, t = res.tickets;
+  var html = '<div class="subcard space-y-2">';
+  html += '<div class="flex items-center gap-2 pb-2 border-b border-gray-200">';
+  html += '<div class="w-8 h-8 rounded-lg bg-blue-100 flex items-center justify-center text-blue-600 text-xs"><i class="fa-solid fa-user"></i></div>';
+  html += '<div><b class="text-xs font-black text-gray-900 block">' + p.nombre + '</b><span class="text-[9px] font-mono text-gray-500">C.I. ' + p.cedula + '</span></div></div>';
+  if (res.deudaUSD > 0) {
+    html += '<div class="bg-amber-50 border border-amber-200 rounded-xl p-2.5">';
+    html += '<div class="text-[10px] font-bold text-amber-700">💳 DEUDA</div>';
+    html += '<b class="text-base font-black text-amber-900">Bs ' + fmt(res.deudaBs) + '</b>';
+    if (res.diasRestantes !== null && res.diasRestantes !== undefined) {
+      var color = res.diasRestantes <= 3 ? 'text-rose-600' : 'text-amber-700';
+      html += '<div class="text-[10px] font-bold ' + color + ' mt-1">⏰ ' + res.diasRestantes + ' días (límite: ' + res.fechaLimite + ')</div>';
+    }
+    html += '</div>';
+  }
+  if (t.pagados.length) {
+    html += '<div><div class="text-[10px] font-black text-gray-500 mb-1">✅ PAGADOS (' + t.pagados.length + ')</div><div class="flex flex-wrap gap-1">';
+    t.pagados.forEach(function(n) { html += '<span class="chip paid">' + n + '</span>'; });
+    html += '</div></div>';
+  }
+  if (t.espera.length) {
+    html += '<div><div class="text-[10px] font-black text-gray-500 mb-1">🟣 EN REVISIÓN (' + t.espera.length + ')</div><div class="flex flex-wrap gap-1">';
+    t.espera.forEach(function(n) { html += '<span class="chip esp">' + n + '</span>'; });
+    html += '</div></div>';
+  }
+  if (t.reservados.length) {
+    html += '<div><div class="flex justify-between items-center mb-1"><div class="text-[10px] font-black text-gray-500">🔵 RESERVADOS (' + t.reservados.length + ')</div>';
+    html += '<button type="button" onclick="seleccionarTodosReservados()" class="text-[9px] font-black text-blue-600 underline">Sel. todos</button></div>';
+    html += '<div class="flex flex-wrap gap-1">';
+    t.reservados.forEach(function(n) {
+      var on = seleccionados.indexOf(n) > -1;
+      html += '<span class="chip reserved ' + (on ? 'on' : '') + '" onclick="toggleReservado(\'' + n + '\')">' + n + '</span>';
+    });
+    html += '</div></div>';
+    html += '<button type="button" onclick="pagarReservadosSeleccionados()" class="btn-primary w-full !py-2 !text-xs"><i class="fa-solid fa-credit-card mr-1"></i> Pagar seleccionados</button>';
+  }
+  html += '</div>';
+  box.innerHTML = html;
+}
+
+function toggleReservado(num) {
+  var idx = seleccionados.indexOf(num);
+  if (idx > -1) seleccionados.splice(idx, 1);
+  else seleccionados.push(num);
+  renderizarTablero();
+  actualizarBarraFlotante();
+  if (participanteConsultado) renderizarResultadoConsulta(participanteConsultado);
+}
+
+function seleccionarTodosReservados() {
+  if (!participanteConsultado || !participanteConsultado.tickets) return;
+  var res = participanteConsultado.tickets.reservados;
+  var todos = res.every(function(n) { return seleccionados.indexOf(n) > -1; });
+  if (todos) seleccionados = seleccionados.filter(function(n) { return res.indexOf(n) === -1; });
+  else res.forEach(function(n) { if (seleccionados.indexOf(n) === -1) seleccionados.push(n); });
+  renderizarTablero();
+  actualizarBarraFlotante();
+  renderizarResultadoConsulta(participanteConsultado);
+}
+
+function pagarReservadosSeleccionados() {
+  var res = participanteConsultado.tickets.reservados;
+  var sel = seleccionados.filter(function(n) { return res.indexOf(n) > -1; });
+  if (!sel.length) { notificar('Selecciona al menos uno', 'error'); return; }
+  $('chkCedula').value = participanteConsultado.participante.cedula || '';
+  $('chkNombre').value = participanteConsultado.participante.nombre || '';
+  $('chkTelefono').value = participanteConsultado.participante.telefono || '';
+  $('chkCorreo').value = participanteConsultado.participante.correo || '';
+  _cedulaVerificada = { nombre: participanteConsultado.participante.nombre, telefono: participanteConsultado.participante.telefono, correo: participanteConsultado.participante.correo };
+  abrirModalCheckout('PAGAR');
+}
+
+function abrirModalCheckout(modo) {
+  if (!seleccionados.length) { notificar('Selecciona al menos un número', 'error'); return; }
+  if (modo === 'RESERVADO' && datosMegaGlobal.permiteReservar === false) {
+    notificar('Solo pago directo. Faltan pocos días.', 'error');
+    modo = 'PAGAR';
+  }
+  modoCheckoutActual = modo;
+  var precioUSD = Number(datosMegaGlobal.precioTicketUSD) || 2;
+  var tasa = Number(datosMegaGlobal.tasa) || 982;
+  var totalUSD = seleccionados.length * precioUSD;
+  var totalBs = totalUSD * tasa;
+  $('tituloModalCheckout').innerText = modo === 'RESERVADO' ? 'Reservar Boletos' : 'Reportar Pago';
+  $('subtituloCheckout').innerText = modo === 'RESERVADO' ? 'Reserva sin pagar ahora' : 'Elige cómo quieres pagar';
+  $('chkCantidad').innerText = seleccionados.length + ' boleto(s)';
+  $('chkNumerosTxt').innerText = '#' + seleccionados.join(' · #');
+  $('chkTotalBs').innerText = 'Bs ' + fmt(totalBs);
+  $('chkTotalUSD').innerText = '$' + fmt(totalUSD);
+  var blq = $('bloqueDatosPago');
+  if (modo === 'PAGAR') { blq.classList.remove('hidden'); cambiarMetodoPago('PM'); }
+  else blq.classList.add('hidden');
+  $('avisoCedula').classList.add('hidden');
+  $('avisoCedula').innerHTML = '';
+  $('chkCedula').classList.remove('inp-ok');
+  abrirModal('modalCheckout');
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+  var input = $('chkCedula');
+  if (input) {
+    input.addEventListener('input', function() {
+      clearTimeout(_debounceTimer);
+      var ced = input.value.trim();
+      var aviso = $('avisoCedula');
+      if (ced.length < 5) {
+        aviso.classList.add('hidden');
+        aviso.innerHTML = '';
+        input.classList.remove('inp-ok');
+        _cedulaVerificada = null;
+        return;
+      }
+      _debounceTimer = setTimeout(function() { verificarCedula(ced); }, 700);
+    });
+  }
+});
+
+function verificarCedula(ced) {
+  apiCall('verificarCedulaMega', { cedula: ced })
+    .then(res => {
+      var aviso = $('avisoCedula');
+      var input = $('chkCedula');
+      if (res && res.existe) {
+        _cedulaVerificada = res;
+        if (!$('chkNombre').value.trim() && res.nombre) $('chkNombre').value = res.nombre;
+        if (!$('chkTelefono').value.trim() && res.telefono) $('chkTelefono').value = res.telefono;
+        if (!$('chkCorreo').value.trim() && res.correo) $('chkCorreo').value = res.correo;
+        aviso.classList.remove('hidden');
+        aviso.innerHTML = '<div class="bg-blue-50 border border-blue-200 rounded-lg p-2.5 text-[10px] text-blue-800 leading-relaxed"><b>👋 ¡Bienvenido de vuelta!</b><br>Cédula registrada a nombre de <b>' + res.nombre + '</b>.<br><span class="text-blue-600">Si eres tú, continúa. Si no, revisa la cédula.</span></div>';
+        input.classList.add('inp-ok');
+      } else {
+        _cedulaVerificada = null;
+        aviso.classList.add('hidden');
+        aviso.innerHTML = '';
+        input.classList.remove('inp-ok');
+      }
+    })
+    .catch(() => {});
+}
+
+function cambiarMetodoPago(met) {
+  metodoPagoActual = met;
+  var metodos = ['PM','TR','BZ','ZP','EF','US'];
+  for (var i = 0; i < metodos.length; i++) {
+    var btn = $('pm' + metodos[i]);
+    if (metodos[i] === met) btn.classList.add('on');
+    else btn.classList.remove('on');
+  }
+  var esUSD = METODOS_USD.indexOf(met) > -1;
+  var precioUSD = Number(datosMegaGlobal.precioTicketUSD) || 2;
+  var tasa = Number(datosMegaGlobal.tasa) || 982;
+  var totalUSD = seleccionados.length * precioUSD;
+  var totalBs = totalUSD * tasa;
+  if (esUSD) {
+    $('chkTotalBs').innerText = '$' + fmt(totalUSD);
+    $('chkTotalUSD').innerText = '≈ Bs ' + fmt(totalBs);
+  } else {
+    $('chkTotalBs').innerText = 'Bs ' + fmt(totalBs);
+    $('chkTotalUSD').innerText = '≈ $' + fmt(totalUSD);
+  }
+  $('chkTotalUSD').classList.remove('hidden');
+  var box = $('datosPagoVisual');
+  if (met === 'PM') box.innerHTML = '<b>💳 Pago Móvil</b><br>' + (datosMegaGlobal.pmDatos || 'No configurado');
+  else if (met === 'TR') box.innerHTML = '<b>🏦 Transferencia</b><br>' + (datosMegaGlobal.trDatos || 'No configurado');
+  else if (met === 'BZ') box.innerHTML = '<b>🪙 Binance Pay</b><br>' + (datosMegaGlobal.binanceDatos || '');
+  else if (met === 'ZP') box.innerHTML = '<b>💜 Zelle</b><br>' + (datosMegaGlobal.zelleDatos || '');
+  else if (met === 'EF') box.innerHTML = '<b>💵 Efectivo</b><br>' + (datosMegaGlobal.efectivoDatos || '');
+  else if (met === 'US') box.innerHTML = '<b>🪙 USDT</b><br>' + (datosMegaGlobal.usdtDatos || '');
+  var blqWA = $('bloqueWhatsAppSoporte');
+  var blqRef = $('bloqueRefComprobante');
+  if (esUSD) {
+    blqWA.classList.remove('hidden');
+    blqRef.classList.add('hidden');
+    var tel = (datosMegaGlobal.waList && datosMegaGlobal.waList[0]) || '';
+    var metodoNombre = met === 'BZ' ? 'Binance' : met === 'ZP' ? 'Zelle' : met === 'EF' ? 'Efectivo' : 'USDT';
+    var msg = encodeURIComponent('¡Hola! 👋 Quiero pagar con *' + metodoNombre + '*.\n\n🎟️ Números: #' + seleccionados.join(', #') + '\n💰 Monto: *$' + fmt(totalUSD) + '*\n\n¿Me indican cómo proceder? 🙏');
+    $('btnWhatsAppSoporte').href = tel ? ('https://wa.me/' + tel + '?text=' + msg) : '#';
+  } else {
+    blqWA.classList.add('hidden');
+    blqRef.classList.remove('hidden');
+  }
+}
+
+function ejecutarCheckout() {
+  var ced = $('chkCedula').value.trim();
+  var nom = $('chkNombre').value.trim();
+  var tel = $('chkTelefono').value.trim();
+  var correo = $('chkCorreo').value.trim();
+  if (!ced || !nom || !tel || !correo) { notificar('Completa todos los datos', 'error'); return; }
+  if (correo.indexOf('@') === -1) { notificar('Correo inválido', 'error'); return; }
+  var btn = $('btnEjecutarCheckout');
+  btn.innerText = 'Procesando...'; btn.disabled = true;
+  
+  if (modoCheckoutActual === 'RESERVADO') {
+    apiCall('reservarTicketsMega', { cedula: ced, nombre: nom, telefono: tel, correo: correo, numeros: seleccionados })
+      .then(res => {
+        btn.innerText = 'Confirmar'; btn.disabled = false;
+        if (!res.success) { notificar(res.error, 'error'); return; }
+        cerrarModal('modalCheckout');
+        notificar('¡Reserva enviada! Revisa tu correo 📧', 'success');
+        setTimeout(cargarDatos, 500);
+      })
+      .catch(err => {
+        btn.innerText = 'Confirmar'; btn.disabled = false;
+        notificar('Error: ' + err.message, 'error');
+      });
+  } else {
+    var esUSD = METODOS_USD.indexOf(metodoPagoActual) > -1;
+    var ref = esUSD ? ('USD' + String(Date.now()).slice(-4)) : $('chkReferencia').value.trim();
+    if (!esUSD && ref.length !== 4) { btn.innerText = 'Confirmar'; btn.disabled = false; notificar('La referencia debe ser de 4 dígitos', 'error'); return; }
+    var f = esUSD ? null : $('chkArchivo');
+    var reader = new FileReader();
+    if (f && f.files.length > 0) {
+      reader.readAsDataURL(f.files[0]);
+      reader.onload = function() { enviarPagoServidor(ced, nom, tel, correo, ref, reader.result, btn); };
+    } else enviarPagoServidor(ced, nom, tel, correo, ref, '', btn);
+  }
+}
+
+function enviarPagoServidor(ced, nom, tel, correo, ref, b64, btn) {
+  var precioUSD = Number(datosMegaGlobal.precioTicketUSD) || 2;
+  var tasa = Number(datosMegaGlobal.tasa) || 982;
+  var totalUSD = seleccionados.length * precioUSD;
+  var totalBs = totalUSD * tasa;
+  var metodoTxt = { 'PM':'Pago Móvil','TR':'Transferencia','BZ':'Binance','ZP':'Zelle','EF':'Efectivo','US':'USDT' }[metodoPagoActual] || 'Otro';
+  
+  apiCall('reportarPagoMega', { cedula: ced, nombre: nom, telefono: tel, correo: correo, numeros: seleccionados, montoUSD: totalUSD, montoBs: totalBs, metodo: metodoTxt, referencia: ref, base64: b64 })
+    .then(res => {
+      btn.innerText = 'Confirmar'; btn.disabled = false;
+      if (!res.success) { notificar(res.error, 'error'); return; }
+      cerrarModal('modalCheckout');
+      notificar('¡Pago reportado! Revisa tu correo 📧', 'success');
+      setTimeout(cargarDatos, 500);
+    })
+    .catch(err => {
+      btn.innerText = 'Confirmar'; btn.disabled = false;
+      notificar('Error: ' + err.message, 'error');
+    });
+}
+
+function renderizarSoporte(lista) {
+  var c = $('contenedorBotonesSoporte');
+  c.innerHTML = '';
+  if (!lista || !lista.length) { c.innerHTML = '<span class="text-gray-500 text-[11px]">Contacta vía Instagram.</span>'; return; }
+  var html = '';
+  for (var i = 0; i < lista.length; i++) {
+    var msg = encodeURIComponent('¡Hola! 👋 Vengo de Mega Rifas 🎟️✨');
+    html += '<a href="https://wa.me/' + lista[i] + '?text=' + msg + '" target="_blank" class="bg-emerald-500 text-white font-bold py-2 px-3.5 rounded-xl text-[11px] inline-flex items-center gap-1.5"><i class="fa-brands fa-whatsapp"></i> WhatsApp</a>';
+  }
+  c.innerHTML = html;
+}
+
+function abrirModalAdminSeguro() {
+  $('inputPinRifa').value = '';
+  actualizarDots('inputPinRifa', 'dotAdm');
+  abrirModal('modalPinAdmin');
+  setTimeout(function() { $('inputPinRifa').focus(); }, 300);
+}
+
+function verificarPinAdmin() {
+  var p = $('inputPinRifa').value.trim();
+  if (!p || p.length < 6) { notificar('Ingresa el PIN completo de 6 dígitos', 'error'); return; }
+  mostrarCargando(true);
+  apiCall('verificarPinMegaAdmin', { pin: p })
+    .then(res => {
+      mostrarCargando(false);
+      if (res && res.success) {
+        window._adminPin = p;
+        cerrarModal('modalPinAdmin');
+        abrirModal('modalPanelAdmin');
+        cambiarTabAdmin('val');
+        cargarFormularioConfigAdmin();
+        notificar('Bienvenido admin 👋', 'success');
+      } else {
+        notificar('PIN incorrecto', 'error');
+        $('inputPinRifa').value = '';
+        actualizarDots('inputPinRifa', 'dotAdm');
+      }
+    })
+    .catch(err => { mostrarCargando(false); notificar('Error: ' + err.message, 'error'); });
+}
+
+function cambiarTabAdmin(tab) {
+  $('adminViewVal').classList.toggle('hidden', tab !== 'val');
+  $('adminViewVnc').classList.toggle('hidden', tab !== 'vnc');
+  $('adminViewHis').classList.toggle('hidden', tab !== 'his');
+  $('adminViewCfg').classList.toggle('hidden', tab !== 'cfg');
+  $('adminViewNue').classList.toggle('hidden', tab !== 'nue');
+  $('adminTabVal').className = 'tab-btn ' + (tab === 'val' ? 'tab-on' : 'tab-off');
+  $('adminTabVnc').className = 'tab-btn ' + (tab === 'vnc' ? 'tab-warn-on' : 'tab-warn-off');
+  $('adminTabHis').className = 'tab-btn ' + (tab === 'his' ? 'tab-on' : 'tab-off');
+  $('adminTabCfg').className = 'tab-btn ' + (tab === 'cfg' ? 'tab-on' : 'tab-off');
+  $('adminTabNue').className = 'tab-btn ' + (tab === 'nue' ? 'tab-danger-on' : 'tab-danger-off');
+  if (tab === 'val') cargarPagosPendientesAdmin();
+  if (tab === 'vnc') cargarPorVencerAdmin();
+  if (tab === 'his') cargarHistorialAdmin();
+}
+
+function cargarPagosPendientesAdmin() {
+  $('adminViewVal').innerHTML = '<p class="text-center text-gray-500 py-3 text-xs">Cargando...</p>';
+  var pin = window._adminPin;
+  
+  apiCall('obtenerEstadisticasAdmin', { pin: pin })
+    .then(stats => {
+      var est = (datosMegaGlobal && datosMegaGlobal.estadisticas) || {};
+      var html = '';
+      if (stats && stats.success) {
+        html += '<div class="bg-emerald-50 border-2 border-emerald-300 rounded-xl p-3 mb-2">';
+        html += '<div class="text-[10px] font-black text-emerald-700 mb-1">💰 INGRESOS TOTALES</div>';
+        html += '<div class="text-2xl font-black text-emerald-900">$' + fmt(stats.totalUSD) + '</div>';
+        html += '<div class="text-[11px] text-emerald-700 font-mono">≈ Bs ' + fmt(stats.totalBs) + '</div>';
+        html += '<div class="grid grid-cols-3 gap-2 mt-2 pt-2 border-t border-emerald-200 text-center">';
+        html += '<div><div class="text-[9px] font-bold text-emerald-600">HOY</div><b class="text-xs">$' + fmt(stats.totalHoyUSD) + '</b></div>';
+        html += '<div><div class="text-[9px] font-bold text-emerald-600">PAGOS</div><b class="text-xs">' + stats.pagosAprobados + '</b></div>';
+        html += '<div><div class="text-[9px] font-bold text-emerald-600">X VENCER</div><b class="text-xs text-amber-700">' + stats.porVencer + '</b></div>';
+        html += '</div>';
+        if (stats.vencidas > 0) html += '<div class="mt-2 bg-rose-100 text-rose-700 text-[10px] font-black py-1 px-2 rounded-lg">⚠️ ' + stats.vencidas + ' vencidas</div>';
+        html += '</div>';
+      }
+      html += '<div class="subcard border-2 border-amber-200 bg-amber-50 text-xs">';
+      html += '<b class="block mb-1">📊 Taquilla</b>';
+      html += '<div class="grid grid-cols-2 gap-1 text-[11px]">';
+      html += '<div>🟢 Disponibles: <b>' + (est.disponibles || 0) + '</b></div>';
+      html += '<div>🔵 Reservados: <b>' + (est.reservados || 0) + '</b></div>';
+      html += '<div>🟣 En revisión: <b>' + (est.espera || 0) + '</b></div>';
+      html += '<div>🔴 Vendidos: <b>' + (est.vendidos || 0) + '</b></div>';
+      html += '</div></div>';
+      html += '<div class="grid grid-cols-3 gap-2 my-2">';
+      html += '<button type="button" onclick="resincronizar()" class="bg-blue-600 text-white font-bold py-2 rounded-lg text-[10px]">🔄 Re-sinc</button>';
+      html += '<button type="button" onclick="liberarMasivo()" class="bg-amber-600 text-white font-bold py-2 rounded-lg text-[10px]">🔓 Liberar reservas</button>';
+      html += '<button type="button" onclick="exportarCSV()" class="bg-emerald-600 text-white font-bold py-2 rounded-lg text-[10px]">📥 CSV</button>';
+      html += '</div>';
+      $('adminViewVal').innerHTML = html + '<div id="listaPagosCont"></div>';
+      cargarListaPagosEnContenedor();
+    })
+    .catch(() => { $('adminViewVal').innerHTML = '<p class="text-center text-rose-600 py-3 text-xs">Error stats</p>'; });
+}
+
+function cargarListaPagosEnContenedor() {
+  apiCall('listarPagosPendientesMega')
+    .then(lista => {
+      var cont = $('listaPagosCont');
+      if (!cont) return;
+      var html = '';
+      if (!lista.length) { html = '<p class="text-center text-gray-500 py-4 text-xs">No hay pagos pendientes 🎉</p>'; cont.innerHTML = html; return; }
+      for (var i = 0; i < lista.length; i++) {
+        var p = lista[i];
+        window['_pago_' + p.fila] = p;
+        html += '<div class="subcard mt-2">';
+        html += '<div class="flex justify-between items-start mb-1">';
+        html += '<div><b class="text-xs">' + p.nombre + '</b><br><span class="text-[10px] text-gray-500 font-mono">C.I. ' + p.cedula + '</span></div>';
+        html += '<div class="text-right"><b class="text-sm text-emerald-600">$' + fmt(p.montoUSD) + '</b><br><span class="text-[9px] text-gray-500">' + p.fecha + '</span></div></div>';
+        html += '<div class="text-[10px] text-blue-600 font-mono mb-1">🎟️ #' + p.numeros + '</div>';
+        html += '<div class="text-[10px] text-gray-600 mb-1">Ref: <b>' + p.referencia + '</b> · ' + p.metodo + '</div>';
+        if (p.telefono) html += '<div class="text-[9px] text-gray-500 mb-1"><i class="fa-solid fa-phone"></i> ' + p.telefono + '</div>';
+        if (p.correo) html += '<div class="text-[9px] text-gray-500 mb-1"><i class="fa-solid fa-envelope"></i> ' + p.correo + '</div>';
+        if (p.comprobante && p.comprobante.indexOf('data:image') === 0) {
+          window['_cb_' + p.fila] = p.comprobante;
+          html += '<button type="button" data-cb="' + p.fila + '" class="mb-2 w-full bg-blue-50 border border-blue-200 text-blue-700 py-1.5 rounded-lg text-[10px] font-bold">📎 Ver comprobante</button>';
+        }
+        html += '<div class="flex gap-1.5">';
+        html += '<button type="button" onclick="resolverPagoAdmin(' + p.fila + ',\'APROBADO\')" class="flex-1 bg-emerald-600 text-white font-bold py-2 rounded-lg text-xs">✓ Aprobar</button>';
+        html += '<button type="button" onclick="resolverPagoAdmin(' + p.fila + ',\'RECHAZADO\')" class="flex-1 bg-rose-600 text-white font-bold py-2 rounded-lg text-xs">✗ Rechazar</button>';
+        html += '</div></div>';
+      }
+      cont.innerHTML = html;
+    })
+    .catch(err => {
+      var cont = $('listaPagosCont');
+      if (cont) cont.innerHTML = '<p class="text-center text-rose-600 py-3 text-xs">Error: ' + err.message + '</p>';
+    });
+}
+
+function cargarPorVencerAdmin() {
+  $('adminViewVnc').innerHTML = '<p class="text-center text-gray-500 py-3 text-xs">Cargando...</p>';
+  apiCall('listarReservasPorVencer', { pin: window._adminPin })
+    .then(res => {
+      if (!res || !res.success) { $('adminViewVnc').innerHTML = '<p class="text-center text-rose-600 py-3 text-xs">Error: ' + ((res && res.error) || '') + '</p>'; return; }
+      var lista = res.lista || [];
+      if (!lista.length) { $('adminViewVnc').innerHTML = '<p class="text-center text-gray-500 py-6 text-xs">🎉 No hay reservas por vencer ni vencidas.</p>'; return; }
+      var html = '<p class="text-[10px] text-gray-500 mb-2 font-semibold">Reservas que vencen en ≤3 días o ya vencidas. Envía recordatorio manual por correo o WhatsApp.</p>';
+      for (var i = 0; i < lista.length; i++) {
+        var it = lista[i];
+        var urgente = it.vencida ? 'bg-rose-50 border-rose-300' : 'bg-amber-50 border-amber-300';
+        var badge = it.vencida ? '<span class="text-[9px] font-black text-rose-700 bg-rose-200 px-2 py-0.5 rounded-full">⚠️ VENCIDA hace ' + Math.abs(it.diasRestantes) + 'd</span>' : (it.diasRestantes === 0 ? '<span class="text-[9px] font-black text-rose-700 bg-rose-100 px-2 py-0.5 rounded-full">🔴 Vence HOY</span>' : '<span class="text-[9px] font-black text-amber-700 bg-amber-100 px-2 py-0.5 rounded-full">⏰ Vence en ' + it.diasRestantes + 'd</span>');
+        var telLimpio = (it.telefono || '').replace(/\D/g, '');
+        var msgWA = '¡Hola *' + it.nombre + '*! 👋\n\nTe recordamos que tienes boletos reservados en *Mega Rifas* 🎟️\n\n🎟️ Números: *# ' + it.numeros + '*\n\n⏰ ' + (it.vencida ? 'Tu reserva está *vencida*. Urgente para no perder los números.' : 'Completa tu pago para no perder tus números.') + '\n\nCualquier duda estamos aquí 💬\n*Mega Rifas*';
+        html += '<div class="subcard border-2 ' + urgente + ' mt-2">';
+        html += '<div class="flex justify-between items-start mb-1">';
+        html += '<div><b class="text-xs">' + it.nombre + '</b><br><span class="text-[10px] text-gray-500 font-mono">C.I. ' + it.cedula + '</span></div>';
+        html += badge;
+        html += '</div>';
+        html += '<div class="text-[10px] text-blue-600 font-mono mb-1">🎟️ #' + it.numeros + '</div>';
+        if (it.telefono) html += '<div class="text-[9px] text-gray-500 mb-1"><i class="fa-solid fa-phone"></i> ' + it.telefono + '</div>';
+        if (it.correo) html += '<div class="text-[9px] text-gray-500 mb-2"><i class="fa-solid fa-envelope"></i> ' + it.correo + '</div>';
+        html += '<div class="flex gap-1.5">';
+        if (it.correo) html += '<a href="mailto:' + it.correo + '?subject=' + encodeURIComponent('Recordatorio - Mega Rifas') + '&body=' + encodeURIComponent('Hola ' + it.nombre + ',\n\nTe recordamos que tienes boletos reservados en Mega Rifas:\n\nNúmeros: #' + it.numeros + '\n\n' + (it.vencida ? 'Tu reserva ya venció. Urgente para no perder los números.' : 'Completa tu pago antes del límite.') + '\n\n— Mega Rifas') + '" class="flex-1 bg-blue-600 text-white font-bold py-1.5 rounded-lg text-[10px] text-center">📧 Correo</a>';
+        if (telLimpio) html += '<a href="https://wa.me/' + telLimpio + '?text=' + encodeURIComponent(msgWA) + '" target="_blank" class="flex-1 bg-emerald-600 text-white font-bold py-1.5 rounded-lg text-[10px] text-center">📱 WhatsApp</a>';
+        html += '</div></div>';
+      }
+      $('adminViewVnc').innerHTML = html;
+    })
+    .catch(err => {
+      $('adminViewVnc').innerHTML = '<p class="text-center text-rose-600 py-3 text-xs">Error: ' + err.message + '</p>';
+    });
+}
+
+document.addEventListener('click', function(e) {
+  var btn = e.target.closest ? e.target.closest('[data-cb]') : null;
+  if (btn) {
+    var fila = btn.getAttribute('data-cb');
+    var cb = window['_cb_' + fila] || '';
+    if (!cb) { notificar('Sin comprobante', 'error'); return; }
+    $('imgComprobante').src = cb;
+    abrirModal('modalImagen');
+  }
+}, true);
+
+function resolverPagoAdmin(fila, acc) {
+  var pagoData = window['_pago_' + fila];
+  if (acc === 'RECHAZADO') {
+    pedirPin('Rechazar pago', 'Vas a rechazar este pago. Los números volverán a RESERVADO.', function(pin) {
+      ejecutarResolucionPago(fila, acc, pagoData, pin);
+    });
+  } else {
+    ejecutarResolucionPago(fila, acc, pagoData, window._adminPin);
+  }
+}
+
+function ejecutarResolucionPago(fila, acc, pagoData, pin) {
+  notificar('Procesando...', 'info');
+  apiCall('procesarPagoMegaAdmin', { fila: fila, accion: acc })
+    .then(res => {
+      if (!res || !res.success) { notificar('Error: ' + ((res && res.error) || ''), 'error'); return; }
+      if (acc === 'APROBADO') {
+        notificar('✅ Aprobado. Email enviado 📧', 'success');
+        if (pagoData) abrirModalWAConDatos(pagoData);
+      } else {
+        notificar('❌ Rechazado', 'success');
+      }
+      recargarSilencioso();
+      setTimeout(cargarPagosPendientesAdmin, 1200);
+    })
+    .catch(err => { notificar('Error: ' + err.message, 'error'); });
+}
+
+function abrirModalWAConDatos(p) {
+  _waData = { nombre: p.nombre, numeros: p.numeros, ref: p.referencia, monto: fmt(p.montoUSD) };
+  $('waTelefono').value = p.telefono ? String(p.telefono).replace(/\D/g,'') : '';
+  var msg = '¡Hola *' + p.nombre + '*! 🎉\n\n' +
+    '✅ Tu pago por *$' + fmt(p.montoUSD) + '* (Ref: *' + p.referencia + '*) ha sido *APROBADO*.\n\n' +
+    '🎟️ Números: *# ' + p.numeros + '*\n\n' +
+    '¡Mucha suerte en el sorteo! 🍀\n' +
+    '*Mega Rifas*';
+  $('waPreview').innerHTML = msg.replace(/\*(.*?)\*/g, '<b>$1</b>').replace(/\n/g, '<br>');
+  abrirModal('modalWA');
+}
+
+function enviarWAConfirmado() {
+  var tel = $('waTelefono').value.trim().replace(/\D/g,'');
+  if (!tel) { notificar('Ingresa el teléfono', 'error'); return; }
+  if (!_waData) { notificar('Sin datos', 'error'); return; }
+  var msg = encodeURIComponent('¡Hola *' + _waData.nombre + '*! 🎉\n\n' +
+    '✅ Tu pago por *$' + _waData.monto + '* (Ref: *' + _waData.ref + '*) ha sido *APROBADO*.\n\n' +
+    '🎟️ Números: *# ' + _waData.numeros + '*\n\n' +
+    '¡Mucha suerte en el sorteo! 🍀\n' +
+    '*Mega Rifas*');
+  window.open('https://wa.me/' + tel + '?text=' + msg, '_blank');
+  cerrarModal('modalWA');
+  notificar('✅ WhatsApp abierto', 'success');
+}
+
+function resincronizar() {
+  pedirPin('Resincronizar tablero', 'Esta acción revisa TODOS los pagos y actualiza el tablero. Ingresa tu PIN para continuar.', function(pin) {
+    notificar('Resincronizando...', 'info');
+    apiCall('resincronizarTableroAdmin', { pin: pin })
+      .then(res => {
+        if (!res.success) { notificar(res.error, 'error'); return; }
+        notificar('✅ ' + res.cambios + ' actualizados', 'success');
+        recargarSilencioso();
+        setTimeout(cargarPagosPendientesAdmin, 1200);
+      })
+      .catch(err => notificar('Error: ' + err.message, 'error'));
+  });
+}
+
+function liberarMasivo() {
+  pedirPin('Liberar reservas', 'Vas a liberar TODOS los números reservados que no han sido pagados. Esta acción es irreversible.', function(pin) {
+    mostrarConfirm('¿Liberar todas las reservas?', 'Todos los números en estado <b>RESERVADO</b> volverán a estar <b>DISPONIBLES</b>. Los que están en revisión o pagados NO se tocan.', 'fa-triangle-exclamation', function(ok) {
+      if (!ok) return;
+      notificar('Liberando...', 'info');
+      apiCall('liberarTodosReservadosAdmin', { pin: pin, incluirEspera: false })
+        .then(res => {
+          if (!res.success) { notificar(res.error, 'error'); return; }
+          notificar('✅ ' + res.liberados + ' números liberados', 'success');
+          recargarSilencioso();
+          setTimeout(cargarPagosPendientesAdmin, 1200);
+        })
+        .catch(err => notificar('Error: ' + err.message, 'error'));
+    }, true);
+  });
+}
+
+function exportarCSV() {
+  if (!window._adminPin) { notificar('Sesión expirada', 'error'); return; }
+  notificar('Generando CSV...', 'info');
+  apiCall('exportarVentasCSV', { pin: window._adminPin })
+    .then(res => {
+      if (!res.success) { notificar(res.error, 'error'); return; }
+      var blob = new Blob([res.csv], { type: 'text/csv;charset=utf-8;' });
+      var link = document.createElement('a');
+      link.href = URL.createObjectURL(blob);
+      link.download = 'mega-rifas-' + new Date().toISOString().slice(0,10) + '.csv';
+      link.click();
+      notificar('✅ CSV descargado', 'success');
+    })
+    .catch(err => notificar('Error: ' + err.message, 'error'));
+}
+
+function cargarHistorialAdmin() {
+  var cont = $('adminViewHis');
+  cont.innerHTML = '<p class="text-center text-gray-500 py-3 text-xs">Cargando...</p>';
+  apiCall('obtenerHistorialAdmin', { filtro: historialFiltro })
+    .then(lista => {
+      var html = '<div class="flex gap-1 mb-2 overflow-x-auto pb-1">';
+      var filters = ['TODOS','PAGADO','ESPERA','RESERVADO'];
+      for (var f = 0; f < filters.length; f++) {
+        var on = historialFiltro === filters[f];
+        html += '<button type="button" onclick="cambiarFiltroHistorial(\'' + filters[f] + '\')" class="px-3 py-1.5 rounded-lg text-[10px] font-black ' + (on ? 'bg-gray-900 text-white' : 'bg-gray-100 text-gray-600') + ' whitespace-nowrap">' + filters[f] + '</button>';
+      }
+      html += '</div>';
+      if (!lista.length) { html += '<p class="text-center text-gray-500 py-4 text-xs">Sin registros.</p>'; cont.innerHTML = html; return; }
+      for (var i = 0; i < lista.length; i++) {
+        var r = lista[i];
+        var colores = { PAGADO:'bg-gray-100 text-gray-700 border-gray-300', ESPERA:'bg-purple-50 text-purple-700 border-purple-200', RESERVADO:'bg-blue-50 text-blue-700 border-blue-200' };
+        var cls = colores[r.estatus] || 'bg-gray-100 text-gray-700 border-gray-300';
+        html += '<div class="subcard border ' + cls + ' mb-2">';
+        html += '<div class="flex justify-between items-start mb-1">';
+        html += '<div><span class="text-lg font-black font-mono">#' + r.numero + '</span> <span class="text-[9px] font-black px-2 py-0.5 rounded-full ' + cls + '">' + r.estatus + '</span></div>';
+        html += '<button type="button" onclick="abrirEditar(' + r.fila + ',\'' + (r.estatus||'') + '\',\'' + (r.cedula||'').replace(/\'/g,'') + '\',\'' + (r.nombre||'').replace(/\'/g,'') + '\',\'' + (r.telefono||'') + '\')" class="text-[10px] font-black text-blue-600 underline">✏️ Editar</button>';
+        html += '</div>';
+        if (r.nombre || r.cedula) {
+          html += '<div class="text-[11px] text-gray-700 font-bold">' + r.nombre + '</div>';
+          html += '<div class="text-[10px] text-gray-500 font-mono mb-1">C.I. ' + r.cedula + ' · ' + r.telefono + '</div>';
+        }
+        if (r.fechaReserva) html += '<div class="text-[9px] text-gray-500">Reservado: ' + r.fechaReserva + '</div>';
+        if (r.fechaPago) html += '<div class="text-[9px] text-emerald-600 font-bold">Pagado: ' + r.fechaPago + '</div>';
+        var acciones = [];
+        if (r.estatus === 'RESERVADO' && r.telefono) {
+          var msg = encodeURIComponent('¡Hola *' + r.nombre + '*! 👋\n\nTe recordamos que tienes el boleto *# ' + r.numero + '* reservado en *Mega Rifas* 🎟️\n\n⏰ Completa tu pago antes del límite.\n\n*Mega Rifas*');
+          acciones.push('<a href="https://wa.me/' + r.telefono.replace(/\D/g,'') + '?text=' + msg + '" target="_blank" class="flex-1 bg-emerald-600 text-white font-bold py-1.5 rounded-lg text-[10px] text-center">📱 Recordar</a>');
+        }
+        acciones.push('<button type="button" onclick="liberarNumero(' + r.fila + ',\'' + r.numero + '\')" class="flex-1 bg-amber-600 text-white font-bold py-1.5 rounded-lg text-[10px]">🔓 Liberar</button>');
+        html += '<div class="flex gap-1.5 mt-2">' + acciones.join('') + '</div>';
+        html += '</div>';
+      }
+      cont.innerHTML = html;
+    })
+    .catch(err => {
+      cont.innerHTML = '<p class="text-center text-rose-600 py-3 text-xs">Error: ' + err.message + '</p>';
+    });
+}
+
+function cambiarFiltroHistorial(f) { historialFiltro = f; cargarHistorialAdmin(); }
+
+function liberarNumero(fila, numero) {
+  pedirPin('Liberar #' + numero, 'Vas a liberar el número #' + numero + '. Volverá a estar disponible para otros clientes.', function(pin) {
+    mostrarConfirm('¿Liberar #' + numero + '?', 'Esta acción es irreversible.', 'fa-unlock', function(ok) {
+      if (!ok) return;
+      notificar('Liberando...', 'info');
+      apiCall('liberarNumeroAdmin', { numero: numero, pin: pin })
+        .then(res => {
+          if (!res.success) { notificar(res.error, 'error'); return; }
+          notificar('✅ #' + numero + ' liberado', 'success');
+          cargarHistorialAdmin();
+          recargarSilencioso();
+        })
+        .catch(err => notificar('Error: ' + err.message, 'error'));
+    }, true);
+  });
+}
+
+function abrirEditar(fila, est, ced, nom, tel) {
+  $('editFila').value = fila;
+  $('editEstatus').value = est;
+  $('editCedula').value = ced;
+  $('editNombre').value = nom;
+  $('editTelefono').value = tel;
+  $('editPin').value = '';
+  abrirModal('modalEditar');
+}
+
+function guardarEdicion() {
+  var pin = $('editPin').value.trim();
+  if (!pin || pin.length < 6) { notificar('Ingresa el PIN de 6 dígitos', 'error'); return; }
+  var datos = {
+    estatus: $('editEstatus').value,
+    cedula: $('editCedula').value.trim(),
+    nombre: $('editNombre').value.trim(),
+    telefono: $('editTelefono').value.trim()
+  };
+  notificar('Guardando...', 'info');
+  apiCall('editarRegistroAdmin', { fila: parseInt($('editFila').value), datos: datos, pin: pin })
+    .then(res => {
+      if (!res.success) { notificar(res.error, 'error'); return; }
+      notificar('✅ Guardado', 'success');
+      cerrarModal('modalEditar');
+      cargarHistorialAdmin();
+      recargarSilencioso();
+    })
+    .catch(err => notificar('Error: ' + err.message, 'error'));
+}
+
+function cargarFormularioConfigAdmin() {
+  $('cfgTitulo').value = datosMegaGlobal.tituloRifa || '';
+  $('cfgTotal').value = datosMegaGlobal.totalNumeros || 100;
+  $('cfgPrecio').value = datosMegaGlobal.precioTicketUSD || 2;
+  $('cfgPremios').value = datosMegaGlobal.premios || '';
+  $('cfgNoticias').value = datosMegaGlobal.noticias || '';
+  $('cfgTickerNoticias').value = datosMegaGlobal.tickerNoticias || '';
+  $('cfgFechaSorteo').value = datosMegaGlobal.fechaSorteo || '';
+  $('cfgDiasPago').value = datosMegaGlobal.diasLimitePago || 15;
+  $('cfgDiasBloqueo').value = 3;
+  $('cfgTasaManual').value = '';
+  $('cfgLogoVersion').value = datosMegaGlobal.logoVersion || 'OSCURU';
+  $('cfgLogoUrlOscuro').value = datosMegaGlobal.logoUrlOscuro || '';
+  $('cfgLogoUrlClaro').value = datosMegaGlobal.logoUrlClaro || '';
+  $('cfgColorPrin').value = datosMegaGlobal.colorPrincipal || '#111827';
+  $('cfgColorAce').value = datosMegaGlobal.colorAcento || '#FFC107';
+  $('cfgFuente').value = datosMegaGlobal.tipografia || 'system-ui, sans-serif';
+  $('cfgPM').value = datosMegaGlobal.pmDatos || '';
+  $('cfgTR').value = datosMegaGlobal.trDatos || '';
+  $('cfgBZ').value = datosMegaGlobal.binanceDatos || '';
+  $('cfgZP').value = datosMegaGlobal.zelleDatos || '';
+  $('cfgEF').value = datosMegaGlobal.efectivoDatos || '';
+  $('cfgUS').value = datosMegaGlobal.usdtDatos || '';
+  $('cfgIG').value = datosMegaGlobal.igUrl || '';
+  var wa = datosMegaGlobal.waList || [];
+  $('cfgWA1').value = wa[0] || '';
+  $('cfgWA2').value = wa[1] || '';
+  $('cfgWA3').value = wa[2] || '';
+}
+
+function guardarConfigAdmin() {
+  var d = {
+    titulo: $('cfgTitulo').value.trim(), total: $('cfgTotal').value, precio: $('cfgPrecio').value,
+    premios: $('cfgPremios').value.trim(), noticias: $('cfgNoticias').value.trim(),
+    tickerNoticias: $('cfgTickerNoticias').value.trim(),
+    fechaSorteo: $('cfgFechaSorteo').value.trim(), diasLimitePago: $('cfgDiasPago').value,
+    diasBloqueo: $('cfgDiasBloqueo').value, tasaManual: $('cfgTasaManual').value.trim(),
+    logoVersion: $('cfgLogoVersion').value, logoUrlOscuro: $('cfgLogoUrlOscuro').value.trim(),
+    logoUrlClaro: $('cfgLogoUrlClaro').value.trim(), colorPrincipal: $('cfgColorPrin').value,
+    colorAcento: $('cfgColorAce').value, tipografia: $('cfgFuente').value,
+    pm: $('cfgPM').value.trim(), tr: $('cfgTR').value.trim(), binanceDatos: $('cfgBZ').value.trim(),
+    zelleDatos: $('cfgZP').value.trim(), efectivoDatos: $('cfgEF').value.trim(), usdtDatos: $('cfgUS').value.trim(),
+    ig: $('cfgIG').value.trim(), wa1: $('cfgWA1').value.trim(), wa2: $('cfgWA2').value.trim(), wa3: $('cfgWA3').value.trim(),
+    nuevoPin: $('cfgNuevoPin').value.trim()
+  };
+  notificar('Guardando...', 'info');
+  apiCall('guardarConfiguracionAdminMega', d)
+    .then(() => { notificar('✅ Guardado', 'success'); cargarDatos(); })
+    .catch(err => notificar('Error: ' + err.message, 'error'));
+}
+
+function ejecutarNuevaRifa() {
+  var pin = $('pinReiniciarRifa').value.trim();
+  if (!pin || pin.length < 6) { notificar('Ingresa tu PIN de 6 dígitos', 'error'); return; }
+  mostrarConfirm('⚠️ Reiniciar TODA la rifa', 'Esto borrará <b>TODOS</b> los números del tablero y <b>TODOS</b> los pagos registrados. <b>Esta acción no se puede deshacer.</b>', 'fa-triangle-exclamation', function(ok) {
+    if (!ok) return;
+    notificar('Reiniciando...', 'info');
+    apiCall('iniciarNuevaRifaAdmin', { pin: pin })
+      .then(res => {
+        if (!res.success) { notificar(res.error, 'error'); return; }
+        notificar('✅ Rifa reiniciada', 'success');
+        cerrarModal('modalPanelAdmin');
+        setTimeout(cargarDatos, 500);
+      })
+      .catch(err => notificar('Error: ' + err.message, 'error'));
+  }, true);
+}
+
+window.addEventListener('load', function() { setTimeout(cargarDatos, 100); });
+</script>
+</body>
+</html>
