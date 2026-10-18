@@ -499,16 +499,21 @@ const API_URL = 'https://script.google.com/macros/s/AKfycbw7Qw_1BdX1--qWnIJjhDID
 
 async function callAPI(action, data = {}) {
   try {
+    // Usamos URLSearchParams para evitar el error de CORS de Google
+    const formData = new URLSearchParams();
+    formData.append('action', action);
+    formData.append('data', JSON.stringify(data));
+
     const res = await fetch(API_URL, {
       method: 'POST',
-      body: JSON.stringify({ action: action, data: data }),
-      headers: { 'Content-Type': 'text/plain;charset=utf-8' } // Evita el bloqueo CORS
+      body: formData
     });
+    
     if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
     return await res.json();
   } catch (e) {
     console.error('API Error:', e);
-    return { success: false, error: 'Error de conexión con el servidor. Revisa tu internet o intenta más tarde.' };
+    return { success: false, error: 'Error de conexión con el servidor.' };
   }
 }
 
