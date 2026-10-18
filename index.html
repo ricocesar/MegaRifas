@@ -416,7 +416,7 @@
         <div><label class="lbl">WA 3</label><input type="tel" id="cfgWA3" class="inp !text-xs"></div>
       </div>
       <div><label class="lbl">Nuevo PIN (6 dígitos, opcional)</label><input type="password" id="cfgNuevoPin" maxlength="6" inputmode="numeric" class="inp"></div>
-      <button type="button" onclick="guardarConfigAdmin()" class="btn-primary w-full">Guardar Cambios</button>
+      <button type="button" onclick="guardarConfigAdmin()" id="btnGuardarConfig" class="btn-primary w-full">Guardar Cambios</button>
     </div>
     <div id="adminViewNue" class="space-y-3 max-h-[75vh] overflow-y-auto hidden text-center pt-4">
       <div class="w-14 h-14 rounded-2xl bg-rose-100 flex items-center justify-center text-2xl mx-auto"><i class="fa-solid fa-triangle-exclamation text-rose-500"></i></div>
@@ -493,7 +493,7 @@
 
 <script>
 // ============================================================
-// ⚠️ PEGA AQUÍ TU URL DE APPS SCRIPT (termina en /exec) ⚠️
+// URL DE TU APPS SCRIPT YA INTEGRADA
 // ============================================================
 const API_URL = 'https://script.google.com/macros/s/AKfycbw7Qw_1BdX1--qWnIJjhDIDt_H_OJdPjuCpSTU6gIp3Z4IMMc7RK6ZvD7t-onA6XmAd/exec'; 
 
@@ -519,8 +519,11 @@ async function apiCall(action, data = {}) {
       headers: { 'Content-Type': 'text/plain;charset=utf-8' },
       body: JSON.stringify({ action: action, data: data })
     });
-    if (!response.ok) throw new Error('Error de red');
-    return await response.json();
+    if (!response.ok) throw new Error('Error de red: ' + response.status);
+    
+    // Se lee como texto primero para evitar errores de parseo con redirecciones de Google
+    const text = await response.text();
+    return JSON.parse(text);
   } catch (error) {
     console.error('API Error:', error);
     throw error;
@@ -616,10 +619,12 @@ async function confirmarPinAccion() {
   }
 }
 
-// ==== CARGA INICIAL CON CACHÉ (FLUIDEZ) ====
-async function cargarDatos() {
+// ==== CARGA INICIAL CON CACHÉ ====
+async function cargarDatos(forzarRecarga = false) {
+  if (forzarRecarga) localStorage.removeItem(CACHE_KEY);
+
   const cached = localStorage.getItem(CACHE_KEY);
-  if (cached) {
+  if (cached && !forzarRecarga) {
     try {
       const r = JSON.parse(cached);
       aplicarDatos(r);
@@ -638,7 +643,7 @@ async function cargarDatos() {
       notificar('Error: ' + (r.error || 'desconocido'), 'error');
     }
   } catch (error) {
-    if (!cached) notificar('Error de conexión con el servidor. Revisa tu internet o intenta más tarde.', 'error');
+    if (!cached) notificar('Error de conexión con el servidor.', 'error');
   } finally {
     mostrarCargando(false);
   }
@@ -1031,7 +1036,7 @@ async function ejecutarCheckout() {
       if (!res.success) { notificar(res.error, 'error'); return; }
       cerrarModal('modalCheckout');
       notificar('¡Reserva enviada! Revisa tu correo 📧', 'success');
-      setTimeout(cargarDatos, 500);
+      setTimeout(() => cargarDatos(true), 500);
     } catch(e) {
       btn.innerText = 'Confirmar'; btn.disabled = false;
       notificar('Error de conexión', 'error');
@@ -1062,7 +1067,7 @@ async function enviarPagoServidor(ced, nom, tel, correo, ref, b64, btn) {
     if (!res.success) { notificar(res.error, 'error'); return; }
     cerrarModal('modalCheckout');
     notificar('¡Pago reportado! Revisa tu correo 📧', 'success');
-    setTimeout(cargarDatos, 500);
+    setTimeout(() => cargarDatos(true), 500);
   } catch(e) {
     btn.innerText = 'Confirmar'; btn.disabled = false;
     notificar('Error de conexión', 'error');
@@ -1269,7 +1274,7 @@ async function ejecutarResolucionPago(fila, acc, pagoData, pin) {
     } else {
       notificar('❌ Rechazado', 'success');
     }
-    cargarDatos(); // Recarga en background
+    cargarDatos(true);
     setTimeout(cargarPagosPendientesAdmin, 1200);
   } catch(e) {
     notificar('Error: ' + e.message, 'error');
@@ -1309,7 +1314,7 @@ function resincronizar() {
       const res = await apiCall('resincronizarTableroAdmin', { pin: pin });
       if (!res.success) { notificar(res.error, 'error'); return; }
       notificar('✅ ' + res.cambios + ' actualizados', 'success');
-      cargarDatos();
+      cargarDatos(true);
       setTimeout(cargarPagosPendientesAdmin, 1200);
     } catch(e) {
       notificar('Error: ' + e.message, 'error');
@@ -1326,7 +1331,7 @@ function liberarMasivo() {
         const res = await apiCall('liberarTodosReservadosAdmin', { pin: pin, incluirEspera: false });
         if (!res.success) { notificar(res.error, 'error'); return; }
         notificar('✅ ' + res.liberados + ' números liberados', 'success');
-        cargarDatos();
+        cargarDatos(true);
         setTimeout(cargarPagosPendientesAdmin, 1200);
       } catch(e) {
         notificar('Error: ' + e.message, 'error');
@@ -1407,7 +1412,7 @@ function liberarNumero(fila, numero) {
         if (!res.success) { notificar(res.error, 'error'); return; }
         notificar('✅ #' + numero + ' liberado', 'success');
         cargarHistorialAdmin();
-        cargarDatos();
+        cargarDatos(true);
       } catch(e) {
         notificar('Error: ' + e.message, 'error');
       }
@@ -1441,7 +1446,7 @@ async function guardarEdicion() {
     notificar('✅ Guardado', 'success');
     cerrarModal('modalEditar');
     cargarHistorialAdmin();
-    cargarDatos();
+    cargarDatos(true);
   } catch(e) {
     notificar('Error: ' + e.message, 'error');
   }
@@ -1497,7 +1502,7 @@ async function guardarConfigAdmin() {
     const res = await apiCall('guardarConfiguracionAdminMega', d);
     if (!res.success) { notificar(res.error, 'error'); return; }
     notificar('✅ Guardado', 'success');
-    cargarDatos();
+    cargarDatos(true); // Fuerza recarga de los datos limpios
   } catch(e) {
     notificar('Error: ' + e.message, 'error');
   }
@@ -1514,14 +1519,14 @@ function ejecutarNuevaRifa() {
       if (!res.success) { notificar(res.error, 'error'); return; }
       notificar('✅ Rifa reiniciada', 'success');
       cerrarModal('modalPanelAdmin');
-      setTimeout(cargarDatos, 500);
+      setTimeout(() => cargarDatos(true), 500);
     } catch(e) {
       notificar('Error: ' + e.message, 'error');
     }
   }, true);
 }
 
-window.addEventListener('load', function() { setTimeout(cargarDatos, 100); });
+window.addEventListener('load', function() { setTimeout(() => cargarDatos(false), 100); });
 </script>
 </body>
 </html>
