@@ -185,7 +185,6 @@
     <div id="contenedorBotonesSoporte" class="flex flex-wrap justify-center gap-2"></div>
   </section>
 
-  <!-- FEED ÚLTIMAS COMPRAS -->
   <section id="feedSection" style="display:none">
     <div class="feed-label"><span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span> Últimas compras en vivo</div>
     <div class="feed-wrap mt-1">
@@ -296,7 +295,12 @@
       <b class="text-base block text-gray-900 mb-1">Acceso Admin</b>
       <p class="text-[11px] text-gray-500 mb-3">Ingresa tu PIN de 6 dígitos</p>
       <div class="pin-display">
-        <div class="pin-dot" id="dotAdm0"></div><div class="pin-dot" id="dotAdm1"></div><div class="pin-dot" id="dotAdm2"></div><div class="pin-dot" id="dotAdm3"></div><div class="pin-dot" id="dotAdm4"></div><div class="pin-dot" id="dotAdm5"></div>
+        <div class="pin-dot" id="dotAdm0"></div>
+        <div class="pin-dot" id="dotAdm1"></div>
+        <div class="pin-dot" id="dotAdm2"></div>
+        <div class="pin-dot" id="dotAdm3"></div>
+        <div class="pin-dot" id="dotAdm4"></div>
+        <div class="pin-dot" id="dotAdm5"></div>
       </div>
       <input type="password" id="inputPinRifa" maxlength="6" inputmode="numeric" pattern="[0-9]*" placeholder="••••••" class="inp text-center text-2xl tracking-widest font-mono !py-3" oninput="actualizarDots('inputPinRifa','dotAdm');this.value=this.value.replace(/\D/g,'').slice(0,6)" onkeydown="if(event.key==='Enter')verificarPinAdmin()">
       <button type="button" onclick="verificarPinAdmin()" class="btn-primary w-full mt-3">Acceder</button>
@@ -308,7 +312,9 @@
 <div id="modalConfirm" class="m-bg hidden m-bg-front">
   <div class="m-box !max-w-sm !rounded-3xl !mb-auto !mt-auto">
     <div class="text-center">
-      <div id="confirmIcon" class="w-14 h-14 rounded-2xl bg-amber-100 flex items-center justify-center text-2xl mx-auto mb-3"><i id="confirmIconI" class="fa-solid fa-question text-amber-600"></i></div>
+      <div id="confirmIcon" class="w-14 h-14 rounded-2xl bg-amber-100 flex items-center justify-center text-2xl mx-auto mb-3">
+        <i id="confirmIconI" class="fa-solid fa-question text-amber-600"></i>
+      </div>
       <b id="confirmTitulo" class="text-base block text-gray-900 mb-1">¿Confirmar?</b>
       <p id="confirmTexto" class="text-[12px] text-gray-600 mb-4 leading-relaxed"></p>
       <div class="flex gap-2">
@@ -322,11 +328,18 @@
 <div id="modalPinAccion" class="m-bg hidden m-bg-front">
   <div class="m-box !max-w-xs !rounded-3xl !mb-auto !mt-auto">
     <div class="text-center">
-      <div class="w-14 h-14 rounded-2xl bg-rose-100 flex items-center justify-center text-2xl mx-auto mb-3"><i class="fa-solid fa-lock text-rose-600"></i></div>
+      <div class="w-14 h-14 rounded-2xl bg-rose-100 flex items-center justify-center text-2xl mx-auto mb-3">
+        <i class="fa-solid fa-lock text-rose-600"></i>
+      </div>
       <b id="pinAccionTitulo" class="text-base block text-gray-900 mb-1">Acción protegida</b>
       <p id="pinAccionTexto" class="text-[11px] text-gray-500 mb-3 leading-relaxed">Ingresa tu PIN para confirmar</p>
       <div class="pin-display">
-        <div class="pin-dot" id="dotAcc0"></div><div class="pin-dot" id="dotAcc1"></div><div class="pin-dot" id="dotAcc2"></div><div class="pin-dot" id="dotAcc3"></div><div class="pin-dot" id="dotAcc4"></div><div class="pin-dot" id="dotAcc5"></div>
+        <div class="pin-dot" id="dotAcc0"></div>
+        <div class="pin-dot" id="dotAcc1"></div>
+        <div class="pin-dot" id="dotAcc2"></div>
+        <div class="pin-dot" id="dotAcc3"></div>
+        <div class="pin-dot" id="dotAcc4"></div>
+        <div class="pin-dot" id="dotAcc5"></div>
       </div>
       <input type="password" id="inputPinAccion" maxlength="6" inputmode="numeric" pattern="[0-9]*" placeholder="••••••" class="inp text-center text-2xl tracking-widest font-mono !py-3" oninput="actualizarDots('inputPinAccion','dotAcc');this.value=this.value.replace(/\D/g,'').slice(0,6)" onkeydown="if(event.key==='Enter')confirmarPinAccion()">
       <div class="flex gap-2 mt-3">
@@ -480,21 +493,28 @@
 
 <script>
 // ==========================================
-// CONEXIÓN A LA API DE GOOGLE APPS SCRIPT
+// CONFIGURACIÓN DE LA API (VERCEL -> GOOGLE)
 // ==========================================
 const API_URL = 'https://script.google.com/macros/s/AKfycbw7Qw_1BdX1--qWnIJjhDIDt_H_OJdPjuCpSTU6gIp3Z4IMMc7RK6ZvD7t-onA6XmAd/exec';
 
-async function apiCall(action, data = {}) {
-  const response = await fetch(API_URL, {
-    method: 'POST',
-    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-    body: JSON.stringify({ action: action, data: data })
-  });
-  if (!response.ok) throw new Error('Error de red o servidor');
-  return await response.json();
+async function callAPI(action, data = {}) {
+  try {
+    const res = await fetch(API_URL, {
+      method: 'POST',
+      body: JSON.stringify({ action: action, data: data }),
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' } // Evita el bloqueo CORS
+    });
+    if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
+    return await res.json();
+  } catch (e) {
+    console.error('API Error:', e);
+    return { success: false, error: 'Error de conexión con el servidor. Revisa tu internet o intenta más tarde.' };
+  }
 }
-// ==========================================
 
+// ==========================================
+// LÓGICA DE LA APP
+// ==========================================
 var $ = function(id) { return document.getElementById(id); };
 var datosMegaGlobal = null;
 var seleccionados = [];
@@ -575,58 +595,52 @@ function confirmarPinAccion() {
   var p = $('inputPinAccion').value.trim();
   if (!p || p.length < 6) { notificar('Ingresa el PIN de 6 dígitos', 'error'); return; }
   mostrarCargando(true);
-  apiCall('verificarPinMegaAdmin', { pin: p })
-    .then(res => {
-      mostrarCargando(false);
-      if (res && res.success) {
-        window._adminPin = p;
-        cerrarModal('modalPinAccion');
-        var cb = _pinCallback;
-        _pinCallback = null;
-        if (cb) cb(p);
-      } else {
-        notificar('PIN incorrecto', 'error');
-        $('inputPinAccion').value = '';
-        actualizarDots('inputPinAccion', 'dotAcc');
-      }
-    })
-    .catch(err => { mostrarCargando(false); notificar('Error: ' + err.message, 'error'); });
+  callAPI('verificarPinMegaAdmin', { pin: p }).then(function(res) {
+    mostrarCargando(false);
+    if (res && res.success) {
+      window._adminPin = p;
+      cerrarModal('modalPinAccion');
+      var cb = _pinCallback;
+      _pinCallback = null;
+      if (cb) cb(p);
+    } else {
+      notificar('PIN incorrecto', 'error');
+      $('inputPinAccion').value = '';
+      actualizarDots('inputPinAccion', 'dotAcc');
+    }
+  });
 }
 
 function cargarDatos() {
   mostrarCargando(true);
-  apiCall('obtenerInicioMega')
-    .then(r => {
-      mostrarCargando(false);
-      if (!r) { notificar('Sin respuesta del servidor', 'error'); return; }
-      if (!r.success) { notificar('Error: ' + (r.error || 'desconocido'), 'error'); return; }
-      aplicarDatos(r);
-    })
-    .catch(err => { mostrarCargando(false); notificar('Fallo: ' + err.message, 'error'); });
+  callAPI('obtenerInicioMega').then(function(r) {
+    mostrarCargando(false);
+    if (!r) { notificar('Sin respuesta del servidor', 'error'); return; }
+    if (!r.success) { notificar('Error: ' + (r.error || 'desconocido'), 'error'); return; }
+    aplicarDatos(r);
+  });
 }
 
 function recargarSilencioso(callback) {
-  apiCall('obtenerInicioMega')
-    .then(r => {
-      if (r && r.success) {
-        datosMegaGlobal = r;
-        var est = r.estadisticas || {};
-        $('txtPorcentajeGeneral').innerText = (est.porcentajeGeneral || 0) + '%';
-        $('barraProgreso').style.width = (est.porcentajeGeneral || 0) + '%';
-        $('txtProgresoDetalle').innerText = (est.ocupados || 0) + ' de ' + (est.total || 100) + ' boletos';
-        var restantes = (est.total || 100) - (est.ocupados || 0);
-        var urgente = $('txtProgresoUrgente');
-        if (restantes <= 0) urgente.innerText = '¡AGOTADO!';
-        else if (restantes <= 10) urgente.innerText = '🔥 ¡Quedan ' + restantes + '!';
-        else if (restantes <= 30) urgente.innerText = '⚡ Quedan ' + restantes;
-        else urgente.innerText = '✅ ' + restantes + ' disponibles';
-        renderizarTop(r.topCompradores);
-        renderizarTablero();
-        renderizarFeed(r.feedCompras);
-      }
-      if (callback) callback(r);
-    })
-    .catch(() => { if (callback) callback(null); });
+  callAPI('obtenerInicioMega').then(function(r) {
+    if (r && r.success) {
+      datosMegaGlobal = r;
+      var est = r.estadisticas || {};
+      $('txtPorcentajeGeneral').innerText = (est.porcentajeGeneral || 0) + '%';
+      $('barraProgreso').style.width = (est.porcentajeGeneral || 0) + '%';
+      $('txtProgresoDetalle').innerText = (est.ocupados || 0) + ' de ' + (est.total || 100) + ' boletos';
+      var restantes = (est.total || 100) - (est.ocupados || 0);
+      var urgente = $('txtProgresoUrgente');
+      if (restantes <= 0) urgente.innerText = '¡AGOTADO!';
+      else if (restantes <= 10) urgente.innerText = '🔥 ¡Quedan ' + restantes + '!';
+      else if (restantes <= 30) urgente.innerText = '⚡ Quedan ' + restantes;
+      else urgente.innerText = '✅ ' + restantes + ' disponibles';
+      renderizarTop(r.topCompradores);
+      renderizarTablero();
+      renderizarFeed(r.feedCompras);
+    }
+    if (callback) callback(r);
+  });
 }
 
 function aplicarDatos(r) {
@@ -802,14 +816,12 @@ function consultarParticipante() {
   var ced = $('inputCedulaConsulta').value.trim();
   if (!ced) { notificar('Ingresa una cédula', 'error'); return; }
   mostrarCargando(true);
-  apiCall('consultarParticipanteMega', { cedula: ced })
-    .then(res => {
-      mostrarCargando(false);
-      if (!res || !res.success) { notificar('Error: ' + ((res && res.error) || ''), 'error'); return; }
-      participanteConsultado = res;
-      renderizarResultadoConsulta(res);
-    })
-    .catch(err => { mostrarCargando(false); notificar('Error: ' + err.message, 'error'); });
+  callAPI('consultarParticipanteMega', { cedula: ced }).then(function(res) {
+    mostrarCargando(false);
+    if (!res || !res.success) { notificar('Error: ' + ((res && res.error) || ''), 'error'); return; }
+    participanteConsultado = res;
+    renderizarResultadoConsulta(res);
+  });
 }
 
 function renderizarResultadoConsulta(res) {
@@ -937,26 +949,24 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 function verificarCedula(ced) {
-  apiCall('verificarCedulaMega', { cedula: ced })
-    .then(res => {
-      var aviso = $('avisoCedula');
-      var input = $('chkCedula');
-      if (res && res.existe) {
-        _cedulaVerificada = res;
-        if (!$('chkNombre').value.trim() && res.nombre) $('chkNombre').value = res.nombre;
-        if (!$('chkTelefono').value.trim() && res.telefono) $('chkTelefono').value = res.telefono;
-        if (!$('chkCorreo').value.trim() && res.correo) $('chkCorreo').value = res.correo;
-        aviso.classList.remove('hidden');
-        aviso.innerHTML = '<div class="bg-blue-50 border border-blue-200 rounded-lg p-2.5 text-[10px] text-blue-800 leading-relaxed"><b>👋 ¡Bienvenido de vuelta!</b><br>Cédula registrada a nombre de <b>' + res.nombre + '</b>.<br><span class="text-blue-600">Si eres tú, continúa. Si no, revisa la cédula.</span></div>';
-        input.classList.add('inp-ok');
-      } else {
-        _cedulaVerificada = null;
-        aviso.classList.add('hidden');
-        aviso.innerHTML = '';
-        input.classList.remove('inp-ok');
-      }
-    })
-    .catch(() => {});
+  callAPI('verificarCedulaMega', { cedula: ced }).then(function(res) {
+    var aviso = $('avisoCedula');
+    var input = $('chkCedula');
+    if (res && res.existe) {
+      _cedulaVerificada = res;
+      if (!$('chkNombre').value.trim() && res.nombre) $('chkNombre').value = res.nombre;
+      if (!$('chkTelefono').value.trim() && res.telefono) $('chkTelefono').value = res.telefono;
+      if (!$('chkCorreo').value.trim() && res.correo) $('chkCorreo').value = res.correo;
+      aviso.classList.remove('hidden');
+      aviso.innerHTML = '<div class="bg-blue-50 border border-blue-200 rounded-lg p-2.5 text-[10px] text-blue-800 leading-relaxed"><b>👋 ¡Bienvenido de vuelta!</b><br>Cédula registrada a nombre de <b>' + res.nombre + '</b>.<br><span class="text-blue-600">Si eres tú, continúa. Si no, revisa la cédula.</span></div>';
+      input.classList.add('inp-ok');
+    } else {
+      _cedulaVerificada = null;
+      aviso.classList.add('hidden');
+      aviso.innerHTML = '';
+      input.classList.remove('inp-ok');
+    }
+  });
 }
 
 function cambiarMetodoPago(met) {
@@ -1011,20 +1021,14 @@ function ejecutarCheckout() {
   if (correo.indexOf('@') === -1) { notificar('Correo inválido', 'error'); return; }
   var btn = $('btnEjecutarCheckout');
   btn.innerText = 'Procesando...'; btn.disabled = true;
-  
   if (modoCheckoutActual === 'RESERVADO') {
-    apiCall('reservarTicketsMega', { cedula: ced, nombre: nom, telefono: tel, correo: correo, numeros: seleccionados })
-      .then(res => {
-        btn.innerText = 'Confirmar'; btn.disabled = false;
-        if (!res.success) { notificar(res.error, 'error'); return; }
-        cerrarModal('modalCheckout');
-        notificar('¡Reserva enviada! Revisa tu correo 📧', 'success');
-        setTimeout(cargarDatos, 500);
-      })
-      .catch(err => {
-        btn.innerText = 'Confirmar'; btn.disabled = false;
-        notificar('Error: ' + err.message, 'error');
-      });
+    callAPI('reservarTicketsMega', { cedula: ced, nombre: nom, telefono: tel, correo: correo, numeros: seleccionados }).then(function(res) {
+      btn.innerText = 'Confirmar'; btn.disabled = false;
+      if (!res.success) { notificar(res.error, 'error'); return; }
+      cerrarModal('modalCheckout');
+      notificar('¡Reserva enviada! Revisa tu correo 📧', 'success');
+      setTimeout(cargarDatos, 500);
+    });
   } else {
     var esUSD = METODOS_USD.indexOf(metodoPagoActual) > -1;
     var ref = esUSD ? ('USD' + String(Date.now()).slice(-4)) : $('chkReferencia').value.trim();
@@ -1045,18 +1049,13 @@ function enviarPagoServidor(ced, nom, tel, correo, ref, b64, btn) {
   var totalBs = totalUSD * tasa;
   var metodoTxt = { 'PM':'Pago Móvil','TR':'Transferencia','BZ':'Binance','ZP':'Zelle','EF':'Efectivo','US':'USDT' }[metodoPagoActual] || 'Otro';
   
-  apiCall('reportarPagoMega', { cedula: ced, nombre: nom, telefono: tel, correo: correo, numeros: seleccionados, montoUSD: totalUSD, montoBs: totalBs, metodo: metodoTxt, referencia: ref, base64: b64 })
-    .then(res => {
-      btn.innerText = 'Confirmar'; btn.disabled = false;
-      if (!res.success) { notificar(res.error, 'error'); return; }
-      cerrarModal('modalCheckout');
-      notificar('¡Pago reportado! Revisa tu correo 📧', 'success');
-      setTimeout(cargarDatos, 500);
-    })
-    .catch(err => {
-      btn.innerText = 'Confirmar'; btn.disabled = false;
-      notificar('Error: ' + err.message, 'error');
-    });
+  callAPI('reportarPagoMega', { cedula: ced, nombre: nom, telefono: tel, correo: correo, numeros: seleccionados, montoUSD: totalUSD, montoBs: totalBs, metodo: metodoTxt, referencia: ref, base64: b64 }).then(function(res) {
+    btn.innerText = 'Confirmar'; btn.disabled = false;
+    if (!res.success) { notificar(res.error, 'error'); return; }
+    cerrarModal('modalCheckout');
+    notificar('¡Pago reportado! Revisa tu correo 📧', 'success');
+    setTimeout(cargarDatos, 500);
+  });
 }
 
 function renderizarSoporte(lista) {
@@ -1082,23 +1081,21 @@ function verificarPinAdmin() {
   var p = $('inputPinRifa').value.trim();
   if (!p || p.length < 6) { notificar('Ingresa el PIN completo de 6 dígitos', 'error'); return; }
   mostrarCargando(true);
-  apiCall('verificarPinMegaAdmin', { pin: p })
-    .then(res => {
-      mostrarCargando(false);
-      if (res && res.success) {
-        window._adminPin = p;
-        cerrarModal('modalPinAdmin');
-        abrirModal('modalPanelAdmin');
-        cambiarTabAdmin('val');
-        cargarFormularioConfigAdmin();
-        notificar('Bienvenido admin 👋', 'success');
-      } else {
-        notificar('PIN incorrecto', 'error');
-        $('inputPinRifa').value = '';
-        actualizarDots('inputPinRifa', 'dotAdm');
-      }
-    })
-    .catch(err => { mostrarCargando(false); notificar('Error: ' + err.message, 'error'); });
+  callAPI('verificarPinMegaAdmin', { pin: p }).then(function(res) {
+    mostrarCargando(false);
+    if (res && res.success) {
+      window._adminPin = p;
+      cerrarModal('modalPinAdmin');
+      abrirModal('modalPanelAdmin');
+      cambiarTabAdmin('val');
+      cargarFormularioConfigAdmin();
+      notificar('Bienvenido admin 👋', 'success');
+    } else {
+      notificar('PIN incorrecto', 'error');
+      $('inputPinRifa').value = '';
+      actualizarDots('inputPinRifa', 'dotAdm');
+    }
+  });
 }
 
 function cambiarTabAdmin(tab) {
@@ -1120,110 +1117,98 @@ function cambiarTabAdmin(tab) {
 function cargarPagosPendientesAdmin() {
   $('adminViewVal').innerHTML = '<p class="text-center text-gray-500 py-3 text-xs">Cargando...</p>';
   var pin = window._adminPin;
-  
-  apiCall('obtenerEstadisticasAdmin', { pin: pin })
-    .then(stats => {
-      var est = (datosMegaGlobal && datosMegaGlobal.estadisticas) || {};
-      var html = '';
-      if (stats && stats.success) {
-        html += '<div class="bg-emerald-50 border-2 border-emerald-300 rounded-xl p-3 mb-2">';
-        html += '<div class="text-[10px] font-black text-emerald-700 mb-1">💰 INGRESOS TOTALES</div>';
-        html += '<div class="text-2xl font-black text-emerald-900">$' + fmt(stats.totalUSD) + '</div>';
-        html += '<div class="text-[11px] text-emerald-700 font-mono">≈ Bs ' + fmt(stats.totalBs) + '</div>';
-        html += '<div class="grid grid-cols-3 gap-2 mt-2 pt-2 border-t border-emerald-200 text-center">';
-        html += '<div><div class="text-[9px] font-bold text-emerald-600">HOY</div><b class="text-xs">$' + fmt(stats.totalHoyUSD) + '</b></div>';
-        html += '<div><div class="text-[9px] font-bold text-emerald-600">PAGOS</div><b class="text-xs">' + stats.pagosAprobados + '</b></div>';
-        html += '<div><div class="text-[9px] font-bold text-emerald-600">X VENCER</div><b class="text-xs text-amber-700">' + stats.porVencer + '</b></div>';
-        html += '</div>';
-        if (stats.vencidas > 0) html += '<div class="mt-2 bg-rose-100 text-rose-700 text-[10px] font-black py-1 px-2 rounded-lg">⚠️ ' + stats.vencidas + ' vencidas</div>';
-        html += '</div>';
-      }
-      html += '<div class="subcard border-2 border-amber-200 bg-amber-50 text-xs">';
-      html += '<b class="block mb-1">📊 Taquilla</b>';
-      html += '<div class="grid grid-cols-2 gap-1 text-[11px]">';
-      html += '<div>🟢 Disponibles: <b>' + (est.disponibles || 0) + '</b></div>';
-      html += '<div>🔵 Reservados: <b>' + (est.reservados || 0) + '</b></div>';
-      html += '<div>🟣 En revisión: <b>' + (est.espera || 0) + '</b></div>';
-      html += '<div>🔴 Vendidos: <b>' + (est.vendidos || 0) + '</b></div>';
-      html += '</div></div>';
-      html += '<div class="grid grid-cols-3 gap-2 my-2">';
-      html += '<button type="button" onclick="resincronizar()" class="bg-blue-600 text-white font-bold py-2 rounded-lg text-[10px]">🔄 Re-sinc</button>';
-      html += '<button type="button" onclick="liberarMasivo()" class="bg-amber-600 text-white font-bold py-2 rounded-lg text-[10px]">🔓 Liberar reservas</button>';
-      html += '<button type="button" onclick="exportarCSV()" class="bg-emerald-600 text-white font-bold py-2 rounded-lg text-[10px]">📥 CSV</button>';
+  callAPI('obtenerEstadisticasAdmin', { pin: pin }).then(function(stats) {
+    var est = (datosMegaGlobal && datosMegaGlobal.estadisticas) || {};
+    var html = '';
+    if (stats && stats.success) {
+      html += '<div class="bg-emerald-50 border-2 border-emerald-300 rounded-xl p-3 mb-2">';
+      html += '<div class="text-[10px] font-black text-emerald-700 mb-1">💰 INGRESOS TOTALES</div>';
+      html += '<div class="text-2xl font-black text-emerald-900">$' + fmt(stats.totalUSD) + '</div>';
+      html += '<div class="text-[11px] text-emerald-700 font-mono">≈ Bs ' + fmt(stats.totalBs) + '</div>';
+      html += '<div class="grid grid-cols-3 gap-2 mt-2 pt-2 border-t border-emerald-200 text-center">';
+      html += '<div><div class="text-[9px] font-bold text-emerald-600">HOY</div><b class="text-xs">$' + fmt(stats.totalHoyUSD) + '</b></div>';
+      html += '<div><div class="text-[9px] font-bold text-emerald-600">PAGOS</div><b class="text-xs">' + stats.pagosAprobados + '</b></div>';
+      html += '<div><div class="text-[9px] font-bold text-emerald-600">X VENCER</div><b class="text-xs text-amber-700">' + stats.porVencer + '</b></div>';
       html += '</div>';
-      $('adminViewVal').innerHTML = html + '<div id="listaPagosCont"></div>';
-      cargarListaPagosEnContenedor();
-    })
-    .catch(() => { $('adminViewVal').innerHTML = '<p class="text-center text-rose-600 py-3 text-xs">Error stats</p>'; });
+      if (stats.vencidas > 0) html += '<div class="mt-2 bg-rose-100 text-rose-700 text-[10px] font-black py-1 px-2 rounded-lg">⚠️ ' + stats.vencidas + ' vencidas</div>';
+      html += '</div>';
+    }
+    html += '<div class="subcard border-2 border-amber-200 bg-amber-50 text-xs">';
+    html += '<b class="block mb-1">📊 Taquilla</b>';
+    html += '<div class="grid grid-cols-2 gap-1 text-[11px]">';
+    html += '<div>🟢 Disponibles: <b>' + (est.disponibles || 0) + '</b></div>';
+    html += '<div>🔵 Reservados: <b>' + (est.reservados || 0) + '</b></div>';
+    html += '<div>🟣 En revisión: <b>' + (est.espera || 0) + '</b></div>';
+    html += '<div>🔴 Vendidos: <b>' + (est.vendidos || 0) + '</b></div>';
+    html += '</div></div>';
+    html += '<div class="grid grid-cols-3 gap-2 my-2">';
+    html += '<button type="button" onclick="resincronizar()" class="bg-blue-600 text-white font-bold py-2 rounded-lg text-[10px]">🔄 Re-sinc</button>';
+    html += '<button type="button" onclick="liberarMasivo()" class="bg-amber-600 text-white font-bold py-2 rounded-lg text-[10px]">🔓 Liberar reservas</button>';
+    html += '<button type="button" onclick="exportarCSV()" class="bg-emerald-600 text-white font-bold py-2 rounded-lg text-[10px]">📥 CSV</button>';
+    html += '</div>';
+    $('adminViewVal').innerHTML = html + '<div id="listaPagosCont"></div>';
+    cargarListaPagosEnContenedor();
+  });
 }
 
 function cargarListaPagosEnContenedor() {
-  apiCall('listarPagosPendientesMega')
-    .then(lista => {
-      var cont = $('listaPagosCont');
-      if (!cont) return;
-      var html = '';
-      if (!lista.length) { html = '<p class="text-center text-gray-500 py-4 text-xs">No hay pagos pendientes 🎉</p>'; cont.innerHTML = html; return; }
-      for (var i = 0; i < lista.length; i++) {
-        var p = lista[i];
-        window['_pago_' + p.fila] = p;
-        html += '<div class="subcard mt-2">';
-        html += '<div class="flex justify-between items-start mb-1">';
-        html += '<div><b class="text-xs">' + p.nombre + '</b><br><span class="text-[10px] text-gray-500 font-mono">C.I. ' + p.cedula + '</span></div>';
-        html += '<div class="text-right"><b class="text-sm text-emerald-600">$' + fmt(p.montoUSD) + '</b><br><span class="text-[9px] text-gray-500">' + p.fecha + '</span></div></div>';
-        html += '<div class="text-[10px] text-blue-600 font-mono mb-1">🎟️ #' + p.numeros + '</div>';
-        html += '<div class="text-[10px] text-gray-600 mb-1">Ref: <b>' + p.referencia + '</b> · ' + p.metodo + '</div>';
-        if (p.telefono) html += '<div class="text-[9px] text-gray-500 mb-1"><i class="fa-solid fa-phone"></i> ' + p.telefono + '</div>';
-        if (p.correo) html += '<div class="text-[9px] text-gray-500 mb-1"><i class="fa-solid fa-envelope"></i> ' + p.correo + '</div>';
-        if (p.comprobante && p.comprobante.indexOf('data:image') === 0) {
-          window['_cb_' + p.fila] = p.comprobante;
-          html += '<button type="button" data-cb="' + p.fila + '" class="mb-2 w-full bg-blue-50 border border-blue-200 text-blue-700 py-1.5 rounded-lg text-[10px] font-bold">📎 Ver comprobante</button>';
-        }
-        html += '<div class="flex gap-1.5">';
-        html += '<button type="button" onclick="resolverPagoAdmin(' + p.fila + ',\'APROBADO\')" class="flex-1 bg-emerald-600 text-white font-bold py-2 rounded-lg text-xs">✓ Aprobar</button>';
-        html += '<button type="button" onclick="resolverPagoAdmin(' + p.fila + ',\'RECHAZADO\')" class="flex-1 bg-rose-600 text-white font-bold py-2 rounded-lg text-xs">✗ Rechazar</button>';
-        html += '</div></div>';
+  callAPI('listarPagosPendientesMega').then(function(lista) {
+    var cont = $('listaPagosCont');
+    if (!cont) return;
+    var html = '';
+    if (!lista.length) { html = '<p class="text-center text-gray-500 py-4 text-xs">No hay pagos pendientes 🎉</p>'; cont.innerHTML = html; return; }
+    for (var i = 0; i < lista.length; i++) {
+      var p = lista[i];
+      window['_pago_' + p.fila] = p;
+      html += '<div class="subcard mt-2">';
+      html += '<div class="flex justify-between items-start mb-1">';
+      html += '<div><b class="text-xs">' + p.nombre + '</b><br><span class="text-[10px] text-gray-500 font-mono">C.I. ' + p.cedula + '</span></div>';
+      html += '<div class="text-right"><b class="text-sm text-emerald-600">$' + fmt(p.montoUSD) + '</b><br><span class="text-[9px] text-gray-500">' + p.fecha + '</span></div></div>';
+      html += '<div class="text-[10px] text-blue-600 font-mono mb-1">🎟️ #' + p.numeros + '</div>';
+      html += '<div class="text-[10px] text-gray-600 mb-1">Ref: <b>' + p.referencia + '</b> · ' + p.metodo + '</div>';
+      if (p.telefono) html += '<div class="text-[9px] text-gray-500 mb-1"><i class="fa-solid fa-phone"></i> ' + p.telefono + '</div>';
+      if (p.correo) html += '<div class="text-[9px] text-gray-500 mb-1"><i class="fa-solid fa-envelope"></i> ' + p.correo + '</div>';
+      if (p.comprobante && p.comprobante.indexOf('data:image') === 0) {
+        window['_cb_' + p.fila] = p.comprobante;
+        html += '<button type="button" data-cb="' + p.fila + '" class="mb-2 w-full bg-blue-50 border border-blue-200 text-blue-700 py-1.5 rounded-lg text-[10px] font-bold">📎 Ver comprobante</button>';
       }
-      cont.innerHTML = html;
-    })
-    .catch(err => {
-      var cont = $('listaPagosCont');
-      if (cont) cont.innerHTML = '<p class="text-center text-rose-600 py-3 text-xs">Error: ' + err.message + '</p>';
-    });
+      html += '<div class="flex gap-1.5">';
+      html += '<button type="button" onclick="resolverPagoAdmin(' + p.fila + ',\'APROBADO\')" class="flex-1 bg-emerald-600 text-white font-bold py-2 rounded-lg text-xs">✓ Aprobar</button>';
+      html += '<button type="button" onclick="resolverPagoAdmin(' + p.fila + ',\'RECHAZADO\')" class="flex-1 bg-rose-600 text-white font-bold py-2 rounded-lg text-xs">✗ Rechazar</button>';
+      html += '</div></div>';
+    }
+    cont.innerHTML = html;
+  });
 }
 
 function cargarPorVencerAdmin() {
   $('adminViewVnc').innerHTML = '<p class="text-center text-gray-500 py-3 text-xs">Cargando...</p>';
-  apiCall('listarReservasPorVencer', { pin: window._adminPin })
-    .then(res => {
-      if (!res || !res.success) { $('adminViewVnc').innerHTML = '<p class="text-center text-rose-600 py-3 text-xs">Error: ' + ((res && res.error) || '') + '</p>'; return; }
-      var lista = res.lista || [];
-      if (!lista.length) { $('adminViewVnc').innerHTML = '<p class="text-center text-gray-500 py-6 text-xs">🎉 No hay reservas por vencer ni vencidas.</p>'; return; }
-      var html = '<p class="text-[10px] text-gray-500 mb-2 font-semibold">Reservas que vencen en ≤3 días o ya vencidas. Envía recordatorio manual por correo o WhatsApp.</p>';
-      for (var i = 0; i < lista.length; i++) {
-        var it = lista[i];
-        var urgente = it.vencida ? 'bg-rose-50 border-rose-300' : 'bg-amber-50 border-amber-300';
-        var badge = it.vencida ? '<span class="text-[9px] font-black text-rose-700 bg-rose-200 px-2 py-0.5 rounded-full">⚠️ VENCIDA hace ' + Math.abs(it.diasRestantes) + 'd</span>' : (it.diasRestantes === 0 ? '<span class="text-[9px] font-black text-rose-700 bg-rose-100 px-2 py-0.5 rounded-full">🔴 Vence HOY</span>' : '<span class="text-[9px] font-black text-amber-700 bg-amber-100 px-2 py-0.5 rounded-full">⏰ Vence en ' + it.diasRestantes + 'd</span>');
-        var telLimpio = (it.telefono || '').replace(/\D/g, '');
-        var msgWA = '¡Hola *' + it.nombre + '*! 👋\n\nTe recordamos que tienes boletos reservados en *Mega Rifas* 🎟️\n\n🎟️ Números: *# ' + it.numeros + '*\n\n⏰ ' + (it.vencida ? 'Tu reserva está *vencida*. Urgente para no perder los números.' : 'Completa tu pago para no perder tus números.') + '\n\nCualquier duda estamos aquí 💬\n*Mega Rifas*';
-        html += '<div class="subcard border-2 ' + urgente + ' mt-2">';
-        html += '<div class="flex justify-between items-start mb-1">';
-        html += '<div><b class="text-xs">' + it.nombre + '</b><br><span class="text-[10px] text-gray-500 font-mono">C.I. ' + it.cedula + '</span></div>';
-        html += badge;
-        html += '</div>';
-        html += '<div class="text-[10px] text-blue-600 font-mono mb-1">🎟️ #' + it.numeros + '</div>';
-        if (it.telefono) html += '<div class="text-[9px] text-gray-500 mb-1"><i class="fa-solid fa-phone"></i> ' + it.telefono + '</div>';
-        if (it.correo) html += '<div class="text-[9px] text-gray-500 mb-2"><i class="fa-solid fa-envelope"></i> ' + it.correo + '</div>';
-        html += '<div class="flex gap-1.5">';
-        if (it.correo) html += '<a href="mailto:' + it.correo + '?subject=' + encodeURIComponent('Recordatorio - Mega Rifas') + '&body=' + encodeURIComponent('Hola ' + it.nombre + ',\n\nTe recordamos que tienes boletos reservados en Mega Rifas:\n\nNúmeros: #' + it.numeros + '\n\n' + (it.vencida ? 'Tu reserva ya venció. Urgente para no perder los números.' : 'Completa tu pago antes del límite.') + '\n\n— Mega Rifas') + '" class="flex-1 bg-blue-600 text-white font-bold py-1.5 rounded-lg text-[10px] text-center">📧 Correo</a>';
-        if (telLimpio) html += '<a href="https://wa.me/' + telLimpio + '?text=' + encodeURIComponent(msgWA) + '" target="_blank" class="flex-1 bg-emerald-600 text-white font-bold py-1.5 rounded-lg text-[10px] text-center">📱 WhatsApp</a>';
-        html += '</div></div>';
-      }
-      $('adminViewVnc').innerHTML = html;
-    })
-    .catch(err => {
-      $('adminViewVnc').innerHTML = '<p class="text-center text-rose-600 py-3 text-xs">Error: ' + err.message + '</p>';
-    });
+  callAPI('listarReservasPorVencer', { pin: window._adminPin }).then(function(res) {
+    if (!res || !res.success) { $('adminViewVnc').innerHTML = '<p class="text-center text-rose-600 py-3 text-xs">Error: ' + ((res && res.error) || '') + '</p>'; return; }
+    var lista = res.lista || [];
+    if (!lista.length) { $('adminViewVnc').innerHTML = '<p class="text-center text-gray-500 py-6 text-xs">🎉 No hay reservas por vencer ni vencidas.</p>'; return; }
+    var html = '<p class="text-[10px] text-gray-500 mb-2 font-semibold">Reservas que vencen en ≤3 días o ya vencidas. Envía recordatorio manual por correo o WhatsApp.</p>';
+    for (var i = 0; i < lista.length; i++) {
+      var it = lista[i];
+      var urgente = it.vencida ? 'bg-rose-50 border-rose-300' : 'bg-amber-50 border-amber-300';
+      var badge = it.vencida ? '<span class="text-[9px] font-black text-rose-700 bg-rose-200 px-2 py-0.5 rounded-full">⚠️ VENCIDA hace ' + Math.abs(it.diasRestantes) + 'd</span>' : (it.diasRestantes === 0 ? '<span class="text-[9px] font-black text-rose-700 bg-rose-100 px-2 py-0.5 rounded-full">🔴 Vence HOY</span>' : '<span class="text-[9px] font-black text-amber-700 bg-amber-100 px-2 py-0.5 rounded-full">⏰ Vence en ' + it.diasRestantes + 'd</span>');
+      var telLimpio = (it.telefono || '').replace(/\D/g, '');
+      var msgWA = '¡Hola *' + it.nombre + '*! 👋\n\nTe recordamos que tienes boletos reservados en *Mega Rifas* 🎟️\n\n🎟️ Números: *# ' + it.numeros + '*\n\n⏰ ' + (it.vencida ? 'Tu reserva está *vencida*. Urgente para no perder los números.' : 'Completa tu pago para no perder tus números.') + '\n\nCualquier duda estamos aquí 💬\n*Mega Rifas*';
+      html += '<div class="subcard border-2 ' + urgente + ' mt-2">';
+      html += '<div class="flex justify-between items-start mb-1">';
+      html += '<div><b class="text-xs">' + it.nombre + '</b><br><span class="text-[10px] text-gray-500 font-mono">C.I. ' + it.cedula + '</span></div>';
+      html += badge;
+      html += '</div>';
+      html += '<div class="text-[10px] text-blue-600 font-mono mb-1">🎟️ #' + it.numeros + '</div>';
+      if (it.telefono) html += '<div class="text-[9px] text-gray-500 mb-1"><i class="fa-solid fa-phone"></i> ' + it.telefono + '</div>';
+      if (it.correo) html += '<div class="text-[9px] text-gray-500 mb-2"><i class="fa-solid fa-envelope"></i> ' + it.correo + '</div>';
+      html += '<div class="flex gap-1.5">';
+      if (it.correo) html += '<a href="mailto:' + it.correo + '?subject=' + encodeURIComponent('Recordatorio - Mega Rifas') + '&body=' + encodeURIComponent('Hola ' + it.nombre + ',\n\nTe recordamos que tienes boletos reservados en Mega Rifas:\n\nNúmeros: #' + it.numeros + '\n\n' + (it.vencida ? 'Tu reserva ya venció. Urgente para no perder los números.' : 'Completa tu pago antes del límite.') + '\n\n— Mega Rifas') + '" class="flex-1 bg-blue-600 text-white font-bold py-1.5 rounded-lg text-[10px] text-center">📧 Correo</a>';
+      if (telLimpio) html += '<a href="https://wa.me/' + telLimpio + '?text=' + encodeURIComponent(msgWA) + '" target="_blank" class="flex-1 bg-emerald-600 text-white font-bold py-1.5 rounded-lg text-[10px] text-center">📱 WhatsApp</a>';
+      html += '</div></div>';
+    }
+    $('adminViewVnc').innerHTML = html;
+  });
 }
 
 document.addEventListener('click', function(e) {
@@ -1250,19 +1235,17 @@ function resolverPagoAdmin(fila, acc) {
 
 function ejecutarResolucionPago(fila, acc, pagoData, pin) {
   notificar('Procesando...', 'info');
-  apiCall('procesarPagoMegaAdmin', { fila: fila, accion: acc })
-    .then(res => {
-      if (!res || !res.success) { notificar('Error: ' + ((res && res.error) || ''), 'error'); return; }
-      if (acc === 'APROBADO') {
-        notificar('✅ Aprobado. Email enviado 📧', 'success');
-        if (pagoData) abrirModalWAConDatos(pagoData);
-      } else {
-        notificar('❌ Rechazado', 'success');
-      }
-      recargarSilencioso();
-      setTimeout(cargarPagosPendientesAdmin, 1200);
-    })
-    .catch(err => { notificar('Error: ' + err.message, 'error'); });
+  callAPI('procesarPagoMegaAdmin', { fila: fila, accion: acc }).then(function(res) {
+    if (!res || !res.success) { notificar('Error: ' + ((res && res.error) || ''), 'error'); return; }
+    if (acc === 'APROBADO') {
+      notificar('✅ Aprobado. Email enviado 📧', 'success');
+      if (pagoData) abrirModalWAConDatos(pagoData);
+    } else {
+      notificar('❌ Rechazado', 'success');
+    }
+    recargarSilencioso();
+    setTimeout(cargarPagosPendientesAdmin, 1200);
+  });
 }
 
 function abrirModalWAConDatos(p) {
@@ -1294,14 +1277,12 @@ function enviarWAConfirmado() {
 function resincronizar() {
   pedirPin('Resincronizar tablero', 'Esta acción revisa TODOS los pagos y actualiza el tablero. Ingresa tu PIN para continuar.', function(pin) {
     notificar('Resincronizando...', 'info');
-    apiCall('resincronizarTableroAdmin', { pin: pin })
-      .then(res => {
-        if (!res.success) { notificar(res.error, 'error'); return; }
-        notificar('✅ ' + res.cambios + ' actualizados', 'success');
-        recargarSilencioso();
-        setTimeout(cargarPagosPendientesAdmin, 1200);
-      })
-      .catch(err => notificar('Error: ' + err.message, 'error'));
+    callAPI('resincronizarTableroAdmin', { pin: pin }).then(function(res) {
+      if (!res.success) { notificar(res.error, 'error'); return; }
+      notificar('✅ ' + res.cambios + ' actualizados', 'success');
+      recargarSilencioso();
+      setTimeout(cargarPagosPendientesAdmin, 1200);
+    });
   });
 }
 
@@ -1310,14 +1291,12 @@ function liberarMasivo() {
     mostrarConfirm('¿Liberar todas las reservas?', 'Todos los números en estado <b>RESERVADO</b> volverán a estar <b>DISPONIBLES</b>. Los que están en revisión o pagados NO se tocan.', 'fa-triangle-exclamation', function(ok) {
       if (!ok) return;
       notificar('Liberando...', 'info');
-      apiCall('liberarTodosReservadosAdmin', { pin: pin, incluirEspera: false })
-        .then(res => {
-          if (!res.success) { notificar(res.error, 'error'); return; }
-          notificar('✅ ' + res.liberados + ' números liberados', 'success');
-          recargarSilencioso();
-          setTimeout(cargarPagosPendientesAdmin, 1200);
-        })
-        .catch(err => notificar('Error: ' + err.message, 'error'));
+      callAPI('liberarTodosReservadosAdmin', { pin: pin, incluirEspera: false }).then(function(res) {
+        if (!res.success) { notificar(res.error, 'error'); return; }
+        notificar('✅ ' + res.liberados + ' números liberados', 'success');
+        recargarSilencioso();
+        setTimeout(cargarPagosPendientesAdmin, 1200);
+      });
     }, true);
   });
 }
@@ -1325,61 +1304,55 @@ function liberarMasivo() {
 function exportarCSV() {
   if (!window._adminPin) { notificar('Sesión expirada', 'error'); return; }
   notificar('Generando CSV...', 'info');
-  apiCall('exportarVentasCSV', { pin: window._adminPin })
-    .then(res => {
-      if (!res.success) { notificar(res.error, 'error'); return; }
-      var blob = new Blob([res.csv], { type: 'text/csv;charset=utf-8;' });
-      var link = document.createElement('a');
-      link.href = URL.createObjectURL(blob);
-      link.download = 'mega-rifas-' + new Date().toISOString().slice(0,10) + '.csv';
-      link.click();
-      notificar('✅ CSV descargado', 'success');
-    })
-    .catch(err => notificar('Error: ' + err.message, 'error'));
+  callAPI('exportarVentasCSV', { pin: window._adminPin }).then(function(res) {
+    if (!res.success) { notificar(res.error, 'error'); return; }
+    var blob = new Blob([res.csv], { type: 'text/csv;charset=utf-8;' });
+    var link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = 'mega-rifas-' + new Date().toISOString().slice(0,10) + '.csv';
+    link.click();
+    notificar('✅ CSV descargado', 'success');
+  });
 }
 
 function cargarHistorialAdmin() {
   var cont = $('adminViewHis');
   cont.innerHTML = '<p class="text-center text-gray-500 py-3 text-xs">Cargando...</p>';
-  apiCall('obtenerHistorialAdmin', { filtro: historialFiltro })
-    .then(lista => {
-      var html = '<div class="flex gap-1 mb-2 overflow-x-auto pb-1">';
-      var filters = ['TODOS','PAGADO','ESPERA','RESERVADO'];
-      for (var f = 0; f < filters.length; f++) {
-        var on = historialFiltro === filters[f];
-        html += '<button type="button" onclick="cambiarFiltroHistorial(\'' + filters[f] + '\')" class="px-3 py-1.5 rounded-lg text-[10px] font-black ' + (on ? 'bg-gray-900 text-white' : 'bg-gray-100 text-gray-600') + ' whitespace-nowrap">' + filters[f] + '</button>';
-      }
+  callAPI('obtenerHistorialAdmin', { filtro: historialFiltro }).then(function(lista) {
+    var html = '<div class="flex gap-1 mb-2 overflow-x-auto pb-1">';
+    var filters = ['TODOS','PAGADO','ESPERA','RESERVADO'];
+    for (var f = 0; f < filters.length; f++) {
+      var on = historialFiltro === filters[f];
+      html += '<button type="button" onclick="cambiarFiltroHistorial(\'' + filters[f] + '\')" class="px-3 py-1.5 rounded-lg text-[10px] font-black ' + (on ? 'bg-gray-900 text-white' : 'bg-gray-100 text-gray-600') + ' whitespace-nowrap">' + filters[f] + '</button>';
+    }
+    html += '</div>';
+    if (!lista.length) { html += '<p class="text-center text-gray-500 py-4 text-xs">Sin registros.</p>'; cont.innerHTML = html; return; }
+    for (var i = 0; i < lista.length; i++) {
+      var r = lista[i];
+      var colores = { PAGADO:'bg-gray-100 text-gray-700 border-gray-300', ESPERA:'bg-purple-50 text-purple-700 border-purple-200', RESERVADO:'bg-blue-50 text-blue-700 border-blue-200' };
+      var cls = colores[r.estatus] || 'bg-gray-100 text-gray-700 border-gray-300';
+      html += '<div class="subcard border ' + cls + ' mb-2">';
+      html += '<div class="flex justify-between items-start mb-1">';
+      html += '<div><span class="text-lg font-black font-mono">#' + r.numero + '</span> <span class="text-[9px] font-black px-2 py-0.5 rounded-full ' + cls + '">' + r.estatus + '</span></div>';
+      html += '<button type="button" onclick="abrirEditar(' + r.fila + ',\'' + (r.estatus||'') + '\',\'' + (r.cedula||'').replace(/\'/g,'') + '\',\'' + (r.nombre||'').replace(/\'/g,'') + '\',\'' + (r.telefono||'') + '\')" class="text-[10px] font-black text-blue-600 underline">✏️ Editar</button>';
       html += '</div>';
-      if (!lista.length) { html += '<p class="text-center text-gray-500 py-4 text-xs">Sin registros.</p>'; cont.innerHTML = html; return; }
-      for (var i = 0; i < lista.length; i++) {
-        var r = lista[i];
-        var colores = { PAGADO:'bg-gray-100 text-gray-700 border-gray-300', ESPERA:'bg-purple-50 text-purple-700 border-purple-200', RESERVADO:'bg-blue-50 text-blue-700 border-blue-200' };
-        var cls = colores[r.estatus] || 'bg-gray-100 text-gray-700 border-gray-300';
-        html += '<div class="subcard border ' + cls + ' mb-2">';
-        html += '<div class="flex justify-between items-start mb-1">';
-        html += '<div><span class="text-lg font-black font-mono">#' + r.numero + '</span> <span class="text-[9px] font-black px-2 py-0.5 rounded-full ' + cls + '">' + r.estatus + '</span></div>';
-        html += '<button type="button" onclick="abrirEditar(' + r.fila + ',\'' + (r.estatus||'') + '\',\'' + (r.cedula||'').replace(/\'/g,'') + '\',\'' + (r.nombre||'').replace(/\'/g,'') + '\',\'' + (r.telefono||'') + '\')" class="text-[10px] font-black text-blue-600 underline">✏️ Editar</button>';
-        html += '</div>';
-        if (r.nombre || r.cedula) {
-          html += '<div class="text-[11px] text-gray-700 font-bold">' + r.nombre + '</div>';
-          html += '<div class="text-[10px] text-gray-500 font-mono mb-1">C.I. ' + r.cedula + ' · ' + r.telefono + '</div>';
-        }
-        if (r.fechaReserva) html += '<div class="text-[9px] text-gray-500">Reservado: ' + r.fechaReserva + '</div>';
-        if (r.fechaPago) html += '<div class="text-[9px] text-emerald-600 font-bold">Pagado: ' + r.fechaPago + '</div>';
-        var acciones = [];
-        if (r.estatus === 'RESERVADO' && r.telefono) {
-          var msg = encodeURIComponent('¡Hola *' + r.nombre + '*! 👋\n\nTe recordamos que tienes el boleto *# ' + r.numero + '* reservado en *Mega Rifas* 🎟️\n\n⏰ Completa tu pago antes del límite.\n\n*Mega Rifas*');
-          acciones.push('<a href="https://wa.me/' + r.telefono.replace(/\D/g,'') + '?text=' + msg + '" target="_blank" class="flex-1 bg-emerald-600 text-white font-bold py-1.5 rounded-lg text-[10px] text-center">📱 Recordar</a>');
-        }
-        acciones.push('<button type="button" onclick="liberarNumero(' + r.fila + ',\'' + r.numero + '\')" class="flex-1 bg-amber-600 text-white font-bold py-1.5 rounded-lg text-[10px]">🔓 Liberar</button>');
-        html += '<div class="flex gap-1.5 mt-2">' + acciones.join('') + '</div>';
-        html += '</div>';
+      if (r.nombre || r.cedula) {
+        html += '<div class="text-[11px] text-gray-700 font-bold">' + r.nombre + '</div>';
+        html += '<div class="text-[10px] text-gray-500 font-mono mb-1">C.I. ' + r.cedula + ' · ' + r.telefono + '</div>';
       }
-      cont.innerHTML = html;
-    })
-    .catch(err => {
-      cont.innerHTML = '<p class="text-center text-rose-600 py-3 text-xs">Error: ' + err.message + '</p>';
-    });
+      if (r.fechaReserva) html += '<div class="text-[9px] text-gray-500">Reservado: ' + r.fechaReserva + '</div>';
+      if (r.fechaPago) html += '<div class="text-[9px] text-emerald-600 font-bold">Pagado: ' + r.fechaPago + '</div>';
+      var acciones = [];
+      if (r.estatus === 'RESERVADO' && r.telefono) {
+        var msg = encodeURIComponent('¡Hola *' + r.nombre + '*! 👋\n\nTe recordamos que tienes el boleto *# ' + r.numero + '* reservado en *Mega Rifas* 🎟️\n\n⏰ Completa tu pago antes del límite.\n\n*Mega Rifas*');
+        acciones.push('<a href="https://wa.me/' + r.telefono.replace(/\D/g,'') + '?text=' + msg + '" target="_blank" class="flex-1 bg-emerald-600 text-white font-bold py-1.5 rounded-lg text-[10px] text-center">📱 Recordar</a>');
+      }
+      acciones.push('<button type="button" onclick="liberarNumero(' + r.fila + ',\'' + r.numero + '\')" class="flex-1 bg-amber-600 text-white font-bold py-1.5 rounded-lg text-[10px]">🔓 Liberar</button>');
+      html += '<div class="flex gap-1.5 mt-2">' + acciones.join('') + '</div>';
+      html += '</div>';
+    }
+    cont.innerHTML = html;
+  });
 }
 
 function cambiarFiltroHistorial(f) { historialFiltro = f; cargarHistorialAdmin(); }
@@ -1389,14 +1362,12 @@ function liberarNumero(fila, numero) {
     mostrarConfirm('¿Liberar #' + numero + '?', 'Esta acción es irreversible.', 'fa-unlock', function(ok) {
       if (!ok) return;
       notificar('Liberando...', 'info');
-      apiCall('liberarNumeroAdmin', { numero: numero, pin: pin })
-        .then(res => {
-          if (!res.success) { notificar(res.error, 'error'); return; }
-          notificar('✅ #' + numero + ' liberado', 'success');
-          cargarHistorialAdmin();
-          recargarSilencioso();
-        })
-        .catch(err => notificar('Error: ' + err.message, 'error'));
+      callAPI('liberarNumeroAdmin', { numero: numero, pin: pin }).then(function(res) {
+        if (!res.success) { notificar(res.error, 'error'); return; }
+        notificar('✅ #' + numero + ' liberado', 'success');
+        cargarHistorialAdmin();
+        recargarSilencioso();
+      });
     }, true);
   });
 }
@@ -1421,15 +1392,13 @@ function guardarEdicion() {
     telefono: $('editTelefono').value.trim()
   };
   notificar('Guardando...', 'info');
-  apiCall('editarRegistroAdmin', { fila: parseInt($('editFila').value), datos: datos, pin: pin })
-    .then(res => {
-      if (!res.success) { notificar(res.error, 'error'); return; }
-      notificar('✅ Guardado', 'success');
-      cerrarModal('modalEditar');
-      cargarHistorialAdmin();
-      recargarSilencioso();
-    })
-    .catch(err => notificar('Error: ' + err.message, 'error'));
+  callAPI('editarRegistroAdmin', { fila: parseInt($('editFila').value), datos: datos, pin: pin }).then(function(res) {
+    if (!res.success) { notificar(res.error, 'error'); return; }
+    notificar('✅ Guardado', 'success');
+    cerrarModal('modalEditar');
+    cargarHistorialAdmin();
+    recargarSilencioso();
+  });
 }
 
 function cargarFormularioConfigAdmin() {
@@ -1478,9 +1447,10 @@ function guardarConfigAdmin() {
     nuevoPin: $('cfgNuevoPin').value.trim()
   };
   notificar('Guardando...', 'info');
-  apiCall('guardarConfiguracionAdminMega', d)
-    .then(() => { notificar('✅ Guardado', 'success'); cargarDatos(); })
-    .catch(err => notificar('Error: ' + err.message, 'error'));
+  callAPI('guardarConfiguracionAdminMega', d).then(function() {
+    notificar('✅ Guardado', 'success'); 
+    cargarDatos();
+  });
 }
 
 function ejecutarNuevaRifa() {
@@ -1489,14 +1459,12 @@ function ejecutarNuevaRifa() {
   mostrarConfirm('⚠️ Reiniciar TODA la rifa', 'Esto borrará <b>TODOS</b> los números del tablero y <b>TODOS</b> los pagos registrados. <b>Esta acción no se puede deshacer.</b>', 'fa-triangle-exclamation', function(ok) {
     if (!ok) return;
     notificar('Reiniciando...', 'info');
-    apiCall('iniciarNuevaRifaAdmin', { pin: pin })
-      .then(res => {
-        if (!res.success) { notificar(res.error, 'error'); return; }
-        notificar('✅ Rifa reiniciada', 'success');
-        cerrarModal('modalPanelAdmin');
-        setTimeout(cargarDatos, 500);
-      })
-      .catch(err => notificar('Error: ' + err.message, 'error'));
+    callAPI('iniciarNuevaRifaAdmin', { pin: pin }).then(function(res) {
+      if (!res.success) { notificar(res.error, 'error'); return; }
+      notificar('✅ Rifa reiniciada', 'success');
+      cerrarModal('modalPanelAdmin');
+      setTimeout(cargarDatos, 500);
+    });
   }, true);
 }
 
