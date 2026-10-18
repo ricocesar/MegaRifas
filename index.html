@@ -492,9 +492,6 @@
 </div>
 
 <script>
-// ============================================================
-// URL DE TU APPS SCRIPT YA INTEGRADA
-// ============================================================
 const API_URL = 'https://script.google.com/macros/s/AKfycbw7Qw_1BdX1--qWnIJjhDIDt_H_OJdPjuCpSTU6gIp3Z4IMMc7RK6ZvD7t-onA6XmAd/exec'; 
 
 var $ = function(id) { return document.getElementById(id); };
@@ -510,18 +507,21 @@ var _cedulaVerificada = null;
 var _debounceTimer = null;
 var _confirmCallback = null;
 var _pinCallback = null;
-var CACHE_KEY = 'mega_rifas_cache_v1';
 
 async function apiCall(action, data = {}) {
   try {
+    // ENVIAMOS LOS DATOS COMO FORMULARIO PARA EVITAR CORS Y REDIRECCIONES ROTAS
+    const body = new URLSearchParams();
+    body.append('action', action);
+    body.append('data', JSON.stringify(data));
+
     const response = await fetch(API_URL, {
       method: 'POST',
-      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-      body: JSON.stringify({ action: action, data: data })
+      body: body
     });
+
     if (!response.ok) throw new Error('Error de red: ' + response.status);
     
-    // Se lee como texto primero para evitar errores de parseo con redirecciones de Google
     const text = await response.text();
     return JSON.parse(text);
   } catch (error) {
@@ -619,31 +619,18 @@ async function confirmarPinAccion() {
   }
 }
 
-// ==== CARGA INICIAL CON CACHÉ ====
-async function cargarDatos(forzarRecarga = false) {
-  if (forzarRecarga) localStorage.removeItem(CACHE_KEY);
-
-  const cached = localStorage.getItem(CACHE_KEY);
-  if (cached && !forzarRecarga) {
-    try {
-      const r = JSON.parse(cached);
-      aplicarDatos(r);
-      $('loadingOverlay').classList.add('hidden');
-    } catch(e){}
-  } else {
-    mostrarCargando(true);
-  }
-
+// ==== CARGA INICIAL SIN CACHÉ (SIEMPRE DATOS NUEVOS) ====
+async function cargarDatos() {
+  mostrarCargando(true);
   try {
     const r = await apiCall('obtenerInicioMega');
     if (r && r.success) {
-      localStorage.setItem(CACHE_KEY, JSON.stringify(r));
       aplicarDatos(r);
-    } else if (!cached) {
+    } else {
       notificar('Error: ' + (r.error || 'desconocido'), 'error');
     }
   } catch (error) {
-    if (!cached) notificar('Error de conexión con el servidor.', 'error');
+    notificar('Error de conexión con el servidor.', 'error');
   } finally {
     mostrarCargando(false);
   }
@@ -1036,7 +1023,7 @@ async function ejecutarCheckout() {
       if (!res.success) { notificar(res.error, 'error'); return; }
       cerrarModal('modalCheckout');
       notificar('¡Reserva enviada! Revisa tu correo 📧', 'success');
-      setTimeout(() => cargarDatos(true), 500);
+      setTimeout(() => cargarDatos(), 500);
     } catch(e) {
       btn.innerText = 'Confirmar'; btn.disabled = false;
       notificar('Error de conexión', 'error');
@@ -1067,7 +1054,7 @@ async function enviarPagoServidor(ced, nom, tel, correo, ref, b64, btn) {
     if (!res.success) { notificar(res.error, 'error'); return; }
     cerrarModal('modalCheckout');
     notificar('¡Pago reportado! Revisa tu correo 📧', 'success');
-    setTimeout(() => cargarDatos(true), 500);
+    setTimeout(() => cargarDatos(), 500);
   } catch(e) {
     btn.innerText = 'Confirmar'; btn.disabled = false;
     notificar('Error de conexión', 'error');
@@ -1274,7 +1261,7 @@ async function ejecutarResolucionPago(fila, acc, pagoData, pin) {
     } else {
       notificar('❌ Rechazado', 'success');
     }
-    cargarDatos(true);
+    cargarDatos();
     setTimeout(cargarPagosPendientesAdmin, 1200);
   } catch(e) {
     notificar('Error: ' + e.message, 'error');
@@ -1314,7 +1301,7 @@ function resincronizar() {
       const res = await apiCall('resincronizarTableroAdmin', { pin: pin });
       if (!res.success) { notificar(res.error, 'error'); return; }
       notificar('✅ ' + res.cambios + ' actualizados', 'success');
-      cargarDatos(true);
+      cargarDatos();
       setTimeout(cargarPagosPendientesAdmin, 1200);
     } catch(e) {
       notificar('Error: ' + e.message, 'error');
@@ -1331,7 +1318,7 @@ function liberarMasivo() {
         const res = await apiCall('liberarTodosReservadosAdmin', { pin: pin, incluirEspera: false });
         if (!res.success) { notificar(res.error, 'error'); return; }
         notificar('✅ ' + res.liberados + ' números liberados', 'success');
-        cargarDatos(true);
+        cargarDatos();
         setTimeout(cargarPagosPendientesAdmin, 1200);
       } catch(e) {
         notificar('Error: ' + e.message, 'error');
@@ -1412,7 +1399,7 @@ function liberarNumero(fila, numero) {
         if (!res.success) { notificar(res.error, 'error'); return; }
         notificar('✅ #' + numero + ' liberado', 'success');
         cargarHistorialAdmin();
-        cargarDatos(true);
+        cargarDatos();
       } catch(e) {
         notificar('Error: ' + e.message, 'error');
       }
@@ -1446,7 +1433,7 @@ async function guardarEdicion() {
     notificar('✅ Guardado', 'success');
     cerrarModal('modalEditar');
     cargarHistorialAdmin();
-    cargarDatos(true);
+    cargarDatos();
   } catch(e) {
     notificar('Error: ' + e.message, 'error');
   }
@@ -1502,7 +1489,7 @@ async function guardarConfigAdmin() {
     const res = await apiCall('guardarConfiguracionAdminMega', d);
     if (!res.success) { notificar(res.error, 'error'); return; }
     notificar('✅ Guardado', 'success');
-    cargarDatos(true); // Fuerza recarga de los datos limpios
+    cargarDatos();
   } catch(e) {
     notificar('Error: ' + e.message, 'error');
   }
@@ -1519,14 +1506,14 @@ function ejecutarNuevaRifa() {
       if (!res.success) { notificar(res.error, 'error'); return; }
       notificar('✅ Rifa reiniciada', 'success');
       cerrarModal('modalPanelAdmin');
-      setTimeout(() => cargarDatos(true), 500);
+      setTimeout(cargarDatos, 500);
     } catch(e) {
       notificar('Error: ' + e.message, 'error');
     }
   }, true);
 }
 
-window.addEventListener('load', function() { setTimeout(() => cargarDatos(false), 100); });
+window.addEventListener('load', function() { cargarDatos(); });
 </script>
 </body>
 </html>
