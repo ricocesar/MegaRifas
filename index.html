@@ -510,12 +510,14 @@ var _pinCallback = null;
 
 async function apiCall(action, data = {}) {
   try {
-    // ENVIAMOS LOS DATOS COMO FORMULARIO PARA EVITAR CORS Y REDIRECCIONES ROTAS
     const body = new URLSearchParams();
     body.append('action', action);
     body.append('data', JSON.stringify(data));
 
-    const response = await fetch(API_URL, {
+    // Añadimos un timestamp para evitar el caché del navegador
+    const url = API_URL + '?t=' + new Date().getTime();
+
+    const response = await fetch(url, {
       method: 'POST',
       body: body
     });
@@ -619,7 +621,7 @@ async function confirmarPinAccion() {
   }
 }
 
-// ==== CARGA INICIAL SIN CACHÉ (SIEMPRE DATOS NUEVOS) ====
+// ==== CARGA INICIAL SIN CACHÉ ====
 async function cargarDatos() {
   mostrarCargando(true);
   try {
@@ -1489,7 +1491,8 @@ async function guardarConfigAdmin() {
     const res = await apiCall('guardarConfiguracionAdminMega', d);
     if (!res.success) { notificar(res.error, 'error'); return; }
     notificar('✅ Guardado', 'success');
-    cargarDatos();
+    // LA MAGIA OCURRE AQUÍ: res contiene la data fresca recién guardada. La aplicamos directo.
+    aplicarDatos(res); 
   } catch(e) {
     notificar('Error: ' + e.message, 'error');
   }
