@@ -618,23 +618,21 @@ async function confirmarPinAccion() {
 
 // ==== CARGA INICIAL CON CACHÉ (FLUIDEZ) ====
 async function cargarDatos() {
-  // 1. Cargar caché para mostrar al instante
   const cached = localStorage.getItem(CACHE_KEY);
   if (cached) {
     try {
       const r = JSON.parse(cached);
       aplicarDatos(r);
-      $('loadingOverlay').classList.add('hidden'); // Ocultar spinner de inmediato
+      $('loadingOverlay').classList.add('hidden');
     } catch(e){}
   } else {
     mostrarCargando(true);
   }
 
-  // 2. Pedir datos frescos en segundo plano
   try {
     const r = await apiCall('obtenerInicioMega');
     if (r && r.success) {
-      localStorage.setItem(CACHE_KEY, JSON.stringify(r)); // Guardar en caché
+      localStorage.setItem(CACHE_KEY, JSON.stringify(r));
       aplicarDatos(r);
     } else if (!cached) {
       notificar('Error: ' + (r.error || 'desconocido'), 'error');
@@ -683,4 +681,847 @@ function aplicarDatos(r) {
   } else alerta.classList.add('hidden');
 
   var btnR = $('btnReservarFlotante');
-  if (r.permiteReservar !== false) btnR.classList.remove('
+  if (r.permiteReservar !== false) btnR.classList.remove('hidden');
+  else btnR.classList.add('hidden');
+
+  var est = r.estadisticas || {};
+  $('txtPorcentajeGeneral').innerText = (est.porcentajeGeneral || 0) + '%';
+  $('barraProgreso').style.width = (est.porcentajeGeneral || 0) + '%';
+  $('txtProgresoDetalle').innerText = (est.ocupados || 0) + ' de ' + (est.total || 100) + ' boletos';
+  var restantes = (est.total || 100) - (est.ocupados || 0);
+  var urgente = $('txtProgresoUrgente');
+  if (restantes <= 0) urgente.innerText = '¡AGOTADO!';
+  else if (restantes <= 10) urgente.innerText = '🔥 ¡Quedan ' + restantes + '!';
+  else if (restantes <= 30) urgente.innerText = '⚡ Quedan ' + restantes;
+  else urgente.innerText = '✅ ' + restantes + ' disponibles';
+
+  renderizarTop(r.topCompradores);
+  renderizarSoporte(r.waList);
+  renderizarTablero();
+  renderizarFeed(r.feedCompras);
+}
+
+function renderizarFeed(feed) {
+  if (!feed || !feed.length) { $('feedSection').style.display = 'none'; return; }
+  $('feedSection').style.display = 'block';
+  var html = '';
+  for (var k = 0; k < 2; k++) {
+    for (var i = 0; i < feed.length; i++) {
+      var it = feed[i];
+      var emoji = it.estatus === 'PAGADO' ? '🟢' : '🟣';
+      var hace = haceTiempo(it.ts);
+      html += '<span>' + emoji + ' <b>' + it.nombre + '</b> compró <span class="feed-num">#' + it.numero + '</span> <span class="feed-time">· ' + hace + '</span></span>';
+    }
+  }
+  $('feedContent').innerHTML = html;
+}
+
+function haceTiempo(ts) {
+  if (!ts) return 'hace poco';
+  var diff = Date.now() - ts;
+  var min = Math.floor(diff / 60000);
+  if (min < 1) return 'ahora';
+  if (min < 60) return 'hace ' + min + ' min';
+  var hrs = Math.floor(min / 60);
+  if (hrs < 24) return 'hace ' + hrs + ' h';
+  return 'hace ' + Math.floor(hrs / 24) + ' d';
+}
+
+function renderizarTop(top) {
+  var c = $('listaTopCompradores');
+  if (!top || !top.length) {
+    c.className = 'text-center';
+    c.innerHTML = '<span class="text-gray-400 text-[10px]">Aún sin compradores.</span>';
+    return;
+  }
+  c.className = 'space-y-1';
+  var med = ['🥇','🥈','🥉'];
+  var html = '';
+  for (var i = 0; i < top.length; i++) {
+    var t = top[i];
+    var partes = (t.nombre || '').split(' ');
+    var corto = partes[0] + (partes[1] ? ' ' + partes[1].charAt(0) + '.' : '');
+    html += '<div class="top-mini"><span class="text-sm">' + med[i] + '</span><span class="text-[10px] font-black text-gray-800 truncate flex-1">' + corto + '</span><span class="text-[10px] font-black text-amber-600">' + t.cantidad + ' 🎟️</span></div>';
+  }
+  c.innerHTML = html;
+}
+
+function renderizarTablero() {
+  var grid = $('gridTablero');
+  var total = Number(datosMegaGlobal.totalNumeros) || 100;
+  var digitos = total >= 1000 ? 3 : 2;
+  var tablero = datosMegaGlobal.tablero || {};
+  var html = '';
+  for (var i = 0; i < total; i++) {
+    var numStr = String(i);
+    while (numStr.length < digitos) numStr = '0' + numStr;
+    var info = tablero[numStr] || { estatus: 'DISPONIBLE' };
+    var clase = 'num-' + info.estatus;
+    if (seleccionados.indexOf(numStr) > -1 && info.estatus === 'DISPONIBLE') clase = 'num-SELECCIONADO';
+    var disabled = (info.estatus === 'PAGADO' || info.estatus === 'ESPERA' || info.estatus === 'RESERVADO') ? 'disabled' : '';
+    html += '<button type="button" ' + disabled + ' onclick="tocarNumero(\'' + numStr + '\',\'' + info.estatus + '\')" class="num-btn ' + clase + '">' + numStr + '</button>';
+  }
+  grid.innerHTML = html;
+}
+
+function tocarNumero(num, est) {
+  if (est === 'PAGADO') { notificar('Ya fue pagado', 'error'); return; }
+  if (est === 'ESPERA') { notificar('En revisión', 'error'); return; }
+  if (est === 'RESERVADO') { notificar('Ese número ya está reservado', 'error'); return; }
+  var idx = seleccionados.indexOf(num);
+  if (idx > -1) seleccionados.splice(idx, 1);
+  else seleccionados.push(num);
+  renderizarTablero();
+  actualizarBarraFlotante();
+  if (participanteConsultado) renderizarResultadoConsulta(participanteConsultado);
+}
+
+function actualizarBarraFlotante() {
+  var barra = $('barraAccionFlotante');
+  var sticky = $('stickyTopBtn');
+  if (seleccionados.length > 0) {
+    var precioUSD = Number(datosMegaGlobal && datosMegaGlobal.precioTicketUSD) || 2;
+    var tasa = Number(datosMegaGlobal && datosMegaGlobal.tasa) || 982;
+    var totalBs = seleccionados.length * precioUSD * tasa;
+    barra.classList.remove('hidden');
+    sticky.classList.remove('hidden');
+    $('txtCantSeleccionadosBadge').innerText = seleccionados.length;
+    $('txtTotalBsBottom').innerText = 'Bs ' + fmt(totalBs);
+    $('stickyTopCant').innerText = seleccionados.length;
+    $('stickyTopTotal').innerText = 'Bs ' + fmt(totalBs);
+  } else {
+    barra.classList.add('hidden');
+    sticky.classList.add('hidden');
+  }
+}
+
+function seleccionarAzar() {
+  var disp = [];
+  var total = Number(datosMegaGlobal.totalNumeros) || 100;
+  var dig = total >= 1000 ? 3 : 2;
+  var tablero = datosMegaGlobal.tablero || {};
+  for (var i = 0; i < total; i++) {
+    var s = String(i);
+    while (s.length < dig) s = '0' + s;
+    var inf = tablero[s] || { estatus: 'DISPONIBLE' };
+    if (inf.estatus === 'DISPONIBLE' && seleccionados.indexOf(s) === -1) disp.push(s);
+  }
+  if (!disp.length) { notificar('No hay disponibles', 'error'); return; }
+  tocarNumero(disp[Math.floor(Math.random() * disp.length)], 'DISPONIBLE');
+}
+
+async function consultarParticipante() {
+  var ced = $('inputCedulaConsulta').value.trim();
+  if (!ced) { notificar('Ingresa una cédula', 'error'); return; }
+  mostrarCargando(true);
+  try {
+    const res = await apiCall('consultarParticipanteMega', { cedula: ced });
+    mostrarCargando(false);
+    if (!res || !res.success) { notificar('Error: ' + ((res && res.error) || ''), 'error'); return; }
+    participanteConsultado = res;
+    renderizarResultadoConsulta(res);
+  } catch(e) {
+    mostrarCargando(false);
+    notificar('Error de conexión', 'error');
+  }
+}
+
+function renderizarResultadoConsulta(res) {
+  var box = $('resultadoConsultaParticipante');
+  box.classList.remove('hidden');
+  if (!res.registrado) {
+    box.innerHTML = '<div class="subcard text-center text-xs text-gray-500 py-2"><i class="fa-solid fa-user-slash mr-1"></i> Sin registros.</div>';
+    return;
+  }
+  var p = res.participante, t = res.tickets;
+  var html = '<div class="subcard space-y-2">';
+  html += '<div class="flex items-center gap-2 pb-2 border-b border-gray-200">';
+  html += '<div class="w-8 h-8 rounded-lg bg-blue-100 flex items-center justify-center text-blue-600 text-xs"><i class="fa-solid fa-user"></i></div>';
+  html += '<div><b class="text-xs font-black text-gray-900 block">' + p.nombre + '</b><span class="text-[9px] font-mono text-gray-500">C.I. ' + p.cedula + '</span></div></div>';
+  if (res.deudaUSD > 0) {
+    html += '<div class="bg-amber-50 border border-amber-200 rounded-xl p-2.5">';
+    html += '<div class="text-[10px] font-bold text-amber-700">💳 DEUDA</div>';
+    html += '<b class="text-base font-black text-amber-900">Bs ' + fmt(res.deudaBs) + '</b>';
+    if (res.diasRestantes !== null && res.diasRestantes !== undefined) {
+      var color = res.diasRestantes <= 3 ? 'text-rose-600' : 'text-amber-700';
+      html += '<div class="text-[10px] font-bold ' + color + ' mt-1">⏰ ' + res.diasRestantes + ' días (límite: ' + res.fechaLimite + ')</div>';
+    }
+    html += '</div>';
+  }
+  if (t.pagados.length) {
+    html += '<div><div class="text-[10px] font-black text-gray-500 mb-1">✅ PAGADOS (' + t.pagados.length + ')</div><div class="flex flex-wrap gap-1">';
+    t.pagados.forEach(function(n) { html += '<span class="chip paid">' + n + '</span>'; });
+    html += '</div></div>';
+  }
+  if (t.espera.length) {
+    html += '<div><div class="text-[10px] font-black text-gray-500 mb-1">🟣 EN REVISIÓN (' + t.espera.length + ')</div><div class="flex flex-wrap gap-1">';
+    t.espera.forEach(function(n) { html += '<span class="chip esp">' + n + '</span>'; });
+    html += '</div></div>';
+  }
+  if (t.reservados.length) {
+    html += '<div><div class="flex justify-between items-center mb-1"><div class="text-[10px] font-black text-gray-500">🔵 RESERVADOS (' + t.reservados.length + ')</div>';
+    html += '<button type="button" onclick="seleccionarTodosReservados()" class="text-[9px] font-black text-blue-600 underline">Sel. todos</button></div>';
+    html += '<div class="flex flex-wrap gap-1">';
+    t.reservados.forEach(function(n) {
+      var on = seleccionados.indexOf(n) > -1;
+      html += '<span class="chip reserved ' + (on ? 'on' : '') + '" onclick="toggleReservado(\'' + n + '\')">' + n + '</span>';
+    });
+    html += '</div></div>';
+    html += '<button type="button" onclick="pagarReservadosSeleccionados()" class="btn-primary w-full !py-2 !text-xs"><i class="fa-solid fa-credit-card mr-1"></i> Pagar seleccionados</button>';
+  }
+  html += '</div>';
+  box.innerHTML = html;
+}
+
+function toggleReservado(num) {
+  var idx = seleccionados.indexOf(num);
+  if (idx > -1) seleccionados.splice(idx, 1);
+  else seleccionados.push(num);
+  renderizarTablero();
+  actualizarBarraFlotante();
+  if (participanteConsultado) renderizarResultadoConsulta(participanteConsultado);
+}
+
+function seleccionarTodosReservados() {
+  if (!participanteConsultado || !participanteConsultado.tickets) return;
+  var res = participanteConsultado.tickets.reservados;
+  var todos = res.every(function(n) { return seleccionados.indexOf(n) > -1; });
+  if (todos) seleccionados = seleccionados.filter(function(n) { return res.indexOf(n) === -1; });
+  else res.forEach(function(n) { if (seleccionados.indexOf(n) === -1) seleccionados.push(n); });
+  renderizarTablero();
+  actualizarBarraFlotante();
+  renderizarResultadoConsulta(participanteConsultado);
+}
+
+function pagarReservadosSeleccionados() {
+  var res = participanteConsultado.tickets.reservados;
+  var sel = seleccionados.filter(function(n) { return res.indexOf(n) > -1; });
+  if (!sel.length) { notificar('Selecciona al menos uno', 'error'); return; }
+  $('chkCedula').value = participanteConsultado.participante.cedula || '';
+  $('chkNombre').value = participanteConsultado.participante.nombre || '';
+  $('chkTelefono').value = participanteConsultado.participante.telefono || '';
+  $('chkCorreo').value = participanteConsultado.participante.correo || '';
+  _cedulaVerificada = { nombre: participanteConsultado.participante.nombre, telefono: participanteConsultado.participante.telefono, correo: participanteConsultado.participante.correo };
+  abrirModalCheckout('PAGAR');
+}
+
+function abrirModalCheckout(modo) {
+  if (!seleccionados.length) { notificar('Selecciona al menos un número', 'error'); return; }
+  if (modo === 'RESERVADO' && datosMegaGlobal.permiteReservar === false) {
+    notificar('Solo pago directo. Faltan pocos días.', 'error');
+    modo = 'PAGAR';
+  }
+  modoCheckoutActual = modo;
+  var precioUSD = Number(datosMegaGlobal.precioTicketUSD) || 2;
+  var tasa = Number(datosMegaGlobal.tasa) || 982;
+  var totalUSD = seleccionados.length * precioUSD;
+  var totalBs = totalUSD * tasa;
+  $('tituloModalCheckout').innerText = modo === 'RESERVADO' ? 'Reservar Boletos' : 'Reportar Pago';
+  $('subtituloCheckout').innerText = modo === 'RESERVADO' ? 'Reserva sin pagar ahora' : 'Elige cómo quieres pagar';
+  $('chkCantidad').innerText = seleccionados.length + ' boleto(s)';
+  $('chkNumerosTxt').innerText = '#' + seleccionados.join(' · #');
+  $('chkTotalBs').innerText = 'Bs ' + fmt(totalBs);
+  $('chkTotalUSD').innerText = '$' + fmt(totalUSD);
+  var blq = $('bloqueDatosPago');
+  if (modo === 'PAGAR') { blq.classList.remove('hidden'); cambiarMetodoPago('PM'); }
+  else blq.classList.add('hidden');
+  $('avisoCedula').classList.add('hidden');
+  $('avisoCedula').innerHTML = '';
+  $('chkCedula').classList.remove('inp-ok');
+  abrirModal('modalCheckout');
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+  var input = $('chkCedula');
+  if (input) {
+    input.addEventListener('input', function() {
+      clearTimeout(_debounceTimer);
+      var ced = input.value.trim();
+      var aviso = $('avisoCedula');
+      if (ced.length < 5) {
+        aviso.classList.add('hidden');
+        aviso.innerHTML = '';
+        input.classList.remove('inp-ok');
+        _cedulaVerificada = null;
+        return;
+      }
+      _debounceTimer = setTimeout(function() { verificarCedula(ced); }, 700);
+    });
+  }
+});
+
+async function verificarCedula(ced) {
+  try {
+    const res = await apiCall('verificarCedulaMega', { cedula: ced });
+    var aviso = $('avisoCedula');
+    var input = $('chkCedula');
+    if (res && res.existe) {
+      _cedulaVerificada = res;
+      if (!$('chkNombre').value.trim() && res.nombre) $('chkNombre').value = res.nombre;
+      if (!$('chkTelefono').value.trim() && res.telefono) $('chkTelefono').value = res.telefono;
+      if (!$('chkCorreo').value.trim() && res.correo) $('chkCorreo').value = res.correo;
+      aviso.classList.remove('hidden');
+      aviso.innerHTML = '<div class="bg-blue-50 border border-blue-200 rounded-lg p-2.5 text-[10px] text-blue-800 leading-relaxed"><b>👋 ¡Bienvenido de vuelta!</b><br>Cédula registrada a nombre de <b>' + res.nombre + '</b>.<br><span class="text-blue-600">Si eres tú, continúa. Si no, revisa la cédula.</span></div>';
+      input.classList.add('inp-ok');
+    } else {
+      _cedulaVerificada = null;
+      aviso.classList.add('hidden');
+      aviso.innerHTML = '';
+      input.classList.remove('inp-ok');
+    }
+  } catch(e) {}
+}
+
+function cambiarMetodoPago(met) {
+  metodoPagoActual = met;
+  var metodos = ['PM','TR','BZ','ZP','EF','US'];
+  for (var i = 0; i < metodos.length; i++) {
+    var btn = $('pm' + metodos[i]);
+    if (metodos[i] === met) btn.classList.add('on');
+    else btn.classList.remove('on');
+  }
+  var esUSD = METODOS_USD.indexOf(met) > -1;
+  var precioUSD = Number(datosMegaGlobal.precioTicketUSD) || 2;
+  var tasa = Number(datosMegaGlobal.tasa) || 982;
+  var totalUSD = seleccionados.length * precioUSD;
+  var totalBs = totalUSD * tasa;
+  if (esUSD) {
+    $('chkTotalBs').innerText = '$' + fmt(totalUSD);
+    $('chkTotalUSD').innerText = '≈ Bs ' + fmt(totalBs);
+  } else {
+    $('chkTotalBs').innerText = 'Bs ' + fmt(totalBs);
+    $('chkTotalUSD').innerText = '≈ $' + fmt(totalUSD);
+  }
+  $('chkTotalUSD').classList.remove('hidden');
+  var box = $('datosPagoVisual');
+  if (met === 'PM') box.innerHTML = '<b>💳 Pago Móvil</b><br>' + (datosMegaGlobal.pmDatos || 'No configurado');
+  else if (met === 'TR') box.innerHTML = '<b>🏦 Transferencia</b><br>' + (datosMegaGlobal.trDatos || 'No configurado');
+  else if (met === 'BZ') box.innerHTML = '<b>🪙 Binance Pay</b><br>' + (datosMegaGlobal.binanceDatos || '');
+  else if (met === 'ZP') box.innerHTML = '<b>💜 Zelle</b><br>' + (datosMegaGlobal.zelleDatos || '');
+  else if (met === 'EF') box.innerHTML = '<b>💵 Efectivo</b><br>' + (datosMegaGlobal.efectivoDatos || '');
+  else if (met === 'US') box.innerHTML = '<b>🪙 USDT</b><br>' + (datosMegaGlobal.usdtDatos || '');
+  var blqWA = $('bloqueWhatsAppSoporte');
+  var blqRef = $('bloqueRefComprobante');
+  if (esUSD) {
+    blqWA.classList.remove('hidden');
+    blqRef.classList.add('hidden');
+    var tel = (datosMegaGlobal.waList && datosMegaGlobal.waList[0]) || '';
+    var metodoNombre = met === 'BZ' ? 'Binance' : met === 'ZP' ? 'Zelle' : met === 'EF' ? 'Efectivo' : 'USDT';
+    var msg = encodeURIComponent('¡Hola! 👋 Quiero pagar con *' + metodoNombre + '*.\n\n🎟️ Números: #' + seleccionados.join(', #') + '\n💰 Monto: *$' + fmt(totalUSD) + '*\n\n¿Me indican cómo proceder? 🙏');
+    $('btnWhatsAppSoporte').href = tel ? ('https://wa.me/' + tel + '?text=' + msg) : '#';
+  } else {
+    blqWA.classList.add('hidden');
+    blqRef.classList.remove('hidden');
+  }
+}
+
+async function ejecutarCheckout() {
+  var ced = $('chkCedula').value.trim();
+  var nom = $('chkNombre').value.trim();
+  var tel = $('chkTelefono').value.trim();
+  var correo = $('chkCorreo').value.trim();
+  if (!ced || !nom || !tel || !correo) { notificar('Completa todos los datos', 'error'); return; }
+  if (correo.indexOf('@') === -1) { notificar('Correo inválido', 'error'); return; }
+  var btn = $('btnEjecutarCheckout');
+  btn.innerText = 'Procesando...'; btn.disabled = true;
+  if (modoCheckoutActual === 'RESERVADO') {
+    try {
+      const res = await apiCall('reservarTicketsMega', { cedula: ced, nombre: nom, telefono: tel, correo: correo, numeros: seleccionados });
+      btn.innerText = 'Confirmar'; btn.disabled = false;
+      if (!res.success) { notificar(res.error, 'error'); return; }
+      cerrarModal('modalCheckout');
+      notificar('¡Reserva enviada! Revisa tu correo 📧', 'success');
+      setTimeout(cargarDatos, 500);
+    } catch(e) {
+      btn.innerText = 'Confirmar'; btn.disabled = false;
+      notificar('Error de conexión', 'error');
+    }
+  } else {
+    var esUSD = METODOS_USD.indexOf(metodoPagoActual) > -1;
+    var ref = esUSD ? ('USD' + String(Date.now()).slice(-4)) : $('chkReferencia').value.trim();
+    if (!esUSD && ref.length !== 4) { btn.innerText = 'Confirmar'; btn.disabled = false; notificar('La referencia debe ser de 4 dígitos', 'error'); return; }
+    var f = esUSD ? null : $('chkArchivo');
+    var reader = new FileReader();
+    if (f && f.files.length > 0) {
+      reader.readAsDataURL(f.files[0]);
+      reader.onload = function() { enviarPagoServidor(ced, nom, tel, correo, ref, reader.result, btn); };
+    } else enviarPagoServidor(ced, nom, tel, correo, ref, '', btn);
+  }
+}
+
+async function enviarPagoServidor(ced, nom, tel, correo, ref, b64, btn) {
+  var precioUSD = Number(datosMegaGlobal.precioTicketUSD) || 2;
+  var tasa = Number(datosMegaGlobal.tasa) || 982;
+  var totalUSD = seleccionados.length * precioUSD;
+  var totalBs = totalUSD * tasa;
+  var metodoTxt = { 'PM':'Pago Móvil','TR':'Transferencia','BZ':'Binance','ZP':'Zelle','EF':'Efectivo','US':'USDT' }[metodoPagoActual] || 'Otro';
+  
+  try {
+    const res = await apiCall('reportarPagoMega', { cedula: ced, nombre: nom, telefono: tel, correo: correo, numeros: seleccionados, montoUSD: totalUSD, montoBs: totalBs, metodo: metodoTxt, referencia: ref, base64: b64 });
+    btn.innerText = 'Confirmar'; btn.disabled = false;
+    if (!res.success) { notificar(res.error, 'error'); return; }
+    cerrarModal('modalCheckout');
+    notificar('¡Pago reportado! Revisa tu correo 📧', 'success');
+    setTimeout(cargarDatos, 500);
+  } catch(e) {
+    btn.innerText = 'Confirmar'; btn.disabled = false;
+    notificar('Error de conexión', 'error');
+  }
+}
+
+function renderizarSoporte(lista) {
+  var c = $('contenedorBotonesSoporte');
+  c.innerHTML = '';
+  if (!lista || !lista.length) { c.innerHTML = '<span class="text-gray-500 text-[11px]">Contacta vía Instagram.</span>'; return; }
+  var html = '';
+  for (var i = 0; i < lista.length; i++) {
+    var msg = encodeURIComponent('¡Hola! 👋 Vengo de Mega Rifas 🎟️✨');
+    html += '<a href="https://wa.me/' + lista[i] + '?text=' + msg + '" target="_blank" class="bg-emerald-500 text-white font-bold py-2 px-3.5 rounded-xl text-[11px] inline-flex items-center gap-1.5"><i class="fa-brands fa-whatsapp"></i> WhatsApp</a>';
+  }
+  c.innerHTML = html;
+}
+
+function abrirModalAdminSeguro() {
+  $('inputPinRifa').value = '';
+  actualizarDots('inputPinRifa', 'dotAdm');
+  abrirModal('modalPinAdmin');
+  setTimeout(function() { $('inputPinRifa').focus(); }, 300);
+}
+
+async function verificarPinAdmin() {
+  var p = $('inputPinRifa').value.trim();
+  if (!p || p.length < 6) { notificar('Ingresa el PIN completo de 6 dígitos', 'error'); return; }
+  mostrarCargando(true);
+  try {
+    const res = await apiCall('verificarPinMegaAdmin', { pin: p });
+    mostrarCargando(false);
+    if (res && res.success) {
+      window._adminPin = p;
+      cerrarModal('modalPinAdmin');
+      abrirModal('modalPanelAdmin');
+      cambiarTabAdmin('val');
+      cargarFormularioConfigAdmin();
+      notificar('Bienvenido admin 👋', 'success');
+    } else {
+      notificar('PIN incorrecto', 'error');
+      $('inputPinRifa').value = '';
+      actualizarDots('inputPinRifa', 'dotAdm');
+    }
+  } catch(e) {
+    mostrarCargando(false);
+    notificar('Error de conexión', 'error');
+  }
+}
+
+function cambiarTabAdmin(tab) {
+  $('adminViewVal').classList.toggle('hidden', tab !== 'val');
+  $('adminViewVnc').classList.toggle('hidden', tab !== 'vnc');
+  $('adminViewHis').classList.toggle('hidden', tab !== 'his');
+  $('adminViewCfg').classList.toggle('hidden', tab !== 'cfg');
+  $('adminViewNue').classList.toggle('hidden', tab !== 'nue');
+  $('adminTabVal').className = 'tab-btn ' + (tab === 'val' ? 'tab-on' : 'tab-off');
+  $('adminTabVnc').className = 'tab-btn ' + (tab === 'vnc' ? 'tab-warn-on' : 'tab-warn-off');
+  $('adminTabHis').className = 'tab-btn ' + (tab === 'his' ? 'tab-on' : 'tab-off');
+  $('adminTabCfg').className = 'tab-btn ' + (tab === 'cfg' ? 'tab-on' : 'tab-off');
+  $('adminTabNue').className = 'tab-btn ' + (tab === 'nue' ? 'tab-danger-on' : 'tab-danger-off');
+  if (tab === 'val') cargarPagosPendientesAdmin();
+  if (tab === 'vnc') cargarPorVencerAdmin();
+  if (tab === 'his') cargarHistorialAdmin();
+}
+
+async function cargarPagosPendientesAdmin() {
+  $('adminViewVal').innerHTML = '<p class="text-center text-gray-500 py-3 text-xs">Cargando...</p>';
+  var pin = window._adminPin;
+  try {
+    const stats = await apiCall('obtenerEstadisticasAdmin', { pin: pin });
+    var est = (datosMegaGlobal && datosMegaGlobal.estadisticas) || {};
+    var html = '';
+    if (stats && stats.success) {
+      html += '<div class="bg-emerald-50 border-2 border-emerald-300 rounded-xl p-3 mb-2">';
+      html += '<div class="text-[10px] font-black text-emerald-700 mb-1">💰 INGRESOS TOTALES</div>';
+      html += '<div class="text-2xl font-black text-emerald-900">$' + fmt(stats.totalUSD) + '</div>';
+      html += '<div class="text-[11px] text-emerald-700 font-mono">≈ Bs ' + fmt(stats.totalBs) + '</div>';
+      html += '<div class="grid grid-cols-3 gap-2 mt-2 pt-2 border-t border-emerald-200 text-center">';
+      html += '<div><div class="text-[9px] font-bold text-emerald-600">HOY</div><b class="text-xs">$' + fmt(stats.totalHoyUSD) + '</b></div>';
+      html += '<div><div class="text-[9px] font-bold text-emerald-600">PAGOS</div><b class="text-xs">' + stats.pagosAprobados + '</b></div>';
+      html += '<div><div class="text-[9px] font-bold text-emerald-600">X VENCER</div><b class="text-xs text-amber-700">' + stats.porVencer + '</b></div>';
+      html += '</div>';
+      if (stats.vencidas > 0) html += '<div class="mt-2 bg-rose-100 text-rose-700 text-[10px] font-black py-1 px-2 rounded-lg">⚠️ ' + stats.vencidas + ' vencidas</div>';
+      html += '</div>';
+    }
+    html += '<div class="subcard border-2 border-amber-200 bg-amber-50 text-xs">';
+    html += '<b class="block mb-1">📊 Taquilla</b>';
+    html += '<div class="grid grid-cols-2 gap-1 text-[11px]">';
+    html += '<div>🟢 Disponibles: <b>' + (est.disponibles || 0) + '</b></div>';
+    html += '<div>🔵 Reservados: <b>' + (est.reservados || 0) + '</b></div>';
+    html += '<div>🟣 En revisión: <b>' + (est.espera || 0) + '</b></div>';
+    html += '<div>🔴 Vendidos: <b>' + (est.vendidos || 0) + '</b></div>';
+    html += '</div></div>';
+    html += '<div class="grid grid-cols-3 gap-2 my-2">';
+    html += '<button type="button" onclick="resincronizar()" class="bg-blue-600 text-white font-bold py-2 rounded-lg text-[10px]">🔄 Re-sinc</button>';
+    html += '<button type="button" onclick="liberarMasivo()" class="bg-amber-600 text-white font-bold py-2 rounded-lg text-[10px]">🔓 Liberar reservas</button>';
+    html += '<button type="button" onclick="exportarCSV()" class="bg-emerald-600 text-white font-bold py-2 rounded-lg text-[10px]">📥 CSV</button>';
+    html += '</div>';
+    $('adminViewVal').innerHTML = html + '<div id="listaPagosCont"></div>';
+    cargarListaPagosEnContenedor();
+  } catch(e) {
+    $('adminViewVal').innerHTML = '<p class="text-center text-rose-600 py-3 text-xs">Error stats</p>';
+  }
+}
+
+async function cargarListaPagosEnContenedor() {
+  try {
+    const lista = await apiCall('listarPagosPendientesMega');
+    var cont = $('listaPagosCont');
+    if (!cont) return;
+    var html = '';
+    if (!lista.length) { html = '<p class="text-center text-gray-500 py-4 text-xs">No hay pagos pendientes 🎉</p>'; cont.innerHTML = html; return; }
+    for (var i = 0; i < lista.length; i++) {
+      var p = lista[i];
+      window['_pago_' + p.fila] = p;
+      html += '<div class="subcard mt-2">';
+      html += '<div class="flex justify-between items-start mb-1">';
+      html += '<div><b class="text-xs">' + p.nombre + '</b><br><span class="text-[10px] text-gray-500 font-mono">C.I. ' + p.cedula + '</span></div>';
+      html += '<div class="text-right"><b class="text-sm text-emerald-600">$' + fmt(p.montoUSD) + '</b><br><span class="text-[9px] text-gray-500">' + p.fecha + '</span></div></div>';
+      html += '<div class="text-[10px] text-blue-600 font-mono mb-1">🎟️ #' + p.numeros + '</div>';
+      html += '<div class="text-[10px] text-gray-600 mb-1">Ref: <b>' + p.referencia + '</b> · ' + p.metodo + '</div>';
+      if (p.telefono) html += '<div class="text-[9px] text-gray-500 mb-1"><i class="fa-solid fa-phone"></i> ' + p.telefono + '</div>';
+      if (p.correo) html += '<div class="text-[9px] text-gray-500 mb-1"><i class="fa-solid fa-envelope"></i> ' + p.correo + '</div>';
+      if (p.comprobante && p.comprobante.indexOf('data:image') === 0) {
+        window['_cb_' + p.fila] = p.comprobante;
+        html += '<button type="button" data-cb="' + p.fila + '" class="mb-2 w-full bg-blue-50 border border-blue-200 text-blue-700 py-1.5 rounded-lg text-[10px] font-bold">📎 Ver comprobante</button>';
+      }
+      html += '<div class="flex gap-1.5">';
+      html += '<button type="button" onclick="resolverPagoAdmin(' + p.fila + ',\'APROBADO\')" class="flex-1 bg-emerald-600 text-white font-bold py-2 rounded-lg text-xs">✓ Aprobar</button>';
+      html += '<button type="button" onclick="resolverPagoAdmin(' + p.fila + ',\'RECHAZADO\')" class="flex-1 bg-rose-600 text-white font-bold py-2 rounded-lg text-xs">✗ Rechazar</button>';
+      html += '</div></div>';
+    }
+    cont.innerHTML = html;
+  } catch(e) {
+    var cont = $('listaPagosCont');
+    if (cont) cont.innerHTML = '<p class="text-center text-rose-600 py-3 text-xs">Error al cargar pagos</p>';
+  }
+}
+
+async function cargarPorVencerAdmin() {
+  $('adminViewVnc').innerHTML = '<p class="text-center text-gray-500 py-3 text-xs">Cargando...</p>';
+  try {
+    const res = await apiCall('listarReservasPorVencer', { pin: window._adminPin });
+    if (!res || !res.success) { $('adminViewVnc').innerHTML = '<p class="text-center text-rose-600 py-3 text-xs">Error: ' + ((res && res.error) || '') + '</p>'; return; }
+    var lista = res.lista || [];
+    if (!lista.length) { $('adminViewVnc').innerHTML = '<p class="text-center text-gray-500 py-6 text-xs">🎉 No hay reservas por vencer ni vencidas.</p>'; return; }
+    var html = '<p class="text-[10px] text-gray-500 mb-2 font-semibold">Reservas que vencen en ≤3 días o ya vencidas. Envía recordatorio manual por correo o WhatsApp.</p>';
+    for (var i = 0; i < lista.length; i++) {
+      var it = lista[i];
+      var urgente = it.vencida ? 'bg-rose-50 border-rose-300' : 'bg-amber-50 border-amber-300';
+      var badge = it.vencida ? '<span class="text-[9px] font-black text-rose-700 bg-rose-200 px-2 py-0.5 rounded-full">⚠️ VENCIDA hace ' + Math.abs(it.diasRestantes) + 'd</span>' : (it.diasRestantes === 0 ? '<span class="text-[9px] font-black text-rose-700 bg-rose-100 px-2 py-0.5 rounded-full">🔴 Vence HOY</span>' : '<span class="text-[9px] font-black text-amber-700 bg-amber-100 px-2 py-0.5 rounded-full">⏰ Vence en ' + it.diasRestantes + 'd</span>');
+      var telLimpio = (it.telefono || '').replace(/\D/g, '');
+      var msgWA = '¡Hola *' + it.nombre + '*! 👋\n\nTe recordamos que tienes boletos reservados en *Mega Rifas* 🎟️\n\n🎟️ Números: *# ' + it.numeros + '*\n\n⏰ ' + (it.vencida ? 'Tu reserva está *vencida*. Urgente para no perder los números.' : 'Completa tu pago para no perder tus números.') + '\n\nCualquier duda estamos aquí 💬\n*Mega Rifas*';
+      html += '<div class="subcard border-2 ' + urgente + ' mt-2">';
+      html += '<div class="flex justify-between items-start mb-1">';
+      html += '<div><b class="text-xs">' + it.nombre + '</b><br><span class="text-[10px] text-gray-500 font-mono">C.I. ' + it.cedula + '</span></div>';
+      html += badge;
+      html += '</div>';
+      html += '<div class="text-[10px] text-blue-600 font-mono mb-1">🎟️ #' + it.numeros + '</div>';
+      if (it.telefono) html += '<div class="text-[9px] text-gray-500 mb-1"><i class="fa-solid fa-phone"></i> ' + it.telefono + '</div>';
+      if (it.correo) html += '<div class="text-[9px] text-gray-500 mb-2"><i class="fa-solid fa-envelope"></i> ' + it.correo + '</div>';
+      html += '<div class="flex gap-1.5">';
+      if (it.correo) html += '<a href="mailto:' + it.correo + '?subject=' + encodeURIComponent('Recordatorio - Mega Rifas') + '&body=' + encodeURIComponent('Hola ' + it.nombre + ',\n\nTe recordamos que tienes boletos reservados en Mega Rifas:\n\nNúmeros: #' + it.numeros + '\n\n' + (it.vencida ? 'Tu reserva ya venció. Urgente para no perder los números.' : 'Completa tu pago antes del límite.') + '\n\n— Mega Rifas') + '" class="flex-1 bg-blue-600 text-white font-bold py-1.5 rounded-lg text-[10px] text-center">📧 Correo</a>';
+      if (telLimpio) html += '<a href="https://wa.me/' + telLimpio + '?text=' + encodeURIComponent(msgWA) + '" target="_blank" class="flex-1 bg-emerald-600 text-white font-bold py-1.5 rounded-lg text-[10px] text-center">📱 WhatsApp</a>';
+      html += '</div></div>';
+    }
+    $('adminViewVnc').innerHTML = html;
+  } catch(e) {
+    $('adminViewVnc').innerHTML = '<p class="text-center text-rose-600 py-3 text-xs">Error: ' + e.message + '</p>';
+  }
+}
+
+document.addEventListener('click', function(e) {
+  var btn = e.target.closest ? e.target.closest('[data-cb]') : null;
+  if (btn) {
+    var fila = btn.getAttribute('data-cb');
+    var cb = window['_cb_' + fila] || '';
+    if (!cb) { notificar('Sin comprobante', 'error'); return; }
+    $('imgComprobante').src = cb;
+    abrirModal('modalImagen');
+  }
+}, true);
+
+function resolverPagoAdmin(fila, acc) {
+  var pagoData = window['_pago_' + fila];
+  if (acc === 'RECHAZADO') {
+    pedirPin('Rechazar pago', 'Vas a rechazar este pago. Los números volverán a RESERVADO.', function(pin) {
+      ejecutarResolucionPago(fila, acc, pagoData, pin);
+    });
+  } else {
+    ejecutarResolucionPago(fila, acc, pagoData, window._adminPin);
+  }
+}
+
+async function ejecutarResolucionPago(fila, acc, pagoData, pin) {
+  notificar('Procesando...', 'info');
+  try {
+    const res = await apiCall('procesarPagoMegaAdmin', { fila: fila, accion: acc });
+    if (!res || !res.success) { notificar('Error: ' + ((res && res.error) || ''), 'error'); return; }
+    if (acc === 'APROBADO') {
+      notificar('✅ Aprobado. Email enviado 📧', 'success');
+      if (pagoData) abrirModalWAConDatos(pagoData);
+    } else {
+      notificar('❌ Rechazado', 'success');
+    }
+    cargarDatos(); // Recarga en background
+    setTimeout(cargarPagosPendientesAdmin, 1200);
+  } catch(e) {
+    notificar('Error: ' + e.message, 'error');
+  }
+}
+
+function abrirModalWAConDatos(p) {
+  _waData = { nombre: p.nombre, numeros: p.numeros, ref: p.referencia, monto: fmt(p.montoUSD) };
+  $('waTelefono').value = p.telefono ? String(p.telefono).replace(/\D/g,'') : '';
+  var msg = '¡Hola *' + p.nombre + '*! 🎉\n\n' +
+    '✅ Tu pago por *$' + fmt(p.montoUSD) + '* (Ref: *' + p.referencia + '*) ha sido *APROBADO*.\n\n' +
+    '🎟️ Números: *# ' + p.numeros + '*\n\n' +
+    '¡Mucha suerte en el sorteo! 🍀\n' +
+    '*Mega Rifas*';
+  $('waPreview').innerHTML = msg.replace(/\*(.*?)\*/g, '<b>$1</b>').replace(/\n/g, '<br>');
+  abrirModal('modalWA');
+}
+
+function enviarWAConfirmado() {
+  var tel = $('waTelefono').value.trim().replace(/\D/g,'');
+  if (!tel) { notificar('Ingresa el teléfono', 'error'); return; }
+  if (!_waData) { notificar('Sin datos', 'error'); return; }
+  var msg = encodeURIComponent('¡Hola *' + _waData.nombre + '*! 🎉\n\n' +
+    '✅ Tu pago por *$' + _waData.monto + '* (Ref: *' + _waData.ref + '*) ha sido *APROBADO*.\n\n' +
+    '🎟️ Números: *# ' + _waData.numeros + '*\n\n' +
+    '¡Mucha suerte en el sorteo! 🍀\n' +
+    '*Mega Rifas*');
+  window.open('https://wa.me/' + tel + '?text=' + msg, '_blank');
+  cerrarModal('modalWA');
+  notificar('✅ WhatsApp abierto', 'success');
+}
+
+function resincronizar() {
+  pedirPin('Resincronizar tablero', 'Esta acción revisa TODOS los pagos y actualiza el tablero. Ingresa tu PIN para continuar.', async function(pin) {
+    notificar('Resincronizando...', 'info');
+    try {
+      const res = await apiCall('resincronizarTableroAdmin', { pin: pin });
+      if (!res.success) { notificar(res.error, 'error'); return; }
+      notificar('✅ ' + res.cambios + ' actualizados', 'success');
+      cargarDatos();
+      setTimeout(cargarPagosPendientesAdmin, 1200);
+    } catch(e) {
+      notificar('Error: ' + e.message, 'error');
+    }
+  });
+}
+
+function liberarMasivo() {
+  pedirPin('Liberar reservas', 'Vas a liberar TODOS los números reservados que no han sido pagados. Esta acción es irreversible.', function(pin) {
+    mostrarConfirm('¿Liberar todas las reservas?', 'Todos los números en estado <b>RESERVADO</b> volverán a estar <b>DISPONIBLES</b>. Los que están en revisión o pagados NO se tocan.', 'fa-triangle-exclamation', async function(ok) {
+      if (!ok) return;
+      notificar('Liberando...', 'info');
+      try {
+        const res = await apiCall('liberarTodosReservadosAdmin', { pin: pin, incluirEspera: false });
+        if (!res.success) { notificar(res.error, 'error'); return; }
+        notificar('✅ ' + res.liberados + ' números liberados', 'success');
+        cargarDatos();
+        setTimeout(cargarPagosPendientesAdmin, 1200);
+      } catch(e) {
+        notificar('Error: ' + e.message, 'error');
+      }
+    }, true);
+  });
+}
+
+async function exportarCSV() {
+  if (!window._adminPin) { notificar('Sesión expirada', 'error'); return; }
+  notificar('Generando CSV...', 'info');
+  try {
+    const res = await apiCall('exportarVentasCSV', { pin: window._adminPin });
+    if (!res.success) { notificar(res.error, 'error'); return; }
+    var blob = new Blob([res.csv], { type: 'text/csv;charset=utf-8;' });
+    var link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = 'mega-rifas-' + new Date().toISOString().slice(0,10) + '.csv';
+    link.click();
+    notificar('✅ CSV descargado', 'success');
+  } catch(e) {
+    notificar('Error: ' + e.message, 'error');
+  }
+}
+
+async function cargarHistorialAdmin() {
+  var cont = $('adminViewHis');
+  cont.innerHTML = '<p class="text-center text-gray-500 py-3 text-xs">Cargando...</p>';
+  try {
+    const lista = await apiCall('obtenerHistorialAdmin', { filtro: historialFiltro });
+    var html = '<div class="flex gap-1 mb-2 overflow-x-auto pb-1">';
+    var filters = ['TODOS','PAGADO','ESPERA','RESERVADO'];
+    for (var f = 0; f < filters.length; f++) {
+      var on = historialFiltro === filters[f];
+      html += '<button type="button" onclick="cambiarFiltroHistorial(\'' + filters[f] + '\')" class="px-3 py-1.5 rounded-lg text-[10px] font-black ' + (on ? 'bg-gray-900 text-white' : 'bg-gray-100 text-gray-600') + ' whitespace-nowrap">' + filters[f] + '</button>';
+    }
+    html += '</div>';
+    if (!lista.length) { html += '<p class="text-center text-gray-500 py-4 text-xs">Sin registros.</p>'; cont.innerHTML = html; return; }
+    for (var i = 0; i < lista.length; i++) {
+      var r = lista[i];
+      var colores = { PAGADO:'bg-gray-100 text-gray-700 border-gray-300', ESPERA:'bg-purple-50 text-purple-700 border-purple-200', RESERVADO:'bg-blue-50 text-blue-700 border-blue-200' };
+      var cls = colores[r.estatus] || 'bg-gray-100 text-gray-700 border-gray-300';
+      html += '<div class="subcard border ' + cls + ' mb-2">';
+      html += '<div class="flex justify-between items-start mb-1">';
+      html += '<div><span class="text-lg font-black font-mono">#' + r.numero + '</span> <span class="text-[9px] font-black px-2 py-0.5 rounded-full ' + cls + '">' + r.estatus + '</span></div>';
+      html += '<button type="button" onclick="abrirEditar(' + r.fila + ',\'' + (r.estatus||'') + '\',\'' + (r.cedula||'').replace(/\'/g,'') + '\',\'' + (r.nombre||'').replace(/\'/g,'') + '\',\'' + (r.telefono||'') + '\')" class="text-[10px] font-black text-blue-600 underline">✏️ Editar</button>';
+      html += '</div>';
+      if (r.nombre || r.cedula) {
+        html += '<div class="text-[11px] text-gray-700 font-bold">' + r.nombre + '</div>';
+        html += '<div class="text-[10px] text-gray-500 font-mono mb-1">C.I. ' + r.cedula + ' · ' + r.telefono + '</div>';
+      }
+      if (r.fechaReserva) html += '<div class="text-[9px] text-gray-500">Reservado: ' + r.fechaReserva + '</div>';
+      if (r.fechaPago) html += '<div class="text-[9px] text-emerald-600 font-bold">Pagado: ' + r.fechaPago + '</div>';
+      var acciones = [];
+      if (r.estatus === 'RESERVADO' && r.telefono) {
+        var msg = encodeURIComponent('¡Hola *' + r.nombre + '*! 👋\n\nTe recordamos que tienes el boleto *# ' + r.numero + '* reservado en *Mega Rifas* 🎟️\n\n⏰ Completa tu pago antes del límite.\n\n*Mega Rifas*');
+        acciones.push('<a href="https://wa.me/' + r.telefono.replace(/\D/g,'') + '?text=' + msg + '" target="_blank" class="flex-1 bg-emerald-600 text-white font-bold py-1.5 rounded-lg text-[10px] text-center">📱 Recordar</a>');
+      }
+      acciones.push('<button type="button" onclick="liberarNumero(' + r.fila + ',\'' + r.numero + '\')" class="flex-1 bg-amber-600 text-white font-bold py-1.5 rounded-lg text-[10px]">🔓 Liberar</button>');
+      html += '<div class="flex gap-1.5 mt-2">' + acciones.join('') + '</div>';
+      html += '</div>';
+    }
+    cont.innerHTML = html;
+  } catch(e) {
+    cont.innerHTML = '<p class="text-center text-rose-600 py-3 text-xs">Error: ' + e.message + '</p>';
+  }
+}
+
+function cambiarFiltroHistorial(f) { historialFiltro = f; cargarHistorialAdmin(); }
+
+function liberarNumero(fila, numero) {
+  pedirPin('Liberar #' + numero, 'Vas a liberar el número #' + numero + '. Volverá a estar disponible para otros clientes.', function(pin) {
+    mostrarConfirm('¿Liberar #' + numero + '?', 'Esta acción es irreversible.', 'fa-unlock', async function(ok) {
+      if (!ok) return;
+      notificar('Liberando...', 'info');
+      try {
+        const res = await apiCall('liberarNumeroAdmin', { numero: numero, pin: pin });
+        if (!res.success) { notificar(res.error, 'error'); return; }
+        notificar('✅ #' + numero + ' liberado', 'success');
+        cargarHistorialAdmin();
+        cargarDatos();
+      } catch(e) {
+        notificar('Error: ' + e.message, 'error');
+      }
+    }, true);
+  });
+}
+
+function abrirEditar(fila, est, ced, nom, tel) {
+  $('editFila').value = fila;
+  $('editEstatus').value = est;
+  $('editCedula').value = ced;
+  $('editNombre').value = nom;
+  $('editTelefono').value = tel;
+  $('editPin').value = '';
+  abrirModal('modalEditar');
+}
+
+async function guardarEdicion() {
+  var pin = $('editPin').value.trim();
+  if (!pin || pin.length < 6) { notificar('Ingresa el PIN de 6 dígitos', 'error'); return; }
+  var datos = {
+    estatus: $('editEstatus').value,
+    cedula: $('editCedula').value.trim(),
+    nombre: $('editNombre').value.trim(),
+    telefono: $('editTelefono').value.trim()
+  };
+  notificar('Guardando...', 'info');
+  try {
+    const res = await apiCall('editarRegistroAdmin', { fila: parseInt($('editFila').value), datos: datos, pin: pin });
+    if (!res.success) { notificar(res.error, 'error'); return; }
+    notificar('✅ Guardado', 'success');
+    cerrarModal('modalEditar');
+    cargarHistorialAdmin();
+    cargarDatos();
+  } catch(e) {
+    notificar('Error: ' + e.message, 'error');
+  }
+}
+
+function cargarFormularioConfigAdmin() {
+  $('cfgTitulo').value = datosMegaGlobal.tituloRifa || '';
+  $('cfgTotal').value = datosMegaGlobal.totalNumeros || 100;
+  $('cfgPrecio').value = datosMegaGlobal.precioTicketUSD || 2;
+  $('cfgPremios').value = datosMegaGlobal.premios || '';
+  $('cfgNoticias').value = datosMegaGlobal.noticias || '';
+  $('cfgTickerNoticias').value = datosMegaGlobal.tickerNoticias || '';
+  $('cfgFechaSorteo').value = datosMegaGlobal.fechaSorteo || '';
+  $('cfgDiasPago').value = datosMegaGlobal.diasLimitePago || 15;
+  $('cfgDiasBloqueo').value = 3;
+  $('cfgTasaManual').value = '';
+  $('cfgLogoVersion').value = datosMegaGlobal.logoVersion || 'OSCURU';
+  $('cfgLogoUrlOscuro').value = datosMegaGlobal.logoUrlOscuro || '';
+  $('cfgLogoUrlClaro').value = datosMegaGlobal.logoUrlClaro || '';
+  $('cfgColorPrin').value = datosMegaGlobal.colorPrincipal || '#111827';
+  $('cfgColorAce').value = datosMegaGlobal.colorAcento || '#FFC107';
+  $('cfgFuente').value = datosMegaGlobal.tipografia || 'system-ui, sans-serif';
+  $('cfgPM').value = datosMegaGlobal.pmDatos || '';
+  $('cfgTR').value = datosMegaGlobal.trDatos || '';
+  $('cfgBZ').value = datosMegaGlobal.binanceDatos || '';
+  $('cfgZP').value = datosMegaGlobal.zelleDatos || '';
+  $('cfgEF').value = datosMegaGlobal.efectivoDatos || '';
+  $('cfgUS').value = datosMegaGlobal.usdtDatos || '';
+  $('cfgIG').value = datosMegaGlobal.igUrl || '';
+  var wa = datosMegaGlobal.waList || [];
+  $('cfgWA1').value = wa[0] || '';
+  $('cfgWA2').value = wa[1] || '';
+  $('cfgWA3').value = wa[2] || '';
+}
+
+async function guardarConfigAdmin() {
+  var d = {
+    titulo: $('cfgTitulo').value.trim(), total: $('cfgTotal').value, precio: $('cfgPrecio').value,
+    premios: $('cfgPremios').value.trim(), noticias: $('cfgNoticias').value.trim(),
+    tickerNoticias: $('cfgTickerNoticias').value.trim(),
+    fechaSorteo: $('cfgFechaSorteo').value.trim(), diasLimitePago: $('cfgDiasPago').value,
+    diasBloqueo: $('cfgDiasBloqueo').value, tasaManual: $('cfgTasaManual').value.trim(),
+    logoVersion: $('cfgLogoVersion').value, logoUrlOscuro: $('cfgLogoUrlOscuro').value.trim(),
+    logoUrlClaro: $('cfgLogoUrlClaro').value.trim(), colorPrincipal: $('cfgColorPrin').value,
+    colorAcento: $('cfgColorAce').value, tipografia: $('cfgFuente').value,
+    pm: $('cfgPM').value.trim(), tr: $('cfgTR').value.trim(), binanceDatos: $('cfgBZ').value.trim(),
+    zelleDatos: $('cfgZP').value.trim(), efectivoDatos: $('cfgEF').value.trim(), usdtDatos: $('cfgUS').value.trim(),
+    ig: $('cfgIG').value.trim(), wa1: $('cfgWA1').value.trim(), wa2: $('cfgWA2').value.trim(), wa3: $('cfgWA3').value.trim(),
+    nuevoPin: $('cfgNuevoPin').value.trim()
+  };
+  notificar('Guardando...', 'info');
+  try {
+    const res = await apiCall('guardarConfiguracionAdminMega', d);
+    if (!res.success) { notificar(res.error, 'error'); return; }
+    notificar('✅ Guardado', 'success');
+    cargarDatos();
+  } catch(e) {
+    notificar('Error: ' + e.message, 'error');
+  }
+}
+
+function ejecutarNuevaRifa() {
+  var pin = $('pinReiniciarRifa').value.trim();
+  if (!pin || pin.length < 6) { notificar('Ingresa tu PIN de 6 dígitos', 'error'); return; }
+  mostrarConfirm('⚠️ Reiniciar TODA la rifa', 'Esto borrará <b>TODOS</b> los números del tablero y <b>TODOS</b> los pagos registrados. <b>Esta acción no se puede deshacer.</b>', 'fa-triangle-exclamation', async function(ok) {
+    if (!ok) return;
+    notificar('Reiniciando...', 'info');
+    try {
+      const res = await apiCall('iniciarNuevaRifaAdmin', { pin: pin });
+      if (!res.success) { notificar(res.error, 'error'); return; }
+      notificar('✅ Rifa reiniciada', 'success');
+      cerrarModal('modalPanelAdmin');
+      setTimeout(cargarDatos, 500);
+    } catch(e) {
+      notificar('Error: ' + e.message, 'error');
+    }
+  }, true);
+}
+
+window.addEventListener('load', function() { setTimeout(cargarDatos, 100); });
+</script>
+</body>
+</html>
