@@ -508,18 +508,18 @@ var _debounceTimer = null;
 var _confirmCallback = null;
 var _pinCallback = null;
 
+// Forzamos que las peticiones NO se guarden en caché
 async function apiCall(action, data = {}) {
   try {
     const body = new URLSearchParams();
     body.append('action', action);
     body.append('data', JSON.stringify(data));
 
-    // Añadimos un timestamp para evitar el caché del navegador
-    const url = API_URL + '?t=' + new Date().getTime();
-
-    const response = await fetch(url, {
+    const response = await fetch(API_URL, {
       method: 'POST',
-      body: body
+      body: body,
+      cache: 'no-store', 
+      headers: { 'Pragma': 'no-cache', 'Cache-Control': 'no-cache' }
     });
 
     if (!response.ok) throw new Error('Error de red: ' + response.status);
@@ -621,7 +621,6 @@ async function confirmarPinAccion() {
   }
 }
 
-// ==== CARGA INICIAL SIN CACHÉ ====
 async function cargarDatos() {
   mostrarCargando(true);
   try {
@@ -1491,7 +1490,6 @@ async function guardarConfigAdmin() {
     const res = await apiCall('guardarConfiguracionAdminMega', d);
     if (!res.success) { notificar(res.error, 'error'); return; }
     notificar('✅ Guardado', 'success');
-    // LA MAGIA OCURRE AQUÍ: res contiene la data fresca recién guardada. La aplicamos directo.
     aplicarDatos(res); 
   } catch(e) {
     notificar('Error: ' + e.message, 'error');
