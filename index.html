@@ -508,25 +508,17 @@ var _debounceTimer = null;
 var _confirmCallback = null;
 var _pinCallback = null;
 
-// ====== apiCall CORREGIDO ======
-// Se envía TODO dentro de un único campo "payload" (que es lo que espera el backend).
-// NO se envían headers custom (Pragma/Cache-Control) → evita el preflight OPTIONS
-// que Apps Script no sabe responder y que provocaba el "Error de conexión".
 async function apiCall(action, data = {}) {
   try {
     const body = new URLSearchParams();
     body.append('payload', JSON.stringify({ action: action, data: data }));
-
     const response = await fetch(API_URL, {
       method: 'POST',
       body: body,
       cache: 'no-store'
     });
-
     if (!response.ok) throw new Error('HTTP ' + response.status);
-
     const text = await response.text();
-
     if (text.trim().startsWith('<')) {
       throw new Error('Apps Script devolvió HTML (revisa que el deploy sea "Cualquier persona").');
     }
@@ -1454,8 +1446,8 @@ function cargarFormularioConfigAdmin() {
   $('cfgTickerNoticias').value = datosMegaGlobal.tickerNoticias || '';
   $('cfgFechaSorteo').value = datosMegaGlobal.fechaSorteo || '';
   $('cfgDiasPago').value = datosMegaGlobal.diasLimitePago || 15;
-  $('cfgDiasBloqueo').value = 3;
-  $('cfgTasaManual').value = '';
+  $('cfgDiasBloqueo').value = datosMegaGlobal.diasBloqueo || 3;
+  $('cfgTasaManual').value = datosMegaGlobal.tasaManual || '';
   $('cfgLogoVersion').value = datosMegaGlobal.logoVersion || 'OSCURU';
   $('cfgLogoUrlOscuro').value = datosMegaGlobal.logoUrlOscuro || '';
   $('cfgLogoUrlClaro').value = datosMegaGlobal.logoUrlClaro || '';
@@ -1490,13 +1482,17 @@ async function guardarConfigAdmin() {
     ig: $('cfgIG').value.trim(), wa1: $('cfgWA1').value.trim(), wa2: $('cfgWA2').value.trim(), wa3: $('cfgWA3').value.trim(),
     nuevoPin: $('cfgNuevoPin').value.trim()
   };
+  console.log('[GuardarConfig] Enviando:', d);
   notificar('Guardando...', 'info');
   try {
     const res = await apiCall('guardarConfiguracionAdminMega', d);
-    if (!res.success) { notificar(res.error, 'error'); return; }
-    notificar('✅ Guardado', 'success');
-    aplicarDatos(res); 
+    console.log('[GuardarConfig] Respuesta:', res);
+    if (!res.success) { notificar('Error: ' + (res.error || 'desconocido'), 'error'); return; }
+    notificar('✅ Guardado. Precio: $' + fmt(res.precioTicketUSD) + ' → Bs ' + fmt(res.precioTicketBs), 'success');
+    aplicarDatos(res);
+    cargarFormularioConfigAdmin();
   } catch(e) {
+    console.error('[GuardarConfig] Excepción:', e);
     notificar('Error: ' + e.message, 'error');
   }
 }
