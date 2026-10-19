@@ -508,23 +508,28 @@ var _debounceTimer = null;
 var _confirmCallback = null;
 var _pinCallback = null;
 
-// Forzamos que las peticiones NO se guarden en caché
+// ====== apiCall CORREGIDO ======
+// Se envía TODO dentro de un único campo "payload" (que es lo que espera el backend).
+// NO se envían headers custom (Pragma/Cache-Control) → evita el preflight OPTIONS
+// que Apps Script no sabe responder y que provocaba el "Error de conexión".
 async function apiCall(action, data = {}) {
   try {
     const body = new URLSearchParams();
-    body.append('action', action);
-    body.append('data', JSON.stringify(data));
+    body.append('payload', JSON.stringify({ action: action, data: data }));
 
     const response = await fetch(API_URL, {
       method: 'POST',
       body: body,
-      cache: 'no-store', 
-      headers: { 'Pragma': 'no-cache', 'Cache-Control': 'no-cache' }
+      cache: 'no-store'
     });
 
-    if (!response.ok) throw new Error('Error de red: ' + response.status);
-    
+    if (!response.ok) throw new Error('HTTP ' + response.status);
+
     const text = await response.text();
+
+    if (text.trim().startsWith('<')) {
+      throw new Error('Apps Script devolvió HTML (revisa que el deploy sea "Cualquier persona").');
+    }
     return JSON.parse(text);
   } catch (error) {
     console.error('API Error:', error);
