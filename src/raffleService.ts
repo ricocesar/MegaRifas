@@ -46,6 +46,11 @@ export interface RaffleConfigData {
   igUrl: string;
   waList: string[];
   adminEmails: string[];
+  emailjsEnabled: boolean;
+  emailjsServiceId: string;
+  emailjsPublicKey: string;
+  emailjsTemplateCompra: string;
+  emailjsTemplateAprobacion: string;
   updatedAtMs?: number;
 }
 
@@ -109,6 +114,11 @@ export const DEFAULT_RAFFLE_CONFIG: RaffleConfigData = {
   igUrl: 'https://instagram.com/megarifas',
   waList: ['584129023035'],
   adminEmails: [ADMIN_BOOTSTRAP_EMAIL.toLowerCase()],
+  emailjsEnabled: false,
+  emailjsServiceId: '',
+  emailjsPublicKey: '',
+  emailjsTemplateCompra: '',
+  emailjsTemplateAprobacion: '',
 };
 
 const VALID_METHODS = new Set<PaymentMethodLabel>([
@@ -201,50 +211,8 @@ export async function fetchLiveBcvRate(): Promise<number | null> {
   }
 }
 
-export async function compressReceiptImage(file: File): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onerror = () => reject(new Error('No se pudo leer la imagen.'));
-    reader.onload = () => {
-      const img = new Image();
-      img.onerror = () => reject(new Error('Archivo de imagen inválido.'));
-      img.onload = () => {
-        const maxDim = 900;
-        let { width, height } = img;
-        if (width > maxDim || height > maxDim) {
-          if (width >= height) {
-            height = Math.round((height * maxDim) / width);
-            width = maxDim;
-          } else {
-            width = Math.round((width * maxDim) / height);
-            height = maxDim;
-          }
-        }
-        const canvas = document.createElement('canvas');
-        canvas.width = width;
-        canvas.height = height;
-        const ctx = canvas.getContext('2d');
-        if (!ctx) {
-          resolve('');
-          return;
-        }
-        ctx.drawImage(img, 0, 0, width, height);
-        let quality = 0.72;
-        let dataUrl = canvas.toDataURL('image/jpeg', quality);
-        while (dataUrl.length > 320000 && quality > 0.25) {
-          quality -= 0.12;
-          dataUrl = canvas.toDataURL('image/jpeg', quality);
-        }
-        if (dataUrl.length > 345000) {
-          reject(new Error('La imagen es demasiado pesada. Intenta una captura más ligera.'));
-          return;
-        }
-        resolve(dataUrl);
-      };
-      img.src = String(reader.result || '');
-    };
-    reader.readAsDataURL(file);
-  });
+export function isSixDigitRef(ref: string): boolean {
+  return /^[0-9]{6}$/.test(ref);
 }
 
 function parseConfigSnapshot(raw: Record<string, unknown> | undefined): RaffleConfigData {
@@ -278,6 +246,11 @@ function parseConfigSnapshot(raw: Record<string, unknown> | undefined): RaffleCo
     igUrl: raw.igUrl !== undefined ? clampStr(raw.igUrl, 200) : DEFAULT_RAFFLE_CONFIG.igUrl,
     waList: waRaw.map((w) => normalizeDigits(w)).filter(Boolean).slice(0, 3),
     adminEmails: normalizeAdminEmails(raw.adminEmails),
+    emailjsEnabled: Boolean(raw.emailjsEnabled),
+    emailjsServiceId: clampStr(raw.emailjsServiceId, 100),
+    emailjsPublicKey: clampStr(raw.emailjsPublicKey, 100),
+    emailjsTemplateCompra: clampStr(raw.emailjsTemplateCompra, 100),
+    emailjsTemplateAprobacion: clampStr(raw.emailjsTemplateAprobacion, 100),
     updatedAtMs: toMillis(raw.updatedAt) || undefined,
   };
 }
@@ -304,6 +277,11 @@ function buildConfigPayload(cfg: RaffleConfigData) {
     igUrl: clampStr(cfg.igUrl, 200),
     waList: (cfg.waList || []).map((w) => normalizeDigits(w).slice(0, 25)).filter(Boolean).slice(0, 3),
     adminEmails: normalizeAdminEmails(cfg.adminEmails),
+    emailjsEnabled: Boolean(cfg.emailjsEnabled),
+    emailjsServiceId: clampStr(cfg.emailjsServiceId, 100),
+    emailjsPublicKey: clampStr(cfg.emailjsPublicKey, 100),
+    emailjsTemplateCompra: clampStr(cfg.emailjsTemplateCompra, 100),
+    emailjsTemplateAprobacion: clampStr(cfg.emailjsTemplateAprobacion, 100),
     updatedAt: serverTimestamp(),
   };
 }
@@ -347,6 +325,10 @@ function adminPaymentReportsQuery() {
 
 function adminTicketContactsQuery() {
   return query(collection(db, 'ticketContacts'), where('numero', '>=', '0'));
+}
+
+function adminPaymentReferencesQuery() {
+  return query(collection(db, 'paymentReferences'), where('estatus', 'in', ['PENDIENTE', 'APROBADO']));
 }
 
 export function subscribeTickets(
@@ -462,7 +444,6 @@ export async function submitPaymentReportInFirestore(params: {
   montoBs: number;
   metodo: PaymentMethodLabel;
   referencia: string;
-  comprobante: string;
   currentTickets: Record<string, TicketDoc>;
 }): Promise<string> {
   const cedula = normalizeDigits(params.cedula).slice(0, 20);
@@ -470,7 +451,7 @@ export async function submitPaymentReportInFirestore(params: {
   const telefono = clampStr(params.telefono, 25);
   const correo = clampStr(params.correo, 120);
   const referencia = clampStr(params.referencia, 30);
-  const comprobante = String(params.comprobante || '');
+  const requiresBankRef = params.metodo === 'Pago Móvil' || params.metodo === 'Transferencia';
 
   if (cedula.length < 4) throw new Error('Ingresa una cédula válida.');
   if (nombre.length < 2) throw new Error('Ingresa tu nombre completo.');
@@ -481,12 +462,31 @@ export async function submitPaymentReportInFirestore(params: {
   }
   if (!VALID_METHODS.has(params.metodo)) throw new Error('Método de pago inválido.');
   if (!referencia) throw new Error('Ingresa la referencia de pago.');
-  if (comprobante.length > 350000) throw new Error('El comprobante supera el tamaño permitido.');
+  if (requiresBankRef && !isSixDigitRef(referencia)) {
+    throw new Error('La referencia bancaria debe tener exactamente 6 dígitos numéricos.');
+  }
+
+  // 1) Validate unique 6-digit bank reference against active payments in Firestore
+  if (requiresBankRef) {
+    try {
+      const refSnap = await getDoc(doc(db, 'paymentReferences', referencia));
+      if (refSnap.exists()) {
+        throw new Error(
+          'Esta referencia ya fue registrada anteriormente. Verifica los últimos 6 dígitos.'
+        );
+      }
+    } catch (error) {
+      if (error instanceof Error && error.message.includes('Esta referencia ya fue registrada')) {
+        throw error;
+      }
+      handleFirestoreError(error, OperationType.GET, `paymentReferences/${referencia}`);
+    }
+  }
 
   const cedulaHash = await sha256Hex(cedula);
   const displayName = maskDisplayName(nombre);
 
-  // Check each selected ticket on server
+  // 2) Check each selected ticket on server
   const conflicts: string[] = [];
   const existingSnaps = new Map<string, Record<string, unknown> | null>();
   for (const num of params.numeros) {
@@ -519,7 +519,6 @@ export async function submitPaymentReportInFirestore(params: {
   for (const num of params.numeros) {
     const prev = existingSnaps.get(num);
     if (prev && prev.estatus === 'RESERVADO') {
-      // Transition own RESERVADO -> ESPERA (strictly matching allowed keys)
       batch.update(doc(db, 'tickets', num), {
         estatus: 'ESPERA',
         displayName,
@@ -559,15 +558,39 @@ export async function submitPaymentReportInFirestore(params: {
     montoBs: Number(params.montoBs.toFixed(2)),
     metodo: params.metodo,
     referencia,
-    comprobante,
+    comprobante: '',
     estatus: 'PENDIENTE',
     createdAt: serverTimestamp(),
     resolvedAt: null,
   });
 
+  if (requiresBankRef) {
+    batch.set(doc(db, 'paymentReferences', referencia), {
+      referencia,
+      reportId,
+      estatus: 'PENDIENTE',
+      createdAt: serverTimestamp(),
+    });
+  }
+
   try {
     await batch.commit();
   } catch (error) {
+    // Handle race condition where another user registered the exact same 6 digits simultaneously
+    if (requiresBankRef) {
+      try {
+        const refCheck = await getDoc(doc(db, 'paymentReferences', referencia));
+        if (refCheck.exists()) {
+          throw new Error(
+            'Esta referencia ya fue registrada anteriormente. Verifica los últimos 6 dígitos.'
+          );
+        }
+      } catch (dupErr) {
+        if (dupErr instanceof Error && dupErr.message.includes('Esta referencia ya fue registrada')) {
+          throw dupErr;
+        }
+      }
+    }
     handleFirestoreError(error, OperationType.WRITE, `paymentReports/${reportId}`);
   }
   return reportId;
@@ -686,6 +709,29 @@ export async function resolvePaymentInFirestore(
     estatus: accion,
     resolvedAt: serverTimestamp(),
   });
+
+  if (isSixDigitRef(report.referencia)) {
+    const refDoc = doc(db, 'paymentReferences', report.referencia);
+    try {
+      const refSnap = await getDoc(refDoc);
+      if (accion === 'APROBADO') {
+        if (refSnap.exists()) {
+          batch.update(refDoc, { estatus: 'APROBADO' });
+        } else {
+          batch.set(refDoc, {
+            referencia: report.referencia,
+            reportId: report.id,
+            estatus: 'APROBADO',
+            createdAt: serverTimestamp(),
+          });
+        }
+      } else if (refSnap.exists()) {
+        batch.delete(refDoc);
+      }
+    } catch {
+      // Non-fatal if reference doc was absent
+    }
+  }
 
   const displayName = maskDisplayName(report.nombre);
   for (const num of report.numeros) {
@@ -888,7 +934,7 @@ export async function editTicketInFirestore(params: {
 }
 
 export async function resetRaffleInFirestore(): Promise<void> {
-  const [tSnap, cSnap, pSnap] = await Promise.all([
+  const [tSnap, cSnap, pSnap, rSnap] = await Promise.all([
     getDocs(publicTicketsQuery()).catch((e) =>
       handleFirestoreError(e, OperationType.LIST, 'tickets')
     ),
@@ -898,12 +944,16 @@ export async function resetRaffleInFirestore(): Promise<void> {
     getDocs(adminPaymentReportsQuery()).catch((e) =>
       handleFirestoreError(e, OperationType.LIST, 'paymentReports')
     ),
+    getDocs(adminPaymentReferencesQuery()).catch((e) =>
+      handleFirestoreError(e, OperationType.LIST, 'paymentReferences')
+    ),
   ]);
 
   const refs = [
     ...tSnap.docs.map((d) => d.ref),
     ...cSnap.docs.map((d) => d.ref),
     ...pSnap.docs.map((d) => d.ref),
+    ...rSnap.docs.map((d) => d.ref),
   ];
 
   try {

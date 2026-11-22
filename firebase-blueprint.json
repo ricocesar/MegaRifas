@@ -25,6 +25,11 @@
         "igUrl": { "type": "string", "maxLength": 200, "description": "Instagram profile URL or handle" },
         "waList": { "type": "array", "description": "Up to 3 WhatsApp support numbers" },
         "adminEmails": { "type": "array", "description": "Normalized lowercase Google emails authorized to administer the raffle (max 20, always includes primary admin)" },
+        "emailjsEnabled": { "type": "boolean", "description": "Whether EmailJS notifications are enabled" },
+        "emailjsServiceId": { "type": "string", "maxLength": 100, "description": "EmailJS Service ID" },
+        "emailjsPublicKey": { "type": "string", "maxLength": 100, "description": "EmailJS Public Key" },
+        "emailjsTemplateCompra": { "type": "string", "maxLength": 100, "description": "EmailJS Template ID for purchase confirmation and admin alert" },
+        "emailjsTemplateAprobacion": { "type": "string", "maxLength": 100, "description": "EmailJS Template ID for payment approval confirmation" },
         "updatedAt": { "type": "string", "format": "date-time", "description": "Server timestamp of last update" }
       },
       "required": [
@@ -48,6 +53,11 @@
         "igUrl",
         "waList",
         "adminEmails",
+        "emailjsEnabled",
+        "emailjsServiceId",
+        "emailjsPublicKey",
+        "emailjsTemplateCompra",
+        "emailjsTemplateAprobacion",
         "updatedAt"
       ]
     },
@@ -118,6 +128,18 @@
         "resolvedAt"
       ]
     },
+    "PaymentReference": {
+      "title": "PaymentReference",
+      "description": "Zero-PII uniqueness lock for 6-digit bank payment references in the active raffle.",
+      "type": "object",
+      "properties": {
+        "referencia": { "type": "string", "minLength": 6, "maxLength": 6, "pattern": "^[0-9]{6}$", "description": "6-digit bank reference code" },
+        "reportId": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$", "description": "Associated PaymentReport ID" },
+        "estatus": { "type": "string", "enum": ["PENDIENTE", "APROBADO"], "description": "Active reference lock status" },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Server timestamp" }
+      },
+      "required": ["referencia", "reportId", "estatus", "createdAt"]
+    },
     "AdminUser": {
       "title": "AdminUser",
       "description": "Authorized admin record granting elevated access.",
@@ -145,7 +167,11 @@
     },
     "/paymentReports/{reportId}": {
       "schema": { "$ref": "#/entities/PaymentReport" },
-      "description": "Payment reports submitted by buyers. Readable, updatable (approve/reject), and deletable only by verified admins."
+      "description": "Payment reports submitted by buyers (no image uploads). Readable, updatable (approve/reject), and deletable only by verified admins."
+    },
+    "/paymentReferences/{refCode}": {
+      "schema": { "$ref": "#/entities/PaymentReference" },
+      "description": "Zero-PII uniqueness index for 6-digit bank references preventing duplicate payment submissions."
     },
     "/admins/{uid}": {
       "schema": { "$ref": "#/entities/AdminUser" },

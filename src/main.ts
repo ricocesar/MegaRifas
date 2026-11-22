@@ -9,11 +9,11 @@ import {
 } from './firebase';
 import {
   DEFAULT_RAFFLE_CONFIG,
-  compressReceiptImage,
   editTicketInFirestore,
   ensureConfigSeeded,
   fetchAdminAllData,
   fetchLiveBcvRate,
+  isSixDigitRef,
   isValidAdminEmailFormat,
   normalizeAdminEmail,
   normalizeAdminEmails,
@@ -37,6 +37,7 @@ import {
   type TicketStatus,
 } from './raffleService';
 import { exportHistorialToPdf, exportPaymentsToPdf } from './pdfExport';
+import { sendApprovalEmail, sendPurchaseEmails } from './emailService';
 
 const CACHE_KEY = 'mega_rifas_fb_cache_v1';
 const MY_PROFILE_KEY = 'mega_rifas_my_profile_v1';
@@ -565,12 +566,12 @@ function renderizarSoporte(waList: string[], igUrl: string): void {
   const validWa = waList.map(normalizeDigits).filter(Boolean);
   validWa.forEach((tel, i) => {
     const label = validWa.length > 1 ? `WhatsApp ${i + 1}` : 'WhatsApp';
-    html += `<a href="https://wa.me/${tel}?text=${msg}" target="_blank" rel="noopener noreferrer" class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2 px-3.5 rounded-xl text-xs inline-flex items-center gap-1.5 transition"><i class="fa-brands fa-whatsapp text-sm"></i> ${label}</a>`;
+    html += `<a href="https://wa.me/${tel}?text=${msg}" target="_blank" rel="noopener noreferrer" aria-label="${label}" title="${label}" class="w-11 h-11 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-lg inline-flex items-center justify-center shadow-sm transition shrink-0"><i class="fa-brands fa-whatsapp" aria-hidden="true"></i></a>`;
   });
   if (igUrl.trim()) {
     const raw = igUrl.trim();
     const href = /^https?:\/\//i.test(raw) ? raw : `https://instagram.com/${raw.replace(/^@/, '')}`;
-    html += `<a href="${escHtml(href)}" target="_blank" rel="noopener noreferrer" class="bg-slate-900 hover:bg-slate-800 text-white font-bold py-2 px-3.5 rounded-xl text-xs inline-flex items-center gap-1.5 transition"><i class="fa-brands fa-instagram text-sm text-pink-400"></i> Instagram</a>`;
+    html += `<a href="${escHtml(href)}" target="_blank" rel="noopener noreferrer" aria-label="Instagram" title="Instagram" class="w-11 h-11 rounded-xl bg-slate-900 hover:bg-slate-800 text-pink-400 text-lg inline-flex items-center justify-center shadow-sm transition shrink-0"><i class="fa-brands fa-instagram" aria-hidden="true"></i></a>`;
   }
   c.innerHTML = html || '<span class="text-slate-500 text-xs">Sin canales de soporte configurados.</span>';
 }
@@ -997,42 +998,49 @@ async function ejecutarCheckout(): Promise<void> {
   }
 
   const esUSD = METODOS_USD.has(metodoPagoActual);
-  const refInput = ($<HTMLInputElement>('chkReferencia')?.value || '').trim();
-  const referencia = esUSD ? `USD${String(Date.now()).slice(-4)}` : refInput;
-  if (!esUSD && referencia.length !== 4) {
-    notificar('La referencia debe ser de 4 dígitos', 'error');
+  const refInput = normalizeDigits($<HTMLInputElement>('chkReferencia')?.value || '');
+  const referencia = esUSD ? `USD${String(Date.now()).slice(-6)}` : refInput;
+  if (!esUSD && !isSixDigitRef(referencia)) {
+    notificar('La referencia bancaria debe tener exactamente 6 dígitos numéricos', 'error');
     return;
   }
 
   setBtnLoading(btn, true, 'Enviando pago...');
   try {
-    let comprobante = '';
-    const fileInput = esUSD ? null : $<HTMLInputElement>('chkArchivo');
-    if (fileInput?.files && fileInput.files.length > 0) {
-      comprobante = await compressReceiptImage(fileInput.files[0]);
-    }
-
-    const totalUSD = seleccionados.length * currentConfig.precioTicketUSD;
-    const totalBs = seleccionados.length * getTicketPriceBs();
+    const purchasedNums = seleccionados.slice();
+    const totalUSD = purchasedNums.length * currentConfig.precioTicketUSD;
+    const totalBs = purchasedNums.length * getTicketPriceBs();
+    const metodoLabel = METHOD_LABELS[metodoPagoActual];
 
     await submitPaymentReportInFirestore({
       cedula,
       nombre,
       telefono,
       correo,
-      numeros: seleccionados.slice(),
+      numeros: purchasedNums,
       montoUSD: totalUSD,
       montoBs: totalBs,
-      metodo: METHOD_LABELS[metodoPagoActual],
+      metodo: metodoLabel,
       referencia,
-      comprobante,
       currentTickets,
+    });
+
+    // Non-blocking EmailJS notifications (buyer confirmation + admin alerts)
+    void sendPurchaseEmails(currentConfig, {
+      nombre,
+      cedula,
+      telefono,
+      correo,
+      numeros: purchasedNums,
+      montoUSD: totalUSD,
+      montoBs: totalBs,
+      metodo: metodoLabel,
+      referencia,
     });
 
     seleccionados = [];
     const rEl = $<HTMLInputElement>('chkReferencia');
     if (rEl) rEl.value = '';
-    if (fileInput) fileInput.value = '';
     actualizarBarraFlotante();
     cerrarModal('modalCheckout');
     notificar('¡Pago reportado! Quedó en revisión 🎉', 'success');
@@ -1312,9 +1320,6 @@ async function cargarPagosPendientesAdmin(): Promise<void> {
         html += `<div class="text-xs text-slate-700">Ref: <b>${escHtml(p.referencia)}</b> · ${escHtml(p.metodo)}</div>`;
         if (p.telefono) html += `<div class="text-[11px] text-slate-500"><i class="fa-solid fa-phone mr-1"></i>${escHtml(p.telefono)}</div>`;
         if (p.correo) html += `<div class="text-[11px] text-slate-500"><i class="fa-solid fa-envelope mr-1"></i>${escHtml(p.correo)}</div>`;
-        if (p.comprobante && p.comprobante.startsWith('data:image')) {
-          html += `<button type="button" data-view-receipt="${escHtml(p.id)}" class="w-full bg-blue-50 hover:bg-blue-100 border border-blue-200 text-blue-700 py-1.5 rounded-lg text-xs font-bold transition">📎 Ver comprobante</button>`;
-        }
         html += '<div class="flex gap-2 pt-1">';
         html += `<button type="button" data-resolve-id="${escHtml(p.id)}" data-resolve-acc="APROBADO" class="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2 rounded-lg text-xs transition">✓ Aprobar</button>`;
         html += `<button type="button" data-resolve-id="${escHtml(p.id)}" data-resolve-acc="RECHAZADO" class="flex-1 bg-rose-600 hover:bg-rose-700 text-white font-bold py-2 rounded-lg text-xs transition">✗ Rechazar</button>`;
@@ -1338,6 +1343,7 @@ async function resolverPago(reportId: string, accion: 'APROBADO' | 'RECHAZADO', 
     try {
       await resolvePaymentInFirestore(report, accion);
       if (accion === 'APROBADO') {
+        void sendApprovalEmail(currentConfig, report);
         notificar('✅ Pago aprobado y boletos marcados como PAGADO', 'success');
         abrirModalWAConDatos(report);
       } else {
@@ -1863,6 +1869,13 @@ function cargarFormularioConfigAdmin(): void {
   setVal('cfgWA2', c.waList[1] || '');
   setVal('cfgWA3', c.waList[2] || '');
 
+  const ejsToggle = $<HTMLInputElement>('cfgEmailjsEnabled');
+  if (ejsToggle) ejsToggle.checked = Boolean(c.emailjsEnabled);
+  setVal('cfgEmailjsServiceId', c.emailjsServiceId);
+  setVal('cfgEmailjsPublicKey', c.emailjsPublicKey);
+  setVal('cfgEmailjsTemplateCompra', c.emailjsTemplateCompra);
+  setVal('cfgEmailjsTemplateAprobacion', c.emailjsTemplateAprobacion);
+
   const bcvHint = $('cfgBcvHint');
   if (bcvHint) {
     const rate = liveBcvRate || c.tasa;
@@ -1933,6 +1946,11 @@ async function guardarConfigAdmin(): Promise<void> {
     igUrl: getVal('cfgIG'),
     waList,
     adminEmails: normalizeAdminEmails(currentConfig.adminEmails),
+    emailjsEnabled: Boolean($<HTMLInputElement>('cfgEmailjsEnabled')?.checked),
+    emailjsServiceId: getVal('cfgEmailjsServiceId'),
+    emailjsPublicKey: getVal('cfgEmailjsPublicKey'),
+    emailjsTemplateCompra: getVal('cfgEmailjsTemplateCompra'),
+    emailjsTemplateAprobacion: getVal('cfgEmailjsTemplateAprobacion'),
   };
 
   const btn = $<HTMLButtonElement>('btnGuardarConfig');
@@ -2029,16 +2047,6 @@ function wireEvents(): void {
   // Admin Pagos & Hist click delegation
   $('adminViewVal')?.addEventListener('click', (e) => {
     const target = e.target as HTMLElement;
-    const receiptBtn = target.closest<HTMLElement>('[data-view-receipt]');
-    if (receiptBtn) {
-      const report = adminDataCache?.payments.find((p) => p.id === receiptBtn.dataset.viewReceipt);
-      if (report?.comprobante) {
-        const img = $<HTMLImageElement>('imgComprobante');
-        if (img) img.src = report.comprobante;
-        abrirModal('modalImagen');
-      }
-      return;
-    }
     const resolveBtn = target.closest<HTMLButtonElement>('[data-resolve-id]');
     if (resolveBtn) {
       const id = resolveBtn.dataset.resolveId || '';
@@ -2137,10 +2145,6 @@ function wireEvents(): void {
     el.addEventListener('click', () => cerrarModal(el.dataset.closeModal || ''));
   });
 
-  $('modalImagen')?.addEventListener('click', (e) => {
-    if (e.target === $('modalImagen')) cerrarModal('modalImagen');
-  });
-
   $('btnAgregarAdminEmail')?.addEventListener('click', () => void agregarAdminEmail());
   $('inputNuevoAdminEmail')?.addEventListener('keydown', (e) => {
     if (e.key === 'Enter') {
@@ -2165,7 +2169,7 @@ function wireEvents(): void {
   });
   $('chkReferencia')?.addEventListener('input', (e) => {
     const el = e.target as HTMLInputElement;
-    el.value = normalizeDigits(el.value).slice(0, 4);
+    el.value = normalizeDigits(el.value).slice(0, 6);
   });
   $('waTelefono')?.addEventListener('input', (e) => {
     const el = e.target as HTMLInputElement;
