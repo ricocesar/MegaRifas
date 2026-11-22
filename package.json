@@ -6,8 +6,8 @@
   "scripts": {
     "dev": "node server.js",
     "start": "node server.js",
-    "build": "node --check server.js && node -e \"const fs=require('fs');const m=fs.readFileSync('index.html','utf8').match(/<script>([\\s\\S]*?)<\\/script>/);if(!m)throw new Error('Missing script');new Function(m[1]);\"",
-    "lint": "node --check server.js && node -e \"const fs=require('fs');const m=fs.readFileSync('index.html','utf8').match(/<script>([\\s\\S]*?)<\\/script>/);if(!m)throw new Error('Missing script');new Function(m[1]);\""
+    "build": "node scripts/build.mjs",
+    "lint": "node --check server.js && node --check scripts/build.mjs && node -e \"const fs=require('fs');const m=fs.readFileSync('index.html','utf8').match(/<script>([\\s\\S]*?)<\\/script>/);if(!m)throw new Error('Missing script');new Function(m[1]);\""
   },
   "dependencies": {
     "express": "^5.3.0"

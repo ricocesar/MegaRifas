@@ -14,10 +14,11 @@ const BLOCKED_FILES = new Set([
   '/package.json',
   '/package-lock.json',
   '/metadata.json',
+  '/vercel.json',
 ]);
 
 app.use((req, res, next) => {
-  if (BLOCKED_FILES.has(req.path)) {
+  if (BLOCKED_FILES.has(req.path) || req.path.startsWith('/scripts/')) {
     return res.status(404).end();
   }
   next();
