@@ -1,0 +1,153 @@
+{
+  "entities": {
+    "RaffleConfig": {
+      "title": "RaffleConfig",
+      "description": "Public configuration and payment details for the active Mega Rifas raffle.",
+      "type": "object",
+      "properties": {
+        "tituloRifa": { "type": "string", "maxLength": 120, "description": "Title of the active raffle" },
+        "totalNumeros": { "type": "number", "description": "Total number of tickets in the board (1 to 1000)" },
+        "precioTicketUSD": { "type": "number", "description": "Ticket price in USD" },
+        "tasa": { "type": "number", "description": "Active exchange rate Bs per USD" },
+        "tasaManual": { "type": "number", "description": "Optional manual exchange rate (0 for automatic BCV)" },
+        "premios": { "type": "string", "maxLength": 300, "description": "Prize summary" },
+        "noticias": { "type": "string", "maxLength": 500, "description": "Featured announcement card text" },
+        "tickerNoticias": { "type": "string", "maxLength": 500, "description": "Pipe-separated ticker announcements" },
+        "fechaSorteo": { "type": "string", "maxLength": 30, "description": "Draw date string (dd/mm/aaaa)" },
+        "diasLimitePago": { "type": "number", "description": "Days allowed to pay a reservation" },
+        "diasBloqueo": { "type": "number", "description": "Days before draw when reservations are blocked" },
+        "pmDatos": { "type": "string", "maxLength": 300, "description": "Pago Movil instructions" },
+        "trDatos": { "type": "string", "maxLength": 300, "description": "Bank transfer instructions" },
+        "binanceDatos": { "type": "string", "maxLength": 300, "description": "Binance Pay instructions" },
+        "zelleDatos": { "type": "string", "maxLength": 300, "description": "Zelle instructions" },
+        "efectivoDatos": { "type": "string", "maxLength": 300, "description": "Cash payment instructions" },
+        "usdtDatos": { "type": "string", "maxLength": 300, "description": "USDT payment instructions" },
+        "igUrl": { "type": "string", "maxLength": 200, "description": "Instagram profile URL or handle" },
+        "waList": { "type": "array", "description": "Up to 3 WhatsApp support numbers" },
+        "updatedAt": { "type": "string", "format": "date-time", "description": "Server timestamp of last update" }
+      },
+      "required": [
+        "tituloRifa",
+        "totalNumeros",
+        "precioTicketUSD",
+        "tasa",
+        "tasaManual",
+        "premios",
+        "noticias",
+        "tickerNoticias",
+        "fechaSorteo",
+        "diasLimitePago",
+        "diasBloqueo",
+        "pmDatos",
+        "trDatos",
+        "binanceDatos",
+        "zelleDatos",
+        "efectivoDatos",
+        "usdtDatos",
+        "igUrl",
+        "waList",
+        "updatedAt"
+      ]
+    },
+    "Ticket": {
+      "title": "Ticket",
+      "description": "Public non-PII status of a raffle ticket number on the board.",
+      "type": "object",
+      "properties": {
+        "numero": { "type": "string", "minLength": 2, "maxLength": 4, "pattern": "^[0-9]{2,4}$", "description": "Formatted ticket number" },
+        "estatus": { "type": "string", "enum": ["DISPONIBLE", "RESERVADO", "ESPERA", "PAGADO"], "description": "Current ticket status" },
+        "displayName": { "type": "string", "maxLength": 40, "description": "Masked short buyer display name for Top 3 and feed" },
+        "cedulaHash": { "type": "string", "maxLength": 64, "pattern": "^(|[a-f0-9]{64})$", "description": "SHA-256 hex hash of participant cedula for private lookup" },
+        "reservedAt": { "type": "string", "format": "date-time", "description": "Timestamp when reserved (or null)" },
+        "paidAt": { "type": "string", "format": "date-time", "description": "Timestamp when approved/paid (or null)" },
+        "updatedAt": { "type": "string", "format": "date-time", "description": "Server timestamp of last update" }
+      },
+      "required": ["numero", "estatus", "displayName", "cedulaHash", "reservedAt", "paidAt", "updatedAt"]
+    },
+    "TicketContact": {
+      "title": "TicketContact",
+      "description": "Admin-only private participant contact info (PII) associated with a ticket.",
+      "type": "object",
+      "properties": {
+        "numero": { "type": "string", "minLength": 2, "maxLength": 4, "pattern": "^[0-9]{2,4}$", "description": "Ticket number ID" },
+        "cedula": { "type": "string", "minLength": 4, "maxLength": 20, "description": "Participant ID number" },
+        "cedulaHash": { "type": "string", "minLength": 64, "maxLength": 64, "pattern": "^[a-f0-9]{64}$", "description": "SHA-256 hash matching public Ticket" },
+        "nombre": { "type": "string", "minLength": 2, "maxLength": 100, "description": "Participant full name" },
+        "telefono": { "type": "string", "minLength": 7, "maxLength": 25, "description": "Participant WhatsApp phone" },
+        "correo": { "type": "string", "minLength": 5, "maxLength": 120, "description": "Participant email" },
+        "updatedAt": { "type": "string", "format": "date-time", "description": "Server timestamp of last update" }
+      },
+      "required": ["numero", "cedula", "cedulaHash", "nombre", "telefono", "correo", "updatedAt"]
+    },
+    "PaymentReport": {
+      "title": "PaymentReport",
+      "description": "Admin-only payment submission awaiting approval or rejection.",
+      "type": "object",
+      "properties": {
+        "cedula": { "type": "string", "minLength": 4, "maxLength": 20, "description": "Buyer cedula" },
+        "cedulaHash": { "type": "string", "minLength": 64, "maxLength": 64, "pattern": "^[a-f0-9]{64}$", "description": "SHA-256 hash of cedula" },
+        "nombre": { "type": "string", "minLength": 2, "maxLength": 100, "description": "Buyer full name" },
+        "telefono": { "type": "string", "minLength": 7, "maxLength": 25, "description": "Buyer WhatsApp phone" },
+        "correo": { "type": "string", "minLength": 5, "maxLength": 120, "description": "Buyer email" },
+        "numeros": { "type": "array", "description": "List of ticket numbers covered by this payment (1 to 50)" },
+        "montoUSD": { "type": "number", "description": "Reported USD total" },
+        "montoBs": { "type": "number", "description": "Reported Bs total" },
+        "metodo": { "type": "string", "enum": ["Pago Móvil", "Transferencia", "Binance", "Zelle", "Efectivo", "USDT"], "description": "Payment method" },
+        "referencia": { "type": "string", "minLength": 1, "maxLength": 30, "description": "Payment reference code" },
+        "comprobante": { "type": "string", "maxLength": 350000, "description": "Optional compressed image data URL" },
+        "estatus": { "type": "string", "enum": ["PENDIENTE", "APROBADO", "RECHAZADO"], "description": "Review status" },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Server creation timestamp" },
+        "resolvedAt": { "type": "string", "format": "date-time", "description": "Server resolution timestamp (or null)" }
+      },
+      "required": [
+        "cedula",
+        "cedulaHash",
+        "nombre",
+        "telefono",
+        "correo",
+        "numeros",
+        "montoUSD",
+        "montoBs",
+        "metodo",
+        "referencia",
+        "comprobante",
+        "estatus",
+        "createdAt",
+        "resolvedAt"
+      ]
+    },
+    "AdminUser": {
+      "title": "AdminUser",
+      "description": "Authorized admin record granting elevated access.",
+      "type": "object",
+      "properties": {
+        "email": { "type": "string", "maxLength": 120, "description": "Admin email address" },
+        "role": { "type": "string", "enum": ["admin"], "description": "Admin role" },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Server timestamp" }
+      },
+      "required": ["email", "role", "createdAt"]
+    }
+  },
+  "firestore": {
+    "/raffleConfig/{configId}": {
+      "schema": { "$ref": "#/entities/RaffleConfig" },
+      "description": "Public raffle configuration document (ID 'main'). Read by everyone, written only by verified admins."
+    },
+    "/tickets/{ticketId}": {
+      "schema": { "$ref": "#/entities/Ticket" },
+      "description": "Public non-PII raffle ticket board. Publicly readable; buyers may atomically reserve or move own reserved tickets to review; only admins can approve (PAGADO), edit, release, or delete."
+    },
+    "/ticketContacts/{ticketId}": {
+      "schema": { "$ref": "#/entities/TicketContact" },
+      "description": "Private buyer PII isolated from the public board. Readable only by verified admins; created/updated atomically alongside the corresponding ticket."
+    },
+    "/paymentReports/{reportId}": {
+      "schema": { "$ref": "#/entities/PaymentReport" },
+      "description": "Payment reports submitted by buyers. Readable, updatable (approve/reject), and deletable only by verified admins."
+    },
+    "/admins/{uid}": {
+      "schema": { "$ref": "#/entities/AdminUser" },
+      "description": "Admin directory managed strictly by verified admins."
+    }
+  }
+}

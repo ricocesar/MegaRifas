@@ -1,0 +1,297 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Global Safety Net (Default Deny)
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // ==================== PRIMITIVES ====================
+    function isValidId(id) {
+      return id is string && id.size() >= 1 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function isValidTicketId(id) {
+      return id is string && id.size() >= 2 && id.size() <= 4 && id.matches('^[0-9]{2,4}$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isVerifiedUser() {
+      return isSignedIn() && request.auth.token.email_verified == true;
+    }
+
+    function isBootstrappedAdmin() {
+      return isVerifiedUser() && request.auth.token.email == 'ricocesar86@gmail.com';
+    }
+
+    function isAdmin() {
+      return isBootstrappedAdmin()
+        || (isVerifiedUser() && exists(/databases/$(database)/documents/admins/$(request.auth.uid)));
+    }
+
+    // ==================== VALIDATION BLUEPRINTS ====================
+    function isValidRaffleConfig(data) {
+      return data.keys().hasAll([
+        'tituloRifa', 'totalNumeros', 'precioTicketUSD', 'tasa', 'tasaManual',
+        'premios', 'noticias', 'tickerNoticias', 'fechaSorteo', 'diasLimitePago',
+        'diasBloqueo', 'pmDatos', 'trDatos', 'binanceDatos', 'zelleDatos',
+        'efectivoDatos', 'usdtDatos', 'igUrl', 'waList', 'updatedAt'
+      ])
+      && data.keys().hasOnly([
+        'tituloRifa', 'totalNumeros', 'precioTicketUSD', 'tasa', 'tasaManual',
+        'premios', 'noticias', 'tickerNoticias', 'fechaSorteo', 'diasLimitePago',
+        'diasBloqueo', 'pmDatos', 'trDatos', 'binanceDatos', 'zelleDatos',
+        'efectivoDatos', 'usdtDatos', 'igUrl', 'waList', 'updatedAt'
+      ])
+      && data.tituloRifa is string && data.tituloRifa.size() <= 120
+      && data.totalNumeros is int && data.totalNumeros >= 1 && data.totalNumeros <= 1000
+      && data.precioTicketUSD is number && data.precioTicketUSD > 0 && data.precioTicketUSD <= 100000
+      && data.tasa is number && data.tasa >= 0 && data.tasa <= 10000000
+      && data.tasaManual is number && data.tasaManual >= 0 && data.tasaManual <= 10000000
+      && data.premios is string && data.premios.size() <= 300
+      && data.noticias is string && data.noticias.size() <= 500
+      && data.tickerNoticias is string && data.tickerNoticias.size() <= 500
+      && data.fechaSorteo is string && data.fechaSorteo.size() <= 30
+      && data.diasLimitePago is int && data.diasLimitePago >= 1 && data.diasLimitePago <= 365
+      && data.diasBloqueo is int && data.diasBloqueo >= 0 && data.diasBloqueo <= 365
+      && data.pmDatos is string && data.pmDatos.size() <= 300
+      && data.trDatos is string && data.trDatos.size() <= 300
+      && data.binanceDatos is string && data.binanceDatos.size() <= 300
+      && data.zelleDatos is string && data.zelleDatos.size() <= 300
+      && data.efectivoDatos is string && data.efectivoDatos.size() <= 300
+      && data.usdtDatos is string && data.usdtDatos.size() <= 300
+      && data.igUrl is string && data.igUrl.size() <= 200
+      && data.waList is list && data.waList.size() <= 3
+      && (data.waList.size() < 1 || (data.waList[0] is string && data.waList[0].size() <= 25))
+      && (data.waList.size() < 2 || (data.waList[1] is string && data.waList[1].size() <= 25))
+      && (data.waList.size() < 3 || (data.waList[2] is string && data.waList[2].size() <= 25))
+      && data.updatedAt is timestamp;
+    }
+
+    function isValidTicket(data) {
+      return data.keys().hasAll([
+        'numero', 'estatus', 'displayName', 'cedulaHash', 'reservedAt', 'paidAt', 'updatedAt'
+      ])
+      && data.keys().hasOnly([
+        'numero', 'estatus', 'displayName', 'cedulaHash', 'reservedAt', 'paidAt', 'updatedAt'
+      ])
+      && data.numero is string && data.numero.size() >= 2 && data.numero.size() <= 4 && data.numero.matches('^[0-9]{2,4}$')
+      && data.estatus is string && data.estatus in ['DISPONIBLE', 'RESERVADO', 'ESPERA', 'PAGADO']
+      && data.displayName is string && data.displayName.size() <= 40
+      && data.cedulaHash is string && data.cedulaHash.size() <= 64 && data.cedulaHash.matches('^(|[a-f0-9]{64})$')
+      && (data.reservedAt == null || data.reservedAt is timestamp)
+      && (data.paidAt == null || data.paidAt is timestamp)
+      && data.updatedAt is timestamp;
+    }
+
+    function isValidTicketContact(data) {
+      return data.keys().hasAll([
+        'numero', 'cedula', 'cedulaHash', 'nombre', 'telefono', 'correo', 'updatedAt'
+      ])
+      && data.keys().hasOnly([
+        'numero', 'cedula', 'cedulaHash', 'nombre', 'telefono', 'correo', 'updatedAt'
+      ])
+      && data.numero is string && data.numero.size() >= 2 && data.numero.size() <= 4 && data.numero.matches('^[0-9]{2,4}$')
+      && data.cedula is string && data.cedula.size() >= 4 && data.cedula.size() <= 20
+      && data.cedulaHash is string && data.cedulaHash.size() == 64 && data.cedulaHash.matches('^[a-f0-9]{64}$')
+      && data.nombre is string && data.nombre.size() >= 2 && data.nombre.size() <= 100
+      && data.telefono is string && data.telefono.size() >= 7 && data.telefono.size() <= 25
+      && data.correo is string && data.correo.size() >= 5 && data.correo.size() <= 120
+      && data.updatedAt is timestamp;
+    }
+
+    function isValidPaymentReport(data) {
+      return data.keys().hasAll([
+        'cedula', 'cedulaHash', 'nombre', 'telefono', 'correo', 'numeros',
+        'montoUSD', 'montoBs', 'metodo', 'referencia', 'comprobante',
+        'estatus', 'createdAt', 'resolvedAt'
+      ])
+      && data.keys().hasOnly([
+        'cedula', 'cedulaHash', 'nombre', 'telefono', 'correo', 'numeros',
+        'montoUSD', 'montoBs', 'metodo', 'referencia', 'comprobante',
+        'estatus', 'createdAt', 'resolvedAt'
+      ])
+      && data.cedula is string && data.cedula.size() >= 4 && data.cedula.size() <= 20
+      && data.cedulaHash is string && data.cedulaHash.size() == 64 && data.cedulaHash.matches('^[a-f0-9]{64}$')
+      && data.nombre is string && data.nombre.size() >= 2 && data.nombre.size() <= 100
+      && data.telefono is string && data.telefono.size() >= 7 && data.telefono.size() <= 25
+      && data.correo is string && data.correo.size() >= 5 && data.correo.size() <= 120
+      && data.numeros is list && data.numeros.size() >= 1 && data.numeros.size() <= 50
+      && data.numeros[0] is string && data.numeros[0].size() >= 2 && data.numeros[0].size() <= 4
+      && data.montoUSD is number && data.montoUSD > 0 && data.montoUSD <= 1000000
+      && data.montoBs is number && data.montoBs >= 0 && data.montoBs <= 100000000000
+      && data.metodo is string && data.metodo in ['Pago Móvil', 'Transferencia', 'Binance', 'Zelle', 'Efectivo', 'USDT']
+      && data.referencia is string && data.referencia.size() >= 1 && data.referencia.size() <= 30
+      && data.comprobante is string && data.comprobante.size() <= 350000
+      && data.estatus is string && data.estatus in ['PENDIENTE', 'APROBADO', 'RECHAZADO']
+      && data.createdAt is timestamp
+      && (data.resolvedAt == null || data.resolvedAt is timestamp);
+    }
+
+    function isValidAdmin(data) {
+      return data.keys().hasAll(['email', 'role', 'createdAt'])
+      && data.keys().hasOnly(['email', 'role', 'createdAt'])
+      && data.email is string && data.email.size() >= 5 && data.email.size() <= 120
+      && data.role is string && data.role == 'admin'
+      && data.createdAt is timestamp;
+    }
+
+    // ==================== COLLECTION RULES ====================
+
+    match /raffleConfig/{configId} {
+      allow get: if isValidId(configId) && configId == 'main';
+      allow list: if false;
+      allow create: if isValidId(configId)
+        && configId == 'main'
+        && isValidRaffleConfig(incoming())
+        && incoming().updatedAt == request.time
+        && isAdmin();
+      allow update: if isValidId(configId)
+        && configId == 'main'
+        && isValidRaffleConfig(incoming())
+        && incoming().updatedAt == request.time
+        && isAdmin()
+        && incoming().diff(existing()).affectedKeys().hasOnly([
+          'tituloRifa', 'totalNumeros', 'precioTicketUSD', 'tasa', 'tasaManual',
+          'premios', 'noticias', 'tickerNoticias', 'fechaSorteo', 'diasLimitePago',
+          'diasBloqueo', 'pmDatos', 'trDatos', 'binanceDatos', 'zelleDatos',
+          'efectivoDatos', 'usdtDatos', 'igUrl', 'waList', 'updatedAt'
+        ]);
+      allow delete: if false;
+    }
+
+    match /tickets/{ticketId} {
+      allow get: if isValidTicketId(ticketId);
+      allow list: if resource.data.estatus in ['DISPONIBLE', 'RESERVADO', 'ESPERA', 'PAGADO'];
+      allow create: if isValidTicketId(ticketId)
+        && isValidTicket(incoming())
+        && incoming().numero == ticketId
+        && incoming().updatedAt == request.time
+        && (
+          isAdmin()
+          || (
+            incoming().cedulaHash.size() == 64
+            && incoming().paidAt == null
+            && (
+              (incoming().estatus == 'RESERVADO' && incoming().reservedAt == request.time)
+              || (incoming().estatus == 'ESPERA' && incoming().reservedAt == null)
+            )
+            && existsAfter(/databases/$(database)/documents/ticketContacts/$(ticketId))
+          )
+        );
+      allow update: if isValidTicketId(ticketId)
+        && isValidTicket(incoming())
+        && incoming().numero == existing().numero
+        && incoming().updatedAt == request.time
+        && (
+          (isAdmin() && incoming().diff(existing()).affectedKeys().hasOnly([
+            'estatus', 'displayName', 'cedulaHash', 'reservedAt', 'paidAt', 'updatedAt'
+          ]))
+          || (
+            existing().estatus == 'DISPONIBLE'
+            && incoming().cedulaHash.size() == 64
+            && incoming().paidAt == null
+            && (
+              (incoming().estatus == 'RESERVADO' && incoming().reservedAt == request.time)
+              || (incoming().estatus == 'ESPERA' && incoming().reservedAt == null)
+            )
+            && incoming().diff(existing()).affectedKeys().hasOnly([
+              'estatus', 'displayName', 'cedulaHash', 'reservedAt', 'paidAt', 'updatedAt'
+            ])
+            && existsAfter(/databases/$(database)/documents/ticketContacts/$(ticketId))
+          )
+          || (
+            existing().estatus == 'RESERVADO'
+            && incoming().estatus == 'ESPERA'
+            && incoming().cedulaHash == existing().cedulaHash
+            && incoming().reservedAt == existing().reservedAt
+            && incoming().paidAt == null
+            && incoming().diff(existing()).affectedKeys().hasOnly([
+              'estatus', 'displayName', 'updatedAt'
+            ])
+            && existsAfter(/databases/$(database)/documents/ticketContacts/$(ticketId))
+          )
+        );
+      allow delete: if isValidTicketId(ticketId) && isAdmin();
+    }
+
+    match /ticketContacts/{ticketId} {
+      allow get: if isValidTicketId(ticketId) && isAdmin();
+      allow list: if isBootstrappedAdmin() && resource.data.numero is string;
+      allow create: if isValidTicketId(ticketId)
+        && isValidTicketContact(incoming())
+        && incoming().numero == ticketId
+        && incoming().updatedAt == request.time
+        && (
+          isAdmin()
+          || (
+            existsAfter(/databases/$(database)/documents/tickets/$(ticketId))
+            && getAfter(/databases/$(database)/documents/tickets/$(ticketId)).data.cedulaHash == incoming().cedulaHash
+            && getAfter(/databases/$(database)/documents/tickets/$(ticketId)).data.estatus in ['RESERVADO', 'ESPERA']
+          )
+        );
+      allow update: if isValidTicketId(ticketId)
+        && isValidTicketContact(incoming())
+        && incoming().numero == existing().numero
+        && incoming().updatedAt == request.time
+        && (
+          (isAdmin() && incoming().diff(existing()).affectedKeys().hasOnly([
+            'cedula', 'cedulaHash', 'nombre', 'telefono', 'correo', 'updatedAt'
+          ]))
+          || (
+            incoming().cedulaHash == existing().cedulaHash
+            && incoming().diff(existing()).affectedKeys().hasOnly([
+              'cedula', 'nombre', 'telefono', 'correo', 'updatedAt'
+            ])
+            && existsAfter(/databases/$(database)/documents/tickets/$(ticketId))
+            && getAfter(/databases/$(database)/documents/tickets/$(ticketId)).data.cedulaHash == incoming().cedulaHash
+            && getAfter(/databases/$(database)/documents/tickets/$(ticketId)).data.estatus in ['RESERVADO', 'ESPERA']
+          )
+        );
+      allow delete: if isValidTicketId(ticketId) && isAdmin();
+    }
+
+    match /paymentReports/{reportId} {
+      allow get: if isValidId(reportId) && isAdmin();
+      allow list: if isBootstrappedAdmin() && resource.data.estatus in ['PENDIENTE', 'APROBADO', 'RECHAZADO'];
+      allow create: if isValidId(reportId)
+        && isValidPaymentReport(incoming())
+        && incoming().estatus == 'PENDIENTE'
+        && incoming().createdAt == request.time
+        && incoming().resolvedAt == null;
+      allow update: if isValidId(reportId)
+        && isValidPaymentReport(incoming())
+        && isAdmin()
+        && incoming().createdAt == existing().createdAt
+        && incoming().resolvedAt == request.time
+        && incoming().diff(existing()).affectedKeys().hasOnly(['estatus', 'resolvedAt']);
+      allow delete: if isValidId(reportId) && isAdmin();
+    }
+
+    match /admins/{uid} {
+      allow get: if isValidId(uid) && isVerifiedUser() && (request.auth.uid == uid || isAdmin());
+      allow list: if isBootstrappedAdmin() && resource.data.role == 'admin';
+      allow create: if isValidId(uid)
+        && isValidAdmin(incoming())
+        && incoming().createdAt == request.time
+        && isAdmin();
+      allow update: if isValidId(uid)
+        && isValidAdmin(incoming())
+        && incoming().createdAt == existing().createdAt
+        && incoming().diff(existing()).affectedKeys().hasOnly(['email', 'role'])
+        && isAdmin();
+      allow delete: if isValidId(uid) && isAdmin();
+    }
+  }
+}

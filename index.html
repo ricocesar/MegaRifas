@@ -7,8 +7,6 @@
 <meta name="description" content="Plataforma interactiva de rifas para elegir números, consultar boletos, reportar pagos y administrar sorteos.">
 <meta property="og:title" content="Mega Rifas">
 <meta property="og:description" content="Plataforma interactiva de rifas para elegir números, consultar boletos, reportar pagos y administrar sorteos.">
-<link rel="preconnect" href="https://script.google.com">
-<link rel="preconnect" href="https://script.googleusercontent.com">
 <link rel="preconnect" href="https://cdnjs.cloudflare.com" crossorigin>
 <script src="https://cdn.tailwindcss.com"></script>
 <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
@@ -60,8 +58,6 @@
     border-color: var(--brand);
     box-shadow: 0 0 0 3px rgba(245, 158, 11, .18);
   }
-  .inp-ok { border-color: #10B981 !important; background: #ECFDF5 !important; }
-  .inp-warn { border-color: #F59E0B !important; background: #FFFBEB !important; }
   .lbl {
     display: block;
     font-size: .74rem;
@@ -358,9 +354,6 @@
   .progress-fill { height: 11px; border-radius: 999px; background: linear-gradient(90deg, #FFC107, #F59E0B); transition: width .6s cubic-bezier(.16, 1, .3, 1); }
   .top-mini { display: flex; align-items: center; gap: .45rem; padding: .48rem .65rem; background: #F8FAFC; border-radius: .6rem; border: 1px solid #EEF2F6; }
   .wa-preview { background: #DCF8C6; padding: .75rem; border-radius: .75rem; font-size: .78rem; color: #0F172A; line-height: 1.5; white-space: pre-wrap; word-break: break-word; }
-  .pin-display { display: flex; justify-content: center; gap: .5rem; margin-bottom: .9rem; }
-  .pin-dot { width: 14px; height: 14px; border-radius: 50%; background: #E2E8F0; border: 1.5px solid #CBD5E1; transition: .15s; }
-  .pin-dot.on { background: var(--brand); border-color: var(--brand-dark); box-shadow: 0 0 8px rgba(245, 158, 11, .45); }
 </style>
 </head>
 <body class="pb-28">
@@ -405,10 +398,10 @@
             </div>
           </div>
           <div class="flex items-center gap-1.5">
-            <button type="button" id="btnLimpiarSel" onclick="limpiarSeleccion()" class="hidden bg-slate-100 hover:bg-slate-200 text-slate-700 text-[10px] sm:text-xs font-bold px-2.5 py-1.5 rounded-lg transition">
+            <button type="button" id="btnLimpiarSel" class="hidden bg-slate-100 hover:bg-slate-200 text-slate-700 text-[10px] sm:text-xs font-bold px-2.5 py-1.5 rounded-lg transition">
               Limpiar
             </button>
-            <button type="button" onclick="seleccionarAzar()" class="bg-blue-600 hover:bg-blue-700 text-white text-[10px] sm:text-xs font-black px-3 py-1.5 rounded-lg transition flex items-center gap-1.5">
+            <button type="button" id="btnAzar" class="bg-blue-600 hover:bg-blue-700 text-white text-[10px] sm:text-xs font-black px-3 py-1.5 rounded-lg transition flex items-center gap-1.5">
               <i class="fa-solid fa-wand-magic-sparkles"></i> Azar
             </button>
           </div>
@@ -473,8 +466,8 @@
           </div>
         </div>
         <div class="flex gap-2">
-          <input type="tel" id="inputCedulaConsulta" placeholder="Ej: 12345678" inputmode="numeric" class="inp flex-1 !py-2 !text-sm" onkeydown="if(event.key==='Enter')consultarParticipante()">
-          <button type="button" id="btnConsultarCedula" onclick="consultarParticipante()" class="btn-primary !px-4 !py-2 shrink-0">
+          <input type="tel" id="inputCedulaConsulta" placeholder="Ej: 12345678" inputmode="numeric" class="inp flex-1 !py-2 !text-sm">
+          <button type="button" id="btnConsultarCedula" class="btn-primary !px-4 !py-2 shrink-0">
             <i class="fa-solid fa-search text-xs"></i>
           </button>
         </div>
@@ -497,7 +490,7 @@
   </div>
 
   <div class="text-center pt-2 pb-2">
-    <button type="button" onclick="abrirModalAdminSeguro()" class="text-xs text-slate-400 hover:text-slate-700 underline font-semibold transition">
+    <button type="button" id="btnAbrirAdmin" class="text-xs text-slate-400 hover:text-slate-700 underline font-semibold transition">
       <i class="fa-solid fa-shield-halved mr-1"></i> Panel Admin
     </button>
   </div>
@@ -506,7 +499,7 @@
 <!-- Botón rápido superior móvil cuando hay selección -->
 <div id="stickyTopBtn" class="fixed top-[56px] left-0 right-0 z-30 hidden lg:hidden">
   <div class="max-w-5xl mx-auto px-3 pt-1.5">
-    <button type="button" onclick="abrirModalCheckout('PAGAR')" class="w-full btn-primary !py-2.5 !text-xs shadow-lg">
+    <button type="button" id="btnStickyContinuar" class="w-full btn-primary !py-2.5 !text-xs shadow-lg">
       <i class="fa-solid fa-arrow-right"></i> Continuar con <b id="stickyTopCant">0</b> · <span id="stickyTopTotal">Bs 0</span>
     </button>
   </div>
@@ -526,8 +519,8 @@
         </div>
       </div>
       <div class="flex gap-2 shrink-0">
-        <button type="button" id="btnReservarFlotante" onclick="abrirModalCheckout('RESERVADO')" class="bg-white/10 hover:bg-white/20 text-white px-3.5 py-2 rounded-xl text-xs font-bold transition">Reservar</button>
-        <button type="button" onclick="abrirModalCheckout('PAGAR')" class="btn-primary !py-2 !px-4 !text-xs">Pagar</button>
+        <button type="button" id="btnReservarFlotante" class="bg-white/10 hover:bg-white/20 text-white px-3.5 py-2 rounded-xl text-xs font-bold transition">Reservar</button>
+        <button type="button" id="btnPagarFlotante" class="btn-primary !py-2 !px-4 !text-xs">Pagar</button>
       </div>
     </div>
   </div>
@@ -541,7 +534,7 @@
         <h3 id="tituloModalCheckout" class="text-base font-black text-slate-900">Confirmar</h3>
         <p class="text-xs text-slate-500 font-semibold" id="subtituloCheckout">Completa los datos</p>
       </div>
-      <button type="button" onclick="cerrarModal('modalCheckout')" class="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 flex items-center justify-center text-slate-600"><i class="fa-solid fa-xmark"></i></button>
+      <button type="button" data-close-modal="modalCheckout" class="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 flex items-center justify-center text-slate-600"><i class="fa-solid fa-xmark"></i></button>
     </div>
 
     <div class="subcard mb-3">
@@ -561,25 +554,24 @@
 
     <div class="space-y-2.5 mb-3">
       <div>
-        <label class="lbl lbl-req">Cédula</label>
-        <input type="tel" id="chkCedula" class="inp" placeholder="Ej: 12345678" inputmode="numeric" oninput="this.value=this.value.replace(/[^\d]/g,'')">
-        <div id="avisoCedula" class="hidden mt-1.5"></div>
+        <label class="lbl lbl-req" for="chkCedula">Cédula</label>
+        <input type="tel" id="chkCedula" class="inp" placeholder="Ej: 12345678" inputmode="numeric">
       </div>
-      <div><label class="lbl lbl-req">Nombre y apellido</label><input type="text" id="chkNombre" class="inp" placeholder="Tu nombre completo"></div>
-      <div><label class="lbl lbl-req">Teléfono WhatsApp</label><input type="tel" id="chkTelefono" class="inp" placeholder="Ej: 04141234567"></div>
-      <div><label class="lbl lbl-req">Correo electrónico</label><input type="email" id="chkCorreo" class="inp" placeholder="tucorreo@email.com"></div>
+      <div><label class="lbl lbl-req" for="chkNombre">Nombre y apellido</label><input type="text" id="chkNombre" class="inp" placeholder="Tu nombre completo"></div>
+      <div><label class="lbl lbl-req" for="chkTelefono">Teléfono WhatsApp</label><input type="tel" id="chkTelefono" class="inp" placeholder="Ej: 04141234567"></div>
+      <div><label class="lbl lbl-req" for="chkCorreo">Correo electrónico</label><input type="email" id="chkCorreo" class="inp" placeholder="tucorreo@email.com"></div>
     </div>
 
     <div id="bloqueDatosPago" class="space-y-3 pt-3 border-t border-slate-100">
       <div>
         <label class="lbl">Método de pago</label>
         <div class="grid grid-cols-3 gap-1.5">
-          <button type="button" onclick="cambiarMetodoPago('PM')" id="pmPM" class="pay-method on"><i class="fa-solid fa-mobile-screen text-blue-600"></i><span>Pago Móvil</span></button>
-          <button type="button" onclick="cambiarMetodoPago('TR')" id="pmTR" class="pay-method"><i class="fa-solid fa-building-columns text-slate-700"></i><span>Transfer.</span></button>
-          <button type="button" onclick="cambiarMetodoPago('BZ')" id="pmBZ" class="pay-method"><i class="fa-brands fa-bitcoin text-amber-500"></i><span>Binance</span></button>
-          <button type="button" onclick="cambiarMetodoPago('ZP')" id="pmZP" class="pay-method"><i class="fa-solid fa-z text-purple-600"></i><span>Zelle</span></button>
-          <button type="button" onclick="cambiarMetodoPago('EF')" id="pmEF" class="pay-method"><i class="fa-solid fa-money-bill-wave text-emerald-600"></i><span>Efectivo</span></button>
-          <button type="button" onclick="cambiarMetodoPago('US')" id="pmUS" class="pay-method"><i class="fa-solid fa-coins text-emerald-500"></i><span>USDT</span></button>
+          <button type="button" id="pmPM" class="pay-method on"><i class="fa-solid fa-mobile-screen text-blue-600"></i><span>Pago Móvil</span></button>
+          <button type="button" id="pmTR" class="pay-method"><i class="fa-solid fa-building-columns text-slate-700"></i><span>Transfer.</span></button>
+          <button type="button" id="pmBZ" class="pay-method"><i class="fa-brands fa-bitcoin text-amber-500"></i><span>Binance</span></button>
+          <button type="button" id="pmZP" class="pay-method"><i class="fa-solid fa-z text-purple-600"></i><span>Zelle</span></button>
+          <button type="button" id="pmEF" class="pay-method"><i class="fa-solid fa-money-bill-wave text-emerald-600"></i><span>Efectivo</span></button>
+          <button type="button" id="pmUS" class="pay-method"><i class="fa-solid fa-coins text-emerald-500"></i><span>USDT</span></button>
         </div>
       </div>
       <div id="datosPagoVisual" class="subcard text-xs text-slate-700 font-medium leading-relaxed"></div>
@@ -591,41 +583,37 @@
       </div>
       <div id="bloqueRefComprobante" class="space-y-3">
         <div>
-          <label class="lbl lbl-req">Referencia (últimos 4 dígitos)</label>
-          <input type="tel" id="chkReferencia" class="inp font-mono" placeholder="Ej: 1234" maxlength="4" inputmode="numeric" pattern="[0-9]*" oninput="this.value=this.value.replace(/\D/g,'').slice(0,4)">
+          <label class="lbl lbl-req" for="chkReferencia">Referencia (últimos 4 dígitos)</label>
+          <input type="tel" id="chkReferencia" class="inp font-mono" placeholder="Ej: 1234" maxlength="4" inputmode="numeric">
         </div>
         <div>
-          <label class="lbl">Comprobante (opcional)</label>
+          <label class="lbl" for="chkArchivo">Comprobante (opcional)</label>
           <input type="file" id="chkArchivo" accept="image/*" class="inp !py-2 text-xs">
         </div>
       </div>
     </div>
 
     <div class="flex gap-2 mt-4">
-      <button type="button" onclick="cerrarModal('modalCheckout')" class="btn-secondary flex-1">Cancelar</button>
-      <button type="button" id="btnEjecutarCheckout" onclick="ejecutarCheckout()" class="btn-primary flex-1">Confirmar</button>
+      <button type="button" data-close-modal="modalCheckout" class="btn-secondary flex-1">Cancelar</button>
+      <button type="button" id="btnEjecutarCheckout" class="btn-primary flex-1">Confirmar</button>
     </div>
   </div>
 </div>
 
-<!-- Modal PIN Admin -->
-<div id="modalPinAdmin" class="m-bg hidden m-bg-front">
+<!-- Modal Acceso Admin con Google -->
+<div id="modalAuthAdmin" class="m-bg hidden m-bg-front">
   <div class="m-box !max-w-xs !rounded-3xl !my-auto">
     <div class="text-center">
-      <div class="w-14 h-14 rounded-2xl bg-amber-100 flex items-center justify-center text-2xl mx-auto mb-3"><i class="fa-solid fa-shield-halved text-amber-600"></i></div>
-      <b class="text-base block text-slate-900 mb-1">Acceso Admin</b>
-      <p class="text-xs text-slate-500 mb-3">Ingresa tu PIN de 6 dígitos</p>
-      <div class="pin-display">
-        <div class="pin-dot" id="dotAdm0"></div>
-        <div class="pin-dot" id="dotAdm1"></div>
-        <div class="pin-dot" id="dotAdm2"></div>
-        <div class="pin-dot" id="dotAdm3"></div>
-        <div class="pin-dot" id="dotAdm4"></div>
-        <div class="pin-dot" id="dotAdm5"></div>
+      <div class="w-14 h-14 rounded-2xl bg-amber-100 flex items-center justify-center text-2xl mx-auto mb-3">
+        <i class="fa-solid fa-shield-halved text-amber-600"></i>
       </div>
-      <input type="password" id="inputPinRifa" maxlength="6" inputmode="numeric" pattern="[0-9]*" placeholder="••••••" class="inp text-center text-2xl tracking-widest font-mono !py-3" oninput="this.value=this.value.replace(/\D/g,'').slice(0,6);actualizarDots('inputPinRifa','dotAdm')" onkeydown="if(event.key==='Enter')verificarPinAdmin()">
-      <button type="button" id="btnAccederAdmin" onclick="verificarPinAdmin()" class="btn-primary w-full mt-3">Acceder</button>
-      <button type="button" onclick="cerrarModal('modalPinAdmin')" class="text-xs text-slate-400 hover:text-slate-600 mt-3 font-semibold">Cancelar</button>
+      <b class="text-base block text-slate-900 mb-1">Acceso Administrador</b>
+      <p class="text-xs text-slate-500 mb-4 leading-relaxed">Inicia sesión con tu cuenta de Google autorizada para gestionar la rifa en Firebase.</p>
+      <div id="adminAuthError" class="hidden bg-rose-50 border border-rose-200 text-rose-700 rounded-xl p-2.5 text-xs font-semibold mb-3 text-left"></div>
+      <button type="button" id="btnLoginGoogleAdmin" class="btn-primary w-full">
+        <i class="fa-brands fa-google"></i> Iniciar sesión con Google
+      </button>
+      <button type="button" data-close-modal="modalAuthAdmin" class="text-xs text-slate-400 hover:text-slate-600 mt-3 font-semibold block mx-auto">Cancelar</button>
     </div>
   </div>
 </div>
@@ -640,34 +628,8 @@
       <b id="confirmTitulo" class="text-base block text-slate-900 mb-1">¿Confirmar?</b>
       <p id="confirmTexto" class="text-xs text-slate-600 mb-4 leading-relaxed"></p>
       <div class="flex gap-2">
-        <button type="button" onclick="cerrarConfirm(false)" class="btn-secondary flex-1">Cancelar</button>
-        <button type="button" id="confirmBtnOk" onclick="cerrarConfirm(true)" class="btn-primary flex-1">Aceptar</button>
-      </div>
-    </div>
-  </div>
-</div>
-
-<!-- Modal PIN Acción Protegida -->
-<div id="modalPinAccion" class="m-bg hidden m-bg-front">
-  <div class="m-box !max-w-xs !rounded-3xl !my-auto">
-    <div class="text-center">
-      <div class="w-14 h-14 rounded-2xl bg-rose-100 flex items-center justify-center text-2xl mx-auto mb-3">
-        <i class="fa-solid fa-lock text-rose-600"></i>
-      </div>
-      <b id="pinAccionTitulo" class="text-base block text-slate-900 mb-1">Acción protegida</b>
-      <p id="pinAccionTexto" class="text-xs text-slate-500 mb-3 leading-relaxed">Ingresa tu PIN para confirmar</p>
-      <div class="pin-display">
-        <div class="pin-dot" id="dotAcc0"></div>
-        <div class="pin-dot" id="dotAcc1"></div>
-        <div class="pin-dot" id="dotAcc2"></div>
-        <div class="pin-dot" id="dotAcc3"></div>
-        <div class="pin-dot" id="dotAcc4"></div>
-        <div class="pin-dot" id="dotAcc5"></div>
-      </div>
-      <input type="password" id="inputPinAccion" maxlength="6" inputmode="numeric" pattern="[0-9]*" placeholder="••••••" class="inp text-center text-2xl tracking-widest font-mono !py-3" oninput="this.value=this.value.replace(/\D/g,'').slice(0,6);actualizarDots('inputPinAccion','dotAcc')" onkeydown="if(event.key==='Enter')confirmarPinAccion()">
-      <div class="flex gap-2 mt-3">
-        <button type="button" onclick="cerrarModal('modalPinAccion')" class="btn-secondary flex-1">Cancelar</button>
-        <button type="button" id="btnPinAccionOk" onclick="confirmarPinAccion()" class="btn-primary flex-1">Confirmar</button>
+        <button type="button" id="confirmBtnCancel" class="btn-secondary flex-1">Cancelar</button>
+        <button type="button" id="confirmBtnOk" class="btn-primary flex-1">Aceptar</button>
       </div>
     </div>
   </div>
@@ -676,23 +638,26 @@
 <!-- Modal Panel Admin -->
 <div id="modalPanelAdmin" class="m-bg hidden">
   <div class="m-box m-admin">
-    <div class="flex justify-between items-center mb-3 pb-3 border-b border-slate-100 shrink-0">
-      <div class="flex items-center gap-2.5">
-        <div class="w-9 h-9 rounded-xl bg-slate-900 flex items-center justify-center text-amber-400"><i class="fa-solid fa-gears"></i></div>
-        <div>
+    <div class="flex justify-between items-center mb-3 pb-3 border-b border-slate-100 shrink-0 gap-2">
+      <div class="flex items-center gap-2.5 min-w-0">
+        <div class="w-9 h-9 rounded-xl bg-slate-900 flex items-center justify-center text-amber-400 shrink-0"><i class="fa-solid fa-gears"></i></div>
+        <div class="min-w-0">
           <b class="text-sm sm:text-base font-black text-slate-900 block">Panel Admin</b>
-          <p class="text-[11px] text-slate-500 font-semibold">Gestión de rifa y pagos</p>
+          <p id="adminEmailBadge" class="text-[11px] text-slate-500 font-semibold truncate">Sesión verificada</p>
         </div>
       </div>
-      <button type="button" onclick="cerrarModal('modalPanelAdmin')" class="w-9 h-9 rounded-full bg-slate-100 hover:bg-slate-200 flex items-center justify-center text-slate-600"><i class="fa-solid fa-xmark"></i></button>
+      <div class="flex items-center gap-1.5 shrink-0">
+        <button type="button" id="btnLogoutAdmin" class="text-xs font-bold text-slate-600 bg-slate-100 hover:bg-slate-200 px-2.5 py-1.5 rounded-lg transition">Salir</button>
+        <button type="button" data-close-modal="modalPanelAdmin" class="w-9 h-9 rounded-full bg-slate-100 hover:bg-slate-200 flex items-center justify-center text-slate-600"><i class="fa-solid fa-xmark"></i></button>
+      </div>
     </div>
 
     <div class="grid grid-cols-5 gap-1.5 mb-3 shrink-0">
-      <button type="button" onclick="cambiarTabAdmin('val')" id="adminTabVal" class="tab-btn tab-on">⏳ Pagos</button>
-      <button type="button" onclick="cambiarTabAdmin('vnc')" id="adminTabVnc" class="tab-btn tab-warn-off">⏰ Venc.</button>
-      <button type="button" onclick="cambiarTabAdmin('his')" id="adminTabHis" class="tab-btn tab-off">📋 Hist.</button>
-      <button type="button" onclick="cambiarTabAdmin('cfg')" id="adminTabCfg" class="tab-btn tab-off">⚙️ Config</button>
-      <button type="button" onclick="cambiarTabAdmin('nue')" id="adminTabNue" class="tab-btn tab-danger-off">🔄 Reset</button>
+      <button type="button" id="adminTabVal" class="tab-btn tab-on">⏳ Pagos</button>
+      <button type="button" id="adminTabVnc" class="tab-btn tab-warn-off">⏰ Venc.</button>
+      <button type="button" id="adminTabHis" class="tab-btn tab-off">📋 Hist.</button>
+      <button type="button" id="adminTabCfg" class="tab-btn tab-off">⚙️ Config</button>
+      <button type="button" id="adminTabNue" class="tab-btn tab-danger-off">🔄 Reset</button>
     </div>
 
     <div class="flex-1 overflow-y-auto pr-0.5 pb-6">
@@ -700,7 +665,7 @@
       <div id="adminViewVnc" class="space-y-2.5 hidden"></div>
       <div id="adminViewHis" class="space-y-2.5 hidden"></div>
 
-      <!-- Configuración unificada (sin personalización visual) -->
+      <!-- Configuración unificada (Firebase, sin personalización visual) -->
       <div id="adminViewCfg" class="space-y-4 hidden">
         <div id="cfgSaveFeedback" class="hidden rounded-xl p-3 text-xs font-semibold border"></div>
 
@@ -708,12 +673,12 @@
           <div class="text-xs font-black text-slate-900 uppercase tracking-wide">🎟️ Datos de la Rifa</div>
           <div>
             <label class="lbl" for="cfgTitulo">Título de la Rifa</label>
-            <input type="text" id="cfgTitulo" class="inp" placeholder="Ej: Gran Rifa de Diciembre">
+            <input type="text" id="cfgTitulo" class="inp" maxlength="120" placeholder="Ej: Gran Rifa de Diciembre">
           </div>
           <div class="grid grid-cols-2 gap-2.5">
             <div>
               <label class="lbl" for="cfgTotal">Total Números</label>
-              <input type="number" min="1" step="1" id="cfgTotal" class="inp">
+              <input type="number" min="1" max="1000" step="1" id="cfgTotal" class="inp">
             </div>
             <div>
               <label class="lbl" for="cfgPrecio">Precio ($)</label>
@@ -722,15 +687,15 @@
           </div>
           <div>
             <label class="lbl" for="cfgPremios">Premios</label>
-            <input type="text" id="cfgPremios" class="inp" placeholder="Describe los premios">
+            <input type="text" id="cfgPremios" class="inp" maxlength="300" placeholder="Describe los premios">
           </div>
           <div>
             <label class="lbl" for="cfgNoticias">📢 Noticias (tarjeta principal)</label>
-            <textarea id="cfgNoticias" rows="2" class="inp"></textarea>
+            <textarea id="cfgNoticias" rows="2" maxlength="500" class="inp"></textarea>
           </div>
           <div>
             <label class="lbl" for="cfgTickerNoticias">📺 Cinta de avisos (separa con |)</label>
-            <textarea id="cfgTickerNoticias" rows="2" class="inp"></textarea>
+            <textarea id="cfgTickerNoticias" rows="2" maxlength="500" class="inp"></textarea>
           </div>
         </div>
 
@@ -739,52 +704,49 @@
           <div>
             <label class="lbl" for="cfgTasaManual">Tasa Manual Bs/$ (vacío = tasa BCV automática)</label>
             <input type="text" inputmode="decimal" id="cfgTasaManual" class="inp" placeholder="Ej: 920.50 (o vacío para auto)">
+            <p id="cfgBcvHint" class="text-[10px] text-blue-700 font-semibold mt-1"></p>
           </div>
           <div class="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
             <div>
               <label class="lbl" for="cfgFechaSorteo">Fecha Sorteo</label>
-              <input type="text" id="cfgFechaSorteo" class="inp" placeholder="dd/mm/aaaa">
+              <input type="text" id="cfgFechaSorteo" maxlength="30" class="inp" placeholder="dd/mm/aaaa">
             </div>
             <div>
               <label class="lbl" for="cfgDiasPago">Días p/ pagar</label>
-              <input type="number" min="1" step="1" id="cfgDiasPago" class="inp">
+              <input type="number" min="1" max="365" step="1" id="cfgDiasPago" class="inp">
             </div>
             <div>
               <label class="lbl" for="cfgDiasBloqueo">Días bloqueo reservas</label>
-              <input type="number" min="0" step="1" id="cfgDiasBloqueo" class="inp">
+              <input type="number" min="0" max="365" step="1" id="cfgDiasBloqueo" class="inp">
             </div>
           </div>
         </div>
 
         <div class="subcard space-y-2.5">
           <div class="text-xs font-black text-slate-900 uppercase tracking-wide">💳 Datos de Pago</div>
-          <div><label class="lbl" for="cfgPM">Pago Móvil</label><input type="text" id="cfgPM" class="inp !text-xs"></div>
-          <div><label class="lbl" for="cfgTR">Transferencia</label><input type="text" id="cfgTR" class="inp !text-xs"></div>
-          <div><label class="lbl" for="cfgBZ">Binance</label><input type="text" id="cfgBZ" class="inp !text-xs"></div>
-          <div><label class="lbl" for="cfgZP">Zelle</label><input type="text" id="cfgZP" class="inp !text-xs"></div>
-          <div><label class="lbl" for="cfgEF">Efectivo</label><input type="text" id="cfgEF" class="inp !text-xs"></div>
-          <div><label class="lbl" for="cfgUS">USDT</label><input type="text" id="cfgUS" class="inp !text-xs"></div>
+          <div><label class="lbl" for="cfgPM">Pago Móvil</label><input type="text" id="cfgPM" maxlength="300" class="inp !text-xs"></div>
+          <div><label class="lbl" for="cfgTR">Transferencia</label><input type="text" id="cfgTR" maxlength="300" class="inp !text-xs"></div>
+          <div><label class="lbl" for="cfgBZ">Binance</label><input type="text" id="cfgBZ" maxlength="300" class="inp !text-xs"></div>
+          <div><label class="lbl" for="cfgZP">Zelle</label><input type="text" id="cfgZP" maxlength="300" class="inp !text-xs"></div>
+          <div><label class="lbl" for="cfgEF">Efectivo</label><input type="text" id="cfgEF" maxlength="300" class="inp !text-xs"></div>
+          <div><label class="lbl" for="cfgUS">USDT</label><input type="text" id="cfgUS" maxlength="300" class="inp !text-xs"></div>
         </div>
 
         <div class="subcard space-y-2.5">
-          <div class="text-xs font-black text-slate-900 uppercase tracking-wide">📲 Contacto y Seguridad</div>
-          <div><label class="lbl" for="cfgIG">Instagram (URL o usuario)</label><input type="text" id="cfgIG" class="inp" placeholder="https://instagram.com/tu_cuenta"></div>
+          <div class="text-xs font-black text-slate-900 uppercase tracking-wide">📲 Contacto y Redes</div>
+          <div><label class="lbl" for="cfgIG">Instagram (URL o usuario)</label><input type="text" id="cfgIG" maxlength="200" class="inp" placeholder="https://instagram.com/tu_cuenta"></div>
           <div class="grid grid-cols-3 gap-2">
-            <div><label class="lbl" for="cfgWA1">WA 1</label><input type="tel" id="cfgWA1" class="inp !text-xs" placeholder="58412..."></div>
-            <div><label class="lbl" for="cfgWA2">WA 2</label><input type="tel" id="cfgWA2" class="inp !text-xs" placeholder="Opcional"></div>
-            <div><label class="lbl" for="cfgWA3">WA 3</label><input type="tel" id="cfgWA3" class="inp !text-xs" placeholder="Opcional"></div>
-          </div>
-          <div>
-            <label class="lbl" for="cfgNuevoPin">Nuevo PIN (6 dígitos, dejar vacío para mantener el actual)</label>
-            <input type="password" id="cfgNuevoPin" maxlength="6" inputmode="numeric" class="inp font-mono" oninput="this.value=this.value.replace(/\D/g,'').slice(0,6)">
+            <div><label class="lbl" for="cfgWA1">WA 1</label><input type="tel" id="cfgWA1" maxlength="25" class="inp !text-xs" placeholder="58412..."></div>
+            <div><label class="lbl" for="cfgWA2">WA 2</label><input type="tel" id="cfgWA2" maxlength="25" class="inp !text-xs" placeholder="Opcional"></div>
+            <div><label class="lbl" for="cfgWA3">WA 3</label><input type="tel" id="cfgWA3" maxlength="25" class="inp !text-xs" placeholder="Opcional"></div>
           </div>
         </div>
 
         <div class="flex gap-2 sticky bottom-0 bg-white pt-2 pb-1 border-t border-slate-100">
-          <button type="button" onclick="recargarConfigDesdeServidor()" id="btnRecargarConfig" class="btn-secondary px-4" title="Recargar valores desde el servidor">
+          <button type="button" id="btnRecargarConfig" class="btn-secondary px-4" title="Recargar valores desde Firebase">
             <i class="fa-solid fa-rotate"></i>
           </button>
-          <button type="button" onclick="guardarConfigAdmin()" id="btnGuardarConfig" class="btn-primary flex-1">
+          <button type="button" id="btnGuardarConfig" class="btn-primary flex-1">
             <i class="fa-solid fa-floppy-disk"></i> Guardar Cambios
           </button>
         </div>
@@ -793,20 +755,20 @@
       <div id="adminViewNue" class="space-y-3 hidden text-center pt-6 max-w-sm mx-auto">
         <div class="w-14 h-14 rounded-2xl bg-rose-100 flex items-center justify-center text-2xl mx-auto"><i class="fa-solid fa-triangle-exclamation text-rose-500"></i></div>
         <b class="text-sm text-slate-900 block">Reiniciar Rifa Completa</b>
-        <p class="text-xs text-slate-600 font-semibold">Reiniciar borrará todo el tablero y todos los pagos registrados.</p>
-        <input type="password" id="pinReiniciarRifa" placeholder="PIN (6 dígitos)" maxlength="6" inputmode="numeric" class="inp text-center tracking-widest font-mono !w-44 mx-auto" oninput="this.value=this.value.replace(/\D/g,'').slice(0,6)">
-        <button type="button" id="btnReiniciarRifa" onclick="ejecutarNuevaRifa()" class="btn-danger w-full">⚠️ Reiniciar Rifa</button>
+        <p class="text-xs text-slate-600 font-semibold">Reiniciar borrará todo el tablero y todos los pagos registrados en Firebase. Escribe <b>REINICIAR</b> para confirmar.</p>
+        <input type="text" id="inputConfirmReset" placeholder="Escribe REINICIAR" class="inp text-center font-mono uppercase !w-52 mx-auto">
+        <button type="button" id="btnReiniciarRifa" class="btn-danger w-full">⚠️ Reiniciar Rifa</button>
       </div>
     </div>
   </div>
 </div>
 
 <!-- Modal Imagen Comprobante -->
-<div id="modalImagen" class="m-bg hidden m-bg-front" onclick="cerrarModal('modalImagen')">
-  <div class="m-box !max-w-3xl" onclick="event.stopPropagation()">
+<div id="modalImagen" class="m-bg hidden m-bg-front">
+  <div class="m-box !max-w-3xl">
     <div class="flex justify-between items-center mb-3">
       <b class="text-sm font-black">Comprobante de Pago</b>
-      <button type="button" onclick="cerrarModal('modalImagen')" class="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center"><i class="fa-solid fa-xmark"></i></button>
+      <button type="button" data-close-modal="modalImagen" class="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center"><i class="fa-solid fa-xmark"></i></button>
     </div>
     <img id="imgComprobante" src="" class="w-full rounded-xl" alt="Comprobante">
   </div>
@@ -820,12 +782,12 @@
         <div class="w-9 h-9 rounded-full bg-emerald-500 flex items-center justify-center text-white"><i class="fa-brands fa-whatsapp"></i></div>
         <div><b class="text-sm font-black text-slate-900 block">Enviar WhatsApp</b><p class="text-[11px] text-slate-500 font-semibold">Notificar al cliente</p></div>
       </div>
-      <button type="button" onclick="cerrarModal('modalWA')" class="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center"><i class="fa-solid fa-xmark"></i></button>
+      <button type="button" data-close-modal="modalWA" class="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center"><i class="fa-solid fa-xmark"></i></button>
     </div>
     <div class="space-y-3">
       <div>
-        <label class="lbl">Teléfono WhatsApp</label>
-        <input type="tel" id="waTelefono" class="inp" placeholder="Ej: 584121234567" inputmode="numeric" oninput="this.value=this.value.replace(/[^\d]/g,'')">
+        <label class="lbl" for="waTelefono">Teléfono WhatsApp</label>
+        <input type="tel" id="waTelefono" class="inp" placeholder="Ej: 584121234567" inputmode="numeric">
         <p class="text-[10px] text-slate-500 mt-1">Sin + ni espacios. Ej: 584121234567</p>
       </div>
       <div>
@@ -833,8 +795,8 @@
         <div id="waPreview" class="wa-preview"></div>
       </div>
       <div class="flex gap-2">
-        <button type="button" onclick="cerrarModal('modalWA')" class="btn-secondary flex-1">Omitir</button>
-        <button type="button" onclick="enviarWAConfirmado()" class="flex-1 text-white font-black rounded-xl py-3 text-sm" style="background:linear-gradient(135deg,#10B981,#059669);">
+        <button type="button" data-close-modal="modalWA" class="btn-secondary flex-1">Omitir</button>
+        <button type="button" id="btnEnviarWA" class="flex-1 text-white font-black rounded-xl py-3 text-sm" style="background:linear-gradient(135deg,#10B981,#059669);">
           <i class="fa-brands fa-whatsapp mr-1"></i> Enviar
         </button>
       </div>
@@ -846,1652 +808,29 @@
 <div id="modalEditar" class="m-bg hidden m-bg-front">
   <div class="m-box !max-w-md">
     <div class="flex justify-between items-center mb-3">
-      <b class="text-sm font-black">✏️ Editar Registro</b>
-      <button type="button" onclick="cerrarModal('modalEditar')" class="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center"><i class="fa-solid fa-xmark"></i></button>
+      <b class="text-sm font-black">✏️ Editar Boleto <span id="editTituloNum" class="font-mono text-blue-600"></span></b>
+      <button type="button" data-close-modal="modalEditar" class="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center"><i class="fa-solid fa-xmark"></i></button>
     </div>
-    <input type="hidden" id="editFila">
+    <input type="hidden" id="editNumero">
     <div class="space-y-3">
       <div>
-        <label class="lbl">Estatus</label>
+        <label class="lbl" for="editEstatus">Estatus</label>
         <select id="editEstatus" class="inp">
-          <option value="DISPONIBLE">DISPONIBLE</option>
+          <option value="DISPONIBLE">DISPONIBLE (Liberar)</option>
           <option value="RESERVADO">RESERVADO</option>
           <option value="ESPERA">ESPERA</option>
           <option value="PAGADO">PAGADO</option>
         </select>
       </div>
-      <div><label class="lbl">Cédula</label><input type="text" id="editCedula" class="inp"></div>
-      <div><label class="lbl">Nombre</label><input type="text" id="editNombre" class="inp"></div>
-      <div><label class="lbl">Teléfono</label><input type="text" id="editTelefono" class="inp"></div>
-      <div><label class="lbl">PIN (6 dígitos)</label><input type="password" id="editPin" maxlength="6" inputmode="numeric" class="inp font-mono" oninput="this.value=this.value.replace(/\D/g,'').slice(0,6)"></div>
-      <button type="button" id="btnGuardarEdicion" onclick="guardarEdicion()" class="btn-primary w-full">Guardar</button>
+      <div><label class="lbl" for="editCedula">Cédula</label><input type="text" id="editCedula" class="inp"></div>
+      <div><label class="lbl" for="editNombre">Nombre</label><input type="text" id="editNombre" class="inp"></div>
+      <div><label class="lbl" for="editTelefono">Teléfono</label><input type="text" id="editTelefono" class="inp"></div>
+      <div><label class="lbl" for="editCorreo">Correo</label><input type="email" id="editCorreo" class="inp"></div>
+      <button type="button" id="btnGuardarEdicion" class="btn-primary w-full">Guardar</button>
     </div>
   </div>
 </div>
 
-<script>
-const API_URL = 'https://script.google.com/macros/s/AKfycbw7Qw_1BdX1--qWnIJjhDIDt_H_OJdPjuCpSTU6gIp3Z4IMMc7RK6ZvD7t-onA6XmAd/exec';
-const CACHE_KEY = 'mega_rifas_state_v2';
-const API_TIMEOUT_MS = 25000;
-const METODOS_USD = ['BZ', 'ZP', 'EF', 'US'];
-
-// Fuente única de verdad para configuración del Panel Admin
-const CONFIG_SCHEMA = [
-  { key: 'tituloRifa',      payloadKey: 'titulo',          inputId: 'cfgTitulo',         label: 'Título de la Rifa',      type: 'text',   def: '' },
-  { key: 'totalNumeros',    payloadKey: 'total',           inputId: 'cfgTotal',          label: 'Total Números',          type: 'int',    def: 100 },
-  { key: 'precioTicketUSD', payloadKey: 'precio',          inputId: 'cfgPrecio',         label: 'Precio ($)',             type: 'number', def: 2 },
-  { key: 'premios',         payloadKey: 'premios',         inputId: 'cfgPremios',        label: 'Premios',                type: 'text',   def: '' },
-  { key: 'noticias',        payloadKey: 'noticias',        inputId: 'cfgNoticias',       label: 'Noticias',               type: 'text',   def: '' },
-  { key: 'tickerNoticias',  payloadKey: 'tickerNoticias',  inputId: 'cfgTickerNoticias', label: 'Cinta de avisos',        type: 'text',   def: '' },
-  { key: 'tasaManual',      payloadKey: 'tasaManual',      inputId: 'cfgTasaManual',     label: 'Tasa Manual',            type: 'optNum', def: 0 },
-  { key: 'fechaSorteo',     payloadKey: 'fechaSorteo',     inputId: 'cfgFechaSorteo',    label: 'Fecha Sorteo',           type: 'text',   def: '' },
-  { key: 'diasLimitePago',  payloadKey: 'diasLimitePago',  inputId: 'cfgDiasPago',       label: 'Días p/ pagar',          type: 'int',    def: 15 },
-  { key: 'diasBloqueo',     payloadKey: 'diasBloqueo',     inputId: 'cfgDiasBloqueo',    label: 'Días bloqueo reservas',  type: 'int',    def: 3 },
-  { key: 'pmDatos',         payloadKey: 'pm',              inputId: 'cfgPM',             label: 'Pago Móvil',             type: 'text',   def: '' },
-  { key: 'trDatos',         payloadKey: 'tr',              inputId: 'cfgTR',             label: 'Transferencia',          type: 'text',   def: '' },
-  { key: 'binanceDatos',    payloadKey: 'binanceDatos',    inputId: 'cfgBZ',             label: 'Binance',                type: 'text',   def: '' },
-  { key: 'zelleDatos',      payloadKey: 'zelleDatos',      inputId: 'cfgZP',             label: 'Zelle',                  type: 'text',   def: '' },
-  { key: 'efectivoDatos',   payloadKey: 'efectivoDatos',   inputId: 'cfgEF',             label: 'Efectivo',               type: 'text',   def: '' },
-  { key: 'usdtDatos',       payloadKey: 'usdtDatos',       inputId: 'cfgUS',             label: 'USDT',                   type: 'text',   def: '' },
-  { key: 'igUrl',           payloadKey: 'ig',              inputId: 'cfgIG',             label: 'Instagram',              type: 'text',   def: '' }
-];
-
-var $ = function(id) { return document.getElementById(id); };
-var appState = null;
-var seleccionados = [];
-var modoCheckoutActual = 'RESERVADO';
-var metodoPagoActual = 'PM';
-var participanteConsultado = null;
-var historialFiltro = 'TODOS';
-var _waData = null;
-var _cedulaVerificada = null;
-var _debounceTimer = null;
-var _confirmCallback = null;
-var _pinCallback = null;
-var _syncPromise = null;
-var _lastBoardSignature = '';
-var _cfgDirty = false;
-var _historialMap = {};
-var _pagosMap = {};
-var _comprobantesMap = {};
-
-function escHtml(str) {
-  return String(str === undefined || str === null ? '' : str)
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#39;');
-}
-
-function fmt(n) {
-  var num = Number(n);
-  if (!isFinite(num)) return '0,00';
-  var p = num.toFixed(2).split('.');
-  p[0] = p[0].replace(/\B(?=(\d{3})+(?!\d))/g, '.');
-  return p.join(',');
-}
-
-function parseLocaleNumber(val) {
-  if (val === undefined || val === null) return NaN;
-  var cleaned = String(val).trim().replace(',', '.');
-  if (!cleaned) return NaN;
-  var n = Number(cleaned);
-  return isFinite(n) ? n : NaN;
-}
-
-function safe(v, def) {
-  return (v === undefined || v === null || v === '') ? def : v;
-}
-
-function safeNum(v, def) {
-  var n = Number(v);
-  return (v === undefined || v === null || v === '' || !isFinite(n)) ? def : n;
-}
-
-function normalizarTelefono(v) {
-  return String(v || '').replace(/\D/g, '');
-}
-
-function abrirModal(id) {
-  var el = $(id);
-  if (!el) return;
-  el.classList.remove('hidden');
-  document.body.style.overflow = 'hidden';
-}
-
-function cerrarModal(id) {
-  var el = $(id);
-  if (!el) return;
-  el.classList.add('hidden');
-  var abiertos = document.querySelectorAll('.m-bg:not(.hidden)');
-  if (!abiertos.length) document.body.style.overflow = '';
-}
-
-function setBtnLoading(btn, loading, loadingText) {
-  if (!btn) return;
-  if (loading) {
-    if (!btn.dataset.origHtml) btn.dataset.origHtml = btn.innerHTML;
-    btn.disabled = true;
-    btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> ' + escHtml(loadingText || 'Procesando...');
-  } else {
-    btn.disabled = false;
-    if (btn.dataset.origHtml) {
-      btn.innerHTML = btn.dataset.origHtml;
-      delete btn.dataset.origHtml;
-    }
-  }
-}
-
-function actualizarDots(inputId, prefix) {
-  var val = ($(inputId).value || '').length;
-  for (var i = 0; i < 6; i++) {
-    var dot = $(prefix + i);
-    if (dot) dot.classList.toggle('on', i < val);
-  }
-}
-
-function notificar(msg, tipo) {
-  tipo = tipo || 'info';
-  var wrap = $('toastWrap');
-  var t = document.createElement('div');
-  t.className = 'toast ' + tipo;
-  var icono = 'fa-circle-info';
-  if (tipo === 'success') icono = 'fa-circle-check';
-  else if (tipo === 'error') icono = 'fa-circle-exclamation';
-  else if (tipo === 'warn') icono = 'fa-triangle-exclamation';
-  t.innerHTML = '<i class="fa-solid ' + icono + ' mt-0.5 shrink-0"></i><span>' + escHtml(msg) + '</span>';
-  wrap.appendChild(t);
-  setTimeout(function() {
-    t.style.transition = 'opacity .25s';
-    t.style.opacity = '0';
-    setTimeout(function() { if (t.parentNode) t.parentNode.removeChild(t); }, 260);
-  }, tipo === 'warn' || tipo === 'error' ? 7000 : 4500);
-}
-
-async function apiCall(action, data) {
-  var controller = new AbortController();
-  var timer = setTimeout(function() { controller.abort(); }, API_TIMEOUT_MS);
-  try {
-    var body = new URLSearchParams();
-    body.append('payload', JSON.stringify({ action: action, data: data || {} }));
-    var response = await fetch(API_URL, {
-      method: 'POST',
-      body: body,
-      cache: 'no-store',
-      signal: controller.signal
-    });
-    if (!response.ok) throw new Error('HTTP ' + response.status);
-    var text = await response.text();
-    if (text.trim().startsWith('<')) {
-      throw new Error('Apps Script devolvió HTML (verifica el despliegue público).');
-    }
-    return JSON.parse(text);
-  } catch (error) {
-    if (error && error.name === 'AbortError') {
-      throw new Error('Tiempo de espera agotado. Intenta de nuevo.');
-    }
-    throw error;
-  } finally {
-    clearTimeout(timer);
-  }
-}
-
-/* ==================== CACHÉ LOCAL Y ESTADO UNIFICADO ==================== */
-
-function leerCacheLocal() {
-  try {
-    var raw = localStorage.getItem(CACHE_KEY);
-    if (!raw) return null;
-    var parsed = JSON.parse(raw);
-    if (parsed && parsed.data && typeof parsed.data === 'object') return parsed.data;
-  } catch (e) {}
-  return null;
-}
-
-function guardarCacheLocal(data) {
-  if (!data || typeof data !== 'object') return;
-  try {
-    localStorage.setItem(CACHE_KEY, JSON.stringify({ ts: Date.now(), data: data }));
-  } catch (e) {}
-}
-
-function normalizarEstadoServidor(incoming, prev) {
-  var base = prev ? Object.assign({}, prev) : {};
-  var r = Object.assign({}, base, incoming || {});
-
-  // Preservar colecciones si la respuesta del backend fue parcial
-  if (!incoming || incoming.tablero === undefined) r.tablero = base.tablero || {};
-  if (!incoming || incoming.estadisticas === undefined) r.estadisticas = base.estadisticas || {};
-  if (!incoming || incoming.topCompradores === undefined) r.topCompradores = base.topCompradores || [];
-  if (!incoming || incoming.feedCompras === undefined) r.feedCompras = base.feedCompras || [];
-  if (!incoming || incoming.waList === undefined) r.waList = base.waList || [];
-
-  // Normalizar campos numéricos con cuidado (respetando el valor 0 cuando es válido)
-  r.totalNumeros = Math.max(1, Math.floor(safeNum(r.totalNumeros, 100)));
-  r.precioTicketUSD = safeNum(r.precioTicketUSD, 2);
-  r.tasaManual = safeNum(r.tasaManual, 0);
-  r.tasa = r.tasaManual > 0 ? r.tasaManual : safeNum(r.tasa, 0);
-  if (incoming && incoming.precioTicketBs !== undefined && isFinite(Number(incoming.precioTicketBs))) {
-    r.precioTicketBs = Number(incoming.precioTicketBs);
-  } else if (r.tasa > 0) {
-    r.precioTicketBs = Number((r.precioTicketUSD * r.tasa).toFixed(2));
-  } else {
-    r.precioTicketBs = safeNum(r.precioTicketBs, 0);
-  }
-  r.diasLimitePago = Math.max(1, Math.floor(safeNum(r.diasLimitePago, 15)));
-  r.diasBloqueo = Math.max(0, Math.floor(safeNum(r.diasBloqueo, 3)));
-  r.waList = Array.isArray(r.waList)
-    ? r.waList.map(function(w) { return String(w || '').trim(); }).filter(Boolean)
-    : [];
-
-  return r;
-}
-
-function renderizarSkeletonTablero() {
-  var grid = $('gridTablero');
-  if (!grid || grid.children.length > 0) return;
-  var html = '';
-  for (var i = 0; i < 50; i++) {
-    html += '<div class="num-btn skeleton" aria-hidden="true"></div>';
-  }
-  grid.innerHTML = html;
-}
-
-async function cargarDatos(opts) {
-  opts = opts || {};
-  if (_syncPromise && !opts.force) return _syncPromise;
-
-  var req = (async function() {
-    try {
-      var r = await apiCall('obtenerInicioMega', {});
-      if (r && r.success) {
-        aplicarDatos(r, { persistCache: true });
-        return appState;
-      }
-      if (!opts.silent) notificar('Error: ' + ((r && r.error) || 'desconocido'), 'error');
-      return null;
-    } catch (error) {
-      if (!opts.silent) notificar(error.message || 'Error de conexión con el servidor.', 'error');
-      return null;
-    } finally {
-      if (_syncPromise === req) _syncPromise = null;
-    }
-  })();
-
-  _syncPromise = req;
-  return req;
-}
-
-function aplicarDatos(r, opts) {
-  opts = opts || {};
-  appState = normalizarEstadoServidor(r, appState);
-  if (opts.persistCache !== false) guardarCacheLocal(appState);
-
-  // Encabezado fijo con título de rifa y precio
-  var subtitulo = safe(appState.tituloRifa, 'JUEGA Y GANA');
-  $('txtSubtituloRifa').textContent = subtitulo;
-  document.title = appState.tituloRifa ? ('Mega Rifas · ' + appState.tituloRifa) : 'Mega Rifas';
-
-  $('badgePrecioBs').textContent = appState.precioTicketBs > 0 ? ('Bs ' + fmt(appState.precioTicketBs)) : 'Bs --';
-  $('badgePrecioUSD').textContent = appState.precioTicketUSD > 0 ? ('$' + fmt(appState.precioTicketUSD) + ' · por boleto') : 'por boleto';
-
-  $('txtPremiosHeader').textContent = safe(appState.premios, 'Premios por anunciar');
-  var noticiasTxt = safe(appState.noticias, '');
-  var noticiasEl = $('txtNoticiasDisplay');
-  if (noticiasTxt) {
-    noticiasEl.textContent = noticiasTxt;
-    noticiasEl.classList.remove('hidden');
-  } else {
-    noticiasEl.textContent = '';
-    noticiasEl.classList.add('hidden');
-  }
-
-  // Cinta de avisos (ticker)
-  var ticker = safe(appState.tickerNoticias, '') || noticiasTxt || '¡Bienvenidos a Mega Rifas!';
-  var items = ticker.split('|').map(function(s) { return s.trim(); }).filter(Boolean);
-  if (!items.length) items = [ticker];
-  var htmlTicker = '';
-  for (var k = 0; k < 2; k++) {
-    for (var i = 0; i < items.length; i++) {
-      htmlTicker += '<span>• ' + escHtml(items[i]) + '</span>';
-    }
-  }
-  $('tickerContent').innerHTML = htmlTicker;
-
-  // Alerta días para sorteo
-  var alerta = $('alertaSorteo');
-  if (appState.diasSorteo !== null && appState.diasSorteo !== undefined && appState.diasSorteo !== '') {
-    alerta.classList.remove('hidden');
-    alerta.textContent = Number(appState.diasSorteo) <= 0 ? '🎉 HOY' : (appState.diasSorteo + 'd');
-  } else {
-    alerta.classList.add('hidden');
-  }
-
-  // Botón reservar según regla de bloqueo
-  $('btnReservarFlotante').classList.toggle('hidden', appState.permiteReservar === false);
-
-  // Progreso
-  var est = appState.estadisticas || {};
-  var totalEst = safeNum(est.total, appState.totalNumeros);
-  var ocupados = safeNum(est.ocupados, 0);
-  var pct = safeNum(est.porcentajeGeneral, totalEst > 0 ? Math.round((ocupados / totalEst) * 100) : 0);
-  $('txtPorcentajeGeneral').textContent = pct + '%';
-  $('barraProgreso').style.width = Math.min(100, Math.max(0, pct)) + '%';
-  $('txtProgresoDetalle').textContent = ocupados + ' de ' + totalEst + ' boletos';
-  var restantes = Math.max(0, totalEst - ocupados);
-  var urgente = $('txtProgresoUrgente');
-  if (restantes <= 0) urgente.textContent = '¡AGOTADO!';
-  else if (restantes <= 10) urgente.textContent = '🔥 ¡Quedan ' + restantes + '!';
-  else if (restantes <= 30) urgente.textContent = '⚡ Quedan ' + restantes;
-  else urgente.textContent = '✅ ' + restantes + ' disponibles';
-
-  // Limpiar números seleccionados que ya no existan o ya no estén disponibles/reservados por el usuario
-  depurarSeleccionados();
-
-  renderizarTop(appState.topCompradores);
-  renderizarSoporte(appState.waList, appState.igUrl);
-  renderizarTablero();
-  renderizarFeed(appState.feedCompras);
-  actualizarBarraFlotante();
-
-  // Si el panel Admin está abierto y el formulario Config no ha sido editado manualmente, mantenerlo sincronizado
-  var panelAdminAbierto = !$('modalPanelAdmin').classList.contains('hidden');
-  if (panelAdminAbierto && !_cfgDirty) {
-    cargarFormularioConfigAdmin();
-  }
-}
-
-function depurarSeleccionados() {
-  if (!appState || !seleccionados.length) return;
-  var total = appState.totalNumeros;
-  var dig = total >= 1000 ? 3 : 2;
-  var tablero = appState.tablero || {};
-  var reservadosConsultado = (participanteConsultado && participanteConsultado.tickets && participanteConsultado.tickets.reservados) || [];
-
-  seleccionados = seleccionados.filter(function(num) {
-    var idx = parseInt(num, 10);
-    if (!isFinite(idx) || idx < 0 || idx >= total) return false;
-    var expected = String(idx).padStart(dig, '0');
-    if (expected !== num) return false;
-    var est = (tablero[num] && tablero[num].estatus) || 'DISPONIBLE';
-    if (est === 'DISPONIBLE') return true;
-    if (est === 'RESERVADO' && reservadosConsultado.indexOf(num) > -1) return true;
-    return false;
-  });
-}
-
-/* ==================== RENDERIZADO OPTIMIZADO ==================== */
-
-function renderizarFeed(feed) {
-  var sec = $('feedSection');
-  if (!feed || !feed.length) { sec.classList.add('hidden'); return; }
-  sec.classList.remove('hidden');
-  var html = '';
-  for (var k = 0; k < 2; k++) {
-    for (var i = 0; i < feed.length; i++) {
-      var it = feed[i];
-      var emoji = it.estatus === 'PAGADO' ? '🟢' : '🟣';
-      html += '<span>' + emoji + ' <b>' + escHtml(it.nombre) + '</b> compró <span class="feed-num">#' + escHtml(it.numero) + '</span> <span class="feed-time">· ' + escHtml(haceTiempo(it.ts)) + '</span></span>';
-    }
-  }
-  $('feedContent').innerHTML = html;
-}
-
-function haceTiempo(ts) {
-  if (!ts) return 'hace poco';
-  var diff = Date.now() - Number(ts);
-  var min = Math.floor(diff / 60000);
-  if (min < 1) return 'ahora';
-  if (min < 60) return 'hace ' + min + ' min';
-  var hrs = Math.floor(min / 60);
-  if (hrs < 24) return 'hace ' + hrs + ' h';
-  return 'hace ' + Math.floor(hrs / 24) + ' d';
-}
-
-function renderizarTop(top) {
-  var c = $('listaTopCompradores');
-  if (!top || !top.length) {
-    c.className = 'text-center';
-    c.innerHTML = '<span class="text-slate-400 text-xs">Aún sin compradores.</span>';
-    return;
-  }
-  c.className = 'space-y-1.5';
-  var med = ['🥇', '🥈', '🥉'];
-  var html = '';
-  for (var i = 0; i < top.length; i++) {
-    var t = top[i];
-    var partes = String(t.nombre || '').trim().split(/\s+/);
-    var corto = partes[0] + (partes[1] ? ' ' + partes[1].charAt(0) + '.' : '');
-    html += '<div class="top-mini"><span class="text-sm">' + (med[i] || '🏅') + '</span><span class="text-xs font-black text-slate-800 truncate flex-1 text-left">' + escHtml(corto) + '</span><span class="text-xs font-black text-amber-600 font-mono">' + escHtml(t.cantidad) + ' 🎟️</span></div>';
-  }
-  c.innerHTML = html;
-}
-
-function renderizarSoporte(lista, igUrl) {
-  var c = $('contenedorBotonesSoporte');
-  var html = '';
-  if (Array.isArray(lista) && lista.length) {
-    var msg = encodeURIComponent('¡Hola! 👋 Vengo de Mega Rifas 🎟️✨');
-    for (var i = 0; i < lista.length; i++) {
-      var tel = normalizarTelefono(lista[i]);
-      if (!tel) continue;
-      var etiqueta = lista.length > 1 ? ('WhatsApp ' + (i + 1)) : 'WhatsApp';
-      html += '<a href="https://wa.me/' + tel + '?text=' + msg + '" target="_blank" rel="noopener noreferrer" class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2 px-3.5 rounded-xl text-xs inline-flex items-center gap-1.5 transition"><i class="fa-brands fa-whatsapp text-sm"></i> ' + etiqueta + '</a>';
-    }
-  }
-  if (igUrl && String(igUrl).trim()) {
-    var igRaw = String(igUrl).trim();
-    var igHref = /^https?:\/\//i.test(igRaw) ? igRaw : ('https://instagram.com/' + igRaw.replace(/^@/, ''));
-    html += '<a href="' + escHtml(igHref) + '" target="_blank" rel="noopener noreferrer" class="bg-slate-900 hover:bg-slate-800 text-white font-bold py-2 px-3.5 rounded-xl text-xs inline-flex items-center gap-1.5 transition"><i class="fa-brands fa-instagram text-sm text-pink-400"></i> Instagram</a>';
-  }
-  if (!html) {
-    html = '<span class="text-slate-500 text-xs">Sin canales de soporte configurados.</span>';
-  }
-  c.innerHTML = html;
-}
-
-function renderizarTablero(force) {
-  if (!appState) return;
-  var grid = $('gridTablero');
-  var total = appState.totalNumeros;
-  var digitos = total >= 1000 ? 3 : 2;
-  var tablero = appState.tablero || {};
-
-  // Evitar recrear todo el DOM si el tablero no cambió
-  var sig = total + ':' + JSON.stringify(tablero);
-  if (!force && sig === _lastBoardSignature && grid.children.length === total) {
-    sincronizarClasesSeleccionTablero();
-    return;
-  }
-  _lastBoardSignature = sig;
-
-  var selSet = new Set(seleccionados);
-  var parts = new Array(total);
-  for (var i = 0; i < total; i++) {
-    var numStr = String(i).padStart(digitos, '0');
-    var est = (tablero[numStr] && tablero[numStr].estatus) || 'DISPONIBLE';
-    var clase = (est === 'DISPONIBLE' && selSet.has(numStr)) ? 'num-SELECCIONADO' : ('num-' + est);
-    var disabled = est !== 'DISPONIBLE' ? ' disabled' : '';
-    parts[i] = '<button type="button" data-num="' + numStr + '" data-est="' + est + '" class="num-btn ' + clase + '"' + disabled + '>' + numStr + '</button>';
-  }
-  grid.innerHTML = parts.join('');
-}
-
-function sincronizarClasesSeleccionTablero() {
-  var grid = $('gridTablero');
-  if (!grid) return;
-  var selSet = new Set(seleccionados);
-  var buttons = grid.querySelectorAll('button[data-num]');
-  for (var i = 0; i < buttons.length; i++) {
-    var btn = buttons[i];
-    if (btn.dataset.est === 'DISPONIBLE') {
-      var isSel = selSet.has(btn.dataset.num);
-      btn.classList.toggle('num-SELECCIONADO', isSel);
-      btn.classList.toggle('num-DISPONIBLE', !isSel);
-    }
-  }
-}
-
-function actualizarBotonNumero(num) {
-  var btn = $('gridTablero').querySelector('button[data-num="' + num + '"]');
-  if (!btn || btn.dataset.est !== 'DISPONIBLE') return;
-  var isSel = seleccionados.indexOf(num) > -1;
-  btn.classList.toggle('num-SELECCIONADO', isSel);
-  btn.classList.toggle('num-DISPONIBLE', !isSel);
-}
-
-function tocarNumero(num, est) {
-  if (est === 'PAGADO') { notificar('Este número ya fue pagado', 'error'); return; }
-  if (est === 'ESPERA') { notificar('Este número está en revisión', 'error'); return; }
-  if (est === 'RESERVADO') { notificar('Este número ya está reservado', 'error'); return; }
-  var idx = seleccionados.indexOf(num);
-  if (idx > -1) seleccionados.splice(idx, 1);
-  else seleccionados.push(num);
-  actualizarBotonNumero(num);
-  actualizarBarraFlotante();
-  if (participanteConsultado) renderizarResultadoConsulta(participanteConsultado);
-}
-
-function limpiarSeleccion() {
-  seleccionados = [];
-  sincronizarClasesSeleccionTablero();
-  actualizarBarraFlotante();
-  if (participanteConsultado) renderizarResultadoConsulta(participanteConsultado);
-}
-
-function actualizarBarraFlotante() {
-  var barra = $('barraAccionFlotante');
-  var sticky = $('stickyTopBtn');
-  var btnLimpiar = $('btnLimpiarSel');
-  if (seleccionados.length > 0 && appState) {
-    var totalBs = seleccionados.length * appState.precioTicketBs;
-    barra.classList.remove('hidden');
-    sticky.classList.remove('hidden');
-    btnLimpiar.classList.remove('hidden');
-    $('txtCantSeleccionadosBadge').textContent = seleccionados.length;
-    $('txtTotalBsBottom').textContent = 'Bs ' + fmt(totalBs);
-    $('stickyTopCant').textContent = seleccionados.length;
-    $('stickyTopTotal').textContent = 'Bs ' + fmt(totalBs);
-  } else {
-    barra.classList.add('hidden');
-    sticky.classList.add('hidden');
-    btnLimpiar.classList.add('hidden');
-  }
-}
-
-function seleccionarAzar() {
-  if (!appState) { notificar('Cargando tablero...', 'info'); return; }
-  var disp = [];
-  var total = appState.totalNumeros;
-  var dig = total >= 1000 ? 3 : 2;
-  var tablero = appState.tablero || {};
-  var selSet = new Set(seleccionados);
-  for (var i = 0; i < total; i++) {
-    var s = String(i).padStart(dig, '0');
-    var est = (tablero[s] && tablero[s].estatus) || 'DISPONIBLE';
-    if (est === 'DISPONIBLE' && !selSet.has(s)) disp.push(s);
-  }
-  if (!disp.length) { notificar('No hay números disponibles', 'error'); return; }
-  tocarNumero(disp[Math.floor(Math.random() * disp.length)], 'DISPONIBLE');
-}
-
-/* ==================== CONSULTA DE PARTICIPANTE ==================== */
-
-async function consultarParticipante() {
-  var ced = $('inputCedulaConsulta').value.trim();
-  if (!ced) { notificar('Ingresa una cédula', 'error'); return; }
-  var btn = $('btnConsultarCedula');
-  setBtnLoading(btn, true, '');
-  try {
-    var res = await apiCall('consultarParticipanteMega', { cedula: ced });
-    if (!res || !res.success) {
-      notificar('Error: ' + ((res && res.error) || 'No se pudo consultar'), 'error');
-      return;
-    }
-    participanteConsultado = res;
-    renderizarResultadoConsulta(res);
-  } catch (e) {
-    notificar(e.message || 'Error de conexión', 'error');
-  } finally {
-    setBtnLoading(btn, false);
-  }
-}
-
-function renderizarResultadoConsulta(res) {
-  var box = $('resultadoConsultaParticipante');
-  box.classList.remove('hidden');
-  if (!res.registrado) {
-    box.innerHTML = '<div class="subcard text-center text-xs text-slate-500 py-3"><i class="fa-solid fa-user-slash mr-1"></i> No se encontraron boletos para esta cédula.</div>';
-    return;
-  }
-  var p = res.participante || {};
-  var t = res.tickets || { pagados: [], espera: [], reservados: [] };
-  var html = '<div class="subcard space-y-2.5">';
-  html += '<div class="flex items-center gap-2.5 pb-2 border-b border-slate-200">';
-  html += '<div class="w-8 h-8 rounded-lg bg-blue-100 flex items-center justify-center text-blue-600 text-xs shrink-0"><i class="fa-solid fa-user"></i></div>';
-  html += '<div class="min-w-0"><b class="text-xs font-black text-slate-900 block truncate">' + escHtml(p.nombre) + '</b><span class="text-[10px] font-mono text-slate-500">C.I. ' + escHtml(p.cedula) + '</span></div></div>';
-
-  if (Number(res.deudaUSD) > 0) {
-    html += '<div class="bg-amber-50 border border-amber-200 rounded-xl p-2.5">';
-    html += '<div class="text-[10px] font-bold text-amber-700">💳 DEUDA PENDIENTE</div>';
-    html += '<b class="text-base font-black text-amber-900 font-mono">Bs ' + fmt(res.deudaBs) + '</b>';
-    if (res.diasRestantes !== null && res.diasRestantes !== undefined) {
-      var color = Number(res.diasRestantes) <= 3 ? 'text-rose-600' : 'text-amber-700';
-      html += '<div class="text-[11px] font-bold ' + color + ' mt-1">⏰ ' + escHtml(res.diasRestantes) + ' días (límite: ' + escHtml(res.fechaLimite) + ')</div>';
-    }
-    html += '</div>';
-  }
-  if (t.pagados && t.pagados.length) {
-    html += '<div><div class="text-[10px] font-black text-slate-500 mb-1">✅ PAGADOS (' + t.pagados.length + ')</div><div class="flex flex-wrap gap-1">';
-    t.pagados.forEach(function(n) { html += '<span class="chip paid">' + escHtml(n) + '</span>'; });
-    html += '</div></div>';
-  }
-  if (t.espera && t.espera.length) {
-    html += '<div><div class="text-[10px] font-black text-slate-500 mb-1">🟣 EN REVISIÓN (' + t.espera.length + ')</div><div class="flex flex-wrap gap-1">';
-    t.espera.forEach(function(n) { html += '<span class="chip esp">' + escHtml(n) + '</span>'; });
-    html += '</div></div>';
-  }
-  if (t.reservados && t.reservados.length) {
-    html += '<div><div class="flex justify-between items-center mb-1"><div class="text-[10px] font-black text-slate-500">🔵 RESERVADOS (' + t.reservados.length + ')</div>';
-    html += '<button type="button" onclick="seleccionarTodosReservados()" class="text-[10px] font-black text-blue-600 underline">Sel. todos</button></div>';
-    html += '<div class="flex flex-wrap gap-1">';
-    t.reservados.forEach(function(n) {
-      var on = seleccionados.indexOf(n) > -1;
-      html += '<span class="chip reserved ' + (on ? 'on' : '') + '" onclick="toggleReservado(\'' + escHtml(n) + '\')">' + escHtml(n) + '</span>';
-    });
-    html += '</div></div>';
-    html += '<button type="button" onclick="pagarReservadosSeleccionados()" class="btn-primary w-full !py-2 !text-xs"><i class="fa-solid fa-credit-card"></i> Pagar seleccionados</button>';
-  }
-  html += '</div>';
-  box.innerHTML = html;
-}
-
-function toggleReservado(num) {
-  var idx = seleccionados.indexOf(num);
-  if (idx > -1) seleccionados.splice(idx, 1);
-  else seleccionados.push(num);
-  actualizarBarraFlotante();
-  if (participanteConsultado) renderizarResultadoConsulta(participanteConsultado);
-}
-
-function seleccionarTodosReservados() {
-  if (!participanteConsultado || !participanteConsultado.tickets) return;
-  var res = participanteConsultado.tickets.reservados || [];
-  var todos = res.every(function(n) { return seleccionados.indexOf(n) > -1; });
-  if (todos) seleccionados = seleccionados.filter(function(n) { return res.indexOf(n) === -1; });
-  else res.forEach(function(n) { if (seleccionados.indexOf(n) === -1) seleccionados.push(n); });
-  actualizarBarraFlotante();
-  renderizarResultadoConsulta(participanteConsultado);
-}
-
-function pagarReservadosSeleccionados() {
-  var res = (participanteConsultado && participanteConsultado.tickets && participanteConsultado.tickets.reservados) || [];
-  var sel = seleccionados.filter(function(n) { return res.indexOf(n) > -1; });
-  if (!sel.length) { notificar('Selecciona al menos un boleto reservado', 'error'); return; }
-  var p = participanteConsultado.participante || {};
-  $('chkCedula').value = p.cedula || '';
-  $('chkNombre').value = p.nombre || '';
-  $('chkTelefono').value = p.telefono || '';
-  $('chkCorreo').value = p.correo || '';
-  _cedulaVerificada = { nombre: p.nombre, telefono: p.telefono, correo: p.correo };
-  abrirModalCheckout('PAGAR');
-}
-
-/* ==================== CHECKOUT Y PAGOS ==================== */
-
-function abrirModalCheckout(modo) {
-  if (!appState) { notificar('Esperando datos de la rifa...', 'info'); return; }
-  if (!seleccionados.length) { notificar('Selecciona al menos un número', 'error'); return; }
-  if (modo === 'RESERVADO' && appState.permiteReservar === false) {
-    notificar('Solo pago directo. Faltan pocos días para el sorteo.', 'warn');
-    modo = 'PAGAR';
-  }
-  modoCheckoutActual = modo;
-  var totalUSD = seleccionados.length * appState.precioTicketUSD;
-  var totalBs = seleccionados.length * appState.precioTicketBs;
-
-  $('tituloModalCheckout').textContent = modo === 'RESERVADO' ? 'Reservar Boletos' : 'Reportar Pago';
-  $('subtituloCheckout').textContent = modo === 'RESERVADO' ? 'Reserva sin pagar ahora' : 'Elige cómo quieres pagar';
-  $('chkCantidad').textContent = seleccionados.length + ' boleto(s)';
-  $('chkNumerosTxt').textContent = '#' + seleccionados.join(' · #');
-  $('chkTotalBs').textContent = 'Bs ' + fmt(totalBs);
-  $('chkTotalUSD').textContent = '$' + fmt(totalUSD);
-
-  var blq = $('bloqueDatosPago');
-  if (modo === 'PAGAR') {
-    blq.classList.remove('hidden');
-    cambiarMetodoPago('PM');
-  } else {
-    blq.classList.add('hidden');
-    $('chkTotalUSD').classList.add('hidden');
-  }
-  $('avisoCedula').classList.add('hidden');
-  $('avisoCedula').innerHTML = '';
-  $('chkCedula').classList.remove('inp-ok');
-  abrirModal('modalCheckout');
-}
-
-async function verificarCedula(ced) {
-  try {
-    var res = await apiCall('verificarCedulaMega', { cedula: ced });
-    var aviso = $('avisoCedula');
-    var input = $('chkCedula');
-    if (res && res.existe) {
-      _cedulaVerificada = res;
-      if (!$('chkNombre').value.trim() && res.nombre) $('chkNombre').value = res.nombre;
-      if (!$('chkTelefono').value.trim() && res.telefono) $('chkTelefono').value = res.telefono;
-      if (!$('chkCorreo').value.trim() && res.correo) $('chkCorreo').value = res.correo;
-      aviso.classList.remove('hidden');
-      aviso.innerHTML = '<div class="bg-blue-50 border border-blue-200 rounded-lg p-2.5 text-xs text-blue-800 leading-relaxed"><b>👋 ¡Bienvenido de vuelta!</b><br>Cédula registrada a nombre de <b>' + escHtml(res.nombre) + '</b>.<br><span class="text-blue-600 text-[11px]">Si eres tú, continúa. Si no, revisa la cédula.</span></div>';
-      input.classList.add('inp-ok');
-    } else {
-      _cedulaVerificada = null;
-      aviso.classList.add('hidden');
-      aviso.innerHTML = '';
-      input.classList.remove('inp-ok');
-    }
-  } catch (e) {}
-}
-
-function cambiarMetodoPago(met) {
-  metodoPagoActual = met;
-  var metodos = ['PM', 'TR', 'BZ', 'ZP', 'EF', 'US'];
-  for (var i = 0; i < metodos.length; i++) {
-    $('pm' + metodos[i]).classList.toggle('on', metodos[i] === met);
-  }
-  var esUSD = METODOS_USD.indexOf(met) > -1;
-  var totalUSD = seleccionados.length * appState.precioTicketUSD;
-  var totalBs = seleccionados.length * appState.precioTicketBs;
-  if (esUSD) {
-    $('chkTotalBs').textContent = '$' + fmt(totalUSD);
-    $('chkTotalUSD').textContent = '≈ Bs ' + fmt(totalBs);
-  } else {
-    $('chkTotalBs').textContent = 'Bs ' + fmt(totalBs);
-    $('chkTotalUSD').textContent = '≈ $' + fmt(totalUSD);
-  }
-  $('chkTotalUSD').classList.remove('hidden');
-
-  var box = $('datosPagoVisual');
-  if (met === 'PM') box.innerHTML = '<b>💳 Pago Móvil</b><br>' + escHtml(safe(appState.pmDatos, 'No configurado'));
-  else if (met === 'TR') box.innerHTML = '<b>🏦 Transferencia</b><br>' + escHtml(safe(appState.trDatos, 'No configurado'));
-  else if (met === 'BZ') box.innerHTML = '<b>🪙 Binance Pay</b><br>' + escHtml(safe(appState.binanceDatos, 'Coordina con soporte.'));
-  else if (met === 'ZP') box.innerHTML = '<b>💜 Zelle</b><br>' + escHtml(safe(appState.zelleDatos, 'Coordina con soporte.'));
-  else if (met === 'EF') box.innerHTML = '<b>💵 Efectivo</b><br>' + escHtml(safe(appState.efectivoDatos, 'Coordina con soporte.'));
-  else if (met === 'US') box.innerHTML = '<b>🪙 USDT</b><br>' + escHtml(safe(appState.usdtDatos, 'Coordina con soporte.'));
-
-  var blqWA = $('bloqueWhatsAppSoporte');
-  var blqRef = $('bloqueRefComprobante');
-  if (esUSD) {
-    blqWA.classList.remove('hidden');
-    blqRef.classList.add('hidden');
-    var tel = normalizarTelefono(appState.waList && appState.waList[0]);
-    var metodoNombre = { BZ: 'Binance', ZP: 'Zelle', EF: 'Efectivo', US: 'USDT' }[met] || met;
-    var msg = encodeURIComponent('¡Hola! 👋 Quiero pagar con *' + metodoNombre + '*.\n\n🎟️ Números: #' + seleccionados.join(', #') + '\n💰 Monto: *$' + fmt(totalUSD) + '*\n\n¿Me indican cómo proceder? 🙏');
-    $('btnWhatsAppSoporte').href = tel ? ('https://wa.me/' + tel + '?text=' + msg) : '#';
-  } else {
-    blqWA.classList.add('hidden');
-    blqRef.classList.remove('hidden');
-  }
-}
-
-async function ejecutarCheckout() {
-  var ced = $('chkCedula').value.trim();
-  var nom = $('chkNombre').value.trim();
-  var tel = $('chkTelefono').value.trim();
-  var correo = $('chkCorreo').value.trim();
-  if (!ced || !nom || !tel || !correo) { notificar('Completa todos los datos obligatorios', 'error'); return; }
-  if (correo.indexOf('@') === -1) { notificar('Correo electrónico inválido', 'error'); return; }
-
-  var btn = $('btnEjecutarCheckout');
-  if (modoCheckoutActual === 'RESERVADO') {
-    setBtnLoading(btn, true, 'Reservando...');
-    try {
-      var res = await apiCall('reservarTicketsMega', {
-        cedula: ced, nombre: nom, telefono: tel, correo: correo, numeros: seleccionados.slice()
-      });
-      if (!res || !res.success) {
-        notificar((res && res.error) || 'No se pudo reservar', 'error');
-        return;
-      }
-      seleccionados = [];
-      actualizarBarraFlotante();
-      cerrarModal('modalCheckout');
-      notificar('¡Reserva enviada! Revisa tu correo 📧', 'success');
-      cargarDatos({ silent: true, force: true });
-    } catch (e) {
-      notificar(e.message || 'Error de conexión', 'error');
-    } finally {
-      setBtnLoading(btn, false);
-    }
-    return;
-  }
-
-  var esUSD = METODOS_USD.indexOf(metodoPagoActual) > -1;
-  var ref = esUSD ? ('USD' + String(Date.now()).slice(-4)) : $('chkReferencia').value.trim();
-  if (!esUSD && ref.length !== 4) {
-    notificar('La referencia debe ser de 4 dígitos', 'error');
-    return;
-  }
-
-  setBtnLoading(btn, true, 'Enviando pago...');
-  var f = esUSD ? null : $('chkArchivo');
-  if (f && f.files && f.files.length > 0) {
-    var reader = new FileReader();
-    reader.onload = function() { enviarPagoServidor(ced, nom, tel, correo, ref, reader.result, btn); };
-    reader.onerror = function() {
-      setBtnLoading(btn, false);
-      notificar('No se pudo leer la imagen del comprobante', 'error');
-    };
-    reader.readAsDataURL(f.files[0]);
-  } else {
-    enviarPagoServidor(ced, nom, tel, correo, ref, '', btn);
-  }
-}
-
-async function enviarPagoServidor(ced, nom, tel, correo, ref, b64, btn) {
-  var totalUSD = seleccionados.length * appState.precioTicketUSD;
-  var totalBs = seleccionados.length * appState.precioTicketBs;
-  var metodoTxt = { PM: 'Pago Móvil', TR: 'Transferencia', BZ: 'Binance', ZP: 'Zelle', EF: 'Efectivo', US: 'USDT' }[metodoPagoActual] || 'Otro';
-
-  try {
-    var res = await apiCall('reportarPagoMega', {
-      cedula: ced, nombre: nom, telefono: tel, correo: correo,
-      numeros: seleccionados.slice(),
-      montoUSD: totalUSD, montoBs: totalBs,
-      metodo: metodoTxt, referencia: ref, base64: b64
-    });
-    if (!res || !res.success) {
-      notificar((res && res.error) || 'No se pudo reportar el pago', 'error');
-      return;
-    }
-    seleccionados = [];
-    $('chkReferencia').value = '';
-    if ($('chkArchivo')) $('chkArchivo').value = '';
-    actualizarBarraFlotante();
-    cerrarModal('modalCheckout');
-    notificar('¡Pago reportado! Revisa tu correo 📧', 'success');
-    cargarDatos({ silent: true, force: true });
-  } catch (e) {
-    notificar(e.message || 'Error de conexión', 'error');
-  } finally {
-    setBtnLoading(btn, false);
-  }
-}
-
-/* ==================== MODALES CONFIRMAR Y PIN ==================== */
-
-function mostrarConfirm(titulo, texto, icono, callback, peligroso) {
-  $('confirmTitulo').textContent = titulo;
-  $('confirmTexto').innerHTML = texto;
-  $('confirmIconI').className = 'fa-solid ' + (icono || 'fa-question') + ' ' + (peligroso ? 'text-rose-600' : 'text-amber-600');
-  $('confirmIcon').className = 'w-14 h-14 rounded-2xl ' + (peligroso ? 'bg-rose-100' : 'bg-amber-100') + ' flex items-center justify-center text-2xl mx-auto mb-3';
-  $('confirmBtnOk').className = peligroso ? 'btn-danger flex-1' : 'btn-primary flex-1';
-  _confirmCallback = callback;
-  abrirModal('modalConfirm');
-}
-
-function cerrarConfirm(ok) {
-  cerrarModal('modalConfirm');
-  var cb = _confirmCallback;
-  _confirmCallback = null;
-  if (cb) cb(ok);
-}
-
-function pedirPin(titulo, texto, callback) {
-  $('pinAccionTitulo').textContent = titulo;
-  $('pinAccionTexto').textContent = texto;
-  $('inputPinAccion').value = '';
-  actualizarDots('inputPinAccion', 'dotAcc');
-  _pinCallback = callback;
-  abrirModal('modalPinAccion');
-  setTimeout(function() { $('inputPinAccion').focus(); }, 250);
-}
-
-async function confirmarPinAccion() {
-  var p = $('inputPinAccion').value.trim();
-  if (p.length < 6) { notificar('Ingresa el PIN de 6 dígitos', 'error'); return; }
-  var btn = $('btnPinAccionOk');
-  setBtnLoading(btn, true, 'Verificando...');
-  try {
-    var res = await apiCall('verificarPinMegaAdmin', { pin: p });
-    if (res && res.success) {
-      window._adminPin = p;
-      cerrarModal('modalPinAccion');
-      var cb = _pinCallback;
-      _pinCallback = null;
-      if (cb) cb(p);
-    } else {
-      notificar('PIN incorrecto', 'error');
-      $('inputPinAccion').value = '';
-      actualizarDots('inputPinAccion', 'dotAcc');
-    }
-  } catch (e) {
-    notificar(e.message || 'Error de conexión', 'error');
-  } finally {
-    setBtnLoading(btn, false);
-  }
-}
-
-/* ==================== PANEL ADMIN ==================== */
-
-function abrirModalAdminSeguro() {
-  $('inputPinRifa').value = '';
-  actualizarDots('inputPinRifa', 'dotAdm');
-  abrirModal('modalPinAdmin');
-  setTimeout(function() { $('inputPinRifa').focus(); }, 250);
-}
-
-async function verificarPinAdmin() {
-  var p = $('inputPinRifa').value.trim();
-  if (p.length < 6) { notificar('Ingresa el PIN completo de 6 dígitos', 'error'); return; }
-  var btn = $('btnAccederAdmin');
-  setBtnLoading(btn, true, 'Verificando...');
-  try {
-    var res = await apiCall('verificarPinMegaAdmin', { pin: p });
-    if (res && res.success) {
-      window._adminPin = p;
-      cerrarModal('modalPinAdmin');
-      abrirModal('modalPanelAdmin');
-      _cfgDirty = false;
-      ocultarFeedbackConfig();
-      cambiarTabAdmin('val');
-      cargarFormularioConfigAdmin();
-      notificar('Bienvenido al panel Admin 👋', 'success');
-    } else {
-      notificar('PIN incorrecto', 'error');
-      $('inputPinRifa').value = '';
-      actualizarDots('inputPinRifa', 'dotAdm');
-    }
-  } catch (e) {
-    notificar(e.message || 'Error de conexión', 'error');
-  } finally {
-    setBtnLoading(btn, false);
-  }
-}
-
-function cambiarTabAdmin(tab) {
-  $('adminViewVal').classList.toggle('hidden', tab !== 'val');
-  $('adminViewVnc').classList.toggle('hidden', tab !== 'vnc');
-  $('adminViewHis').classList.toggle('hidden', tab !== 'his');
-  $('adminViewCfg').classList.toggle('hidden', tab !== 'cfg');
-  $('adminViewNue').classList.toggle('hidden', tab !== 'nue');
-
-  $('adminTabVal').className = 'tab-btn ' + (tab === 'val' ? 'tab-on' : 'tab-off');
-  $('adminTabVnc').className = 'tab-btn ' + (tab === 'vnc' ? 'tab-warn-on' : 'tab-warn-off');
-  $('adminTabHis').className = 'tab-btn ' + (tab === 'his' ? 'tab-on' : 'tab-off');
-  $('adminTabCfg').className = 'tab-btn ' + (tab === 'cfg' ? 'tab-on' : 'tab-off');
-  $('adminTabNue').className = 'tab-btn ' + (tab === 'nue' ? 'tab-danger-on' : 'tab-danger-off');
-
-  if (tab === 'val') cargarPagosPendientesAdmin();
-  if (tab === 'vnc') cargarPorVencerAdmin();
-  if (tab === 'his') cargarHistorialAdmin();
-  if (tab === 'cfg') {
-    if (!_cfgDirty) cargarFormularioConfigAdmin();
-  }
-}
-
-async function cargarPagosPendientesAdmin() {
-  $('adminViewVal').innerHTML = '<div class="subcard text-center text-slate-500 py-4 text-xs"><i class="fa-solid fa-spinner fa-spin mr-1"></i> Cargando pagos y estadísticas...</div>';
-  var pin = window._adminPin;
-  try {
-    var results = await Promise.all([
-      apiCall('obtenerEstadisticasAdmin', { pin: pin }),
-      apiCall('listarPagosPendientesMega', {})
-    ]);
-    var stats = results[0];
-    var lista = Array.isArray(results[1]) ? results[1] : [];
-    var est = (appState && appState.estadisticas) || {};
-    var html = '';
-
-    if (stats && stats.success) {
-      html += '<div class="bg-emerald-50 border border-emerald-200 rounded-xl p-3.5">';
-      html += '<div class="text-[10px] font-black text-emerald-700 uppercase mb-1">💰 Ingresos Totales</div>';
-      html += '<div class="text-2xl font-black text-emerald-900 font-mono">$' + fmt(stats.totalUSD) + '</div>';
-      html += '<div class="text-xs text-emerald-700 font-mono">≈ Bs ' + fmt(stats.totalBs) + '</div>';
-      html += '<div class="grid grid-cols-3 gap-2 mt-2.5 pt-2.5 border-t border-emerald-200 text-center">';
-      html += '<div><div class="text-[10px] font-bold text-emerald-600">HOY</div><b class="text-xs font-mono">$' + fmt(stats.totalHoyUSD) + '</b></div>';
-      html += '<div><div class="text-[10px] font-bold text-emerald-600">APROBADOS</div><b class="text-xs font-mono">' + escHtml(stats.pagosAprobados) + '</b></div>';
-      html += '<div><div class="text-[10px] font-bold text-emerald-600">X VENCER</div><b class="text-xs font-mono text-amber-700">' + escHtml(stats.porVencer) + '</b></div>';
-      html += '</div>';
-      if (Number(stats.vencidas) > 0) {
-        html += '<div class="mt-2 bg-rose-100 text-rose-700 text-xs font-black py-1.5 px-2.5 rounded-lg">⚠️ ' + escHtml(stats.vencidas) + ' reservas vencidas</div>';
-      }
-      html += '</div>';
-    }
-
-    html += '<div class="subcard border-amber-200 bg-amber-50/70 text-xs">';
-    html += '<b class="block mb-1.5 text-slate-900">📊 Estado de Taquilla</b>';
-    html += '<div class="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs">';
-    html += '<div>🟢 Libres: <b>' + safeNum(est.disponibles, 0) + '</b></div>';
-    html += '<div>🔵 Reservas: <b>' + safeNum(est.reservados, 0) + '</b></div>';
-    html += '<div>🟣 Revisión: <b>' + safeNum(est.espera, 0) + '</b></div>';
-    html += '<div>🔴 Vendidos: <b>' + safeNum(est.vendidos, 0) + '</b></div>';
-    html += '</div></div>';
-
-    html += '<div class="grid grid-cols-3 gap-2">';
-    html += '<button type="button" onclick="resincronizar()" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 rounded-lg text-xs transition">🔄 Re-sinc</button>';
-    html += '<button type="button" onclick="liberarMasivo()" class="bg-amber-600 hover:bg-amber-700 text-white font-bold py-2 rounded-lg text-xs transition">🔓 Liberar</button>';
-    html += '<button type="button" onclick="exportarCSV()" class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2 rounded-lg text-xs transition">📥 CSV</button>';
-    html += '</div>';
-
-    html += '<div id="listaPagosCont" class="space-y-2.5">' + construirHtmlPagosPendientes(lista) + '</div>';
-    $('adminViewVal').innerHTML = html;
-  } catch (e) {
-    $('adminViewVal').innerHTML = '<p class="text-center text-rose-600 py-4 text-xs font-semibold">Error cargando pagos: ' + escHtml(e.message) + '</p>';
-  }
-}
-
-function construirHtmlPagosPendientes(lista) {
-  _pagosMap = {};
-  _comprobantesMap = {};
-  if (!lista.length) {
-    return '<div class="subcard text-center text-slate-500 py-5 text-xs">No hay pagos pendientes por validar 🎉</div>';
-  }
-  var html = '';
-  for (var i = 0; i < lista.length; i++) {
-    var p = lista[i];
-    _pagosMap[p.fila] = p;
-    html += '<div class="subcard space-y-1.5">';
-    html += '<div class="flex justify-between items-start gap-2">';
-    html += '<div><b class="text-xs sm:text-sm text-slate-900">' + escHtml(p.nombre) + '</b><br><span class="text-[11px] text-slate-500 font-mono">C.I. ' + escHtml(p.cedula) + '</span></div>';
-    html += '<div class="text-right"><b class="text-sm text-emerald-600 font-mono">$' + fmt(p.montoUSD) + '</b><br><span class="text-[10px] text-slate-500">' + escHtml(p.fecha) + '</span></div></div>';
-    html += '<div class="text-xs text-blue-600 font-mono font-bold">🎟️ #' + escHtml(p.numeros) + '</div>';
-    html += '<div class="text-xs text-slate-700">Ref: <b>' + escHtml(p.referencia) + '</b> · ' + escHtml(p.metodo) + '</div>';
-    if (p.telefono) html += '<div class="text-[11px] text-slate-500"><i class="fa-solid fa-phone mr-1"></i>' + escHtml(p.telefono) + '</div>';
-    if (p.correo) html += '<div class="text-[11px] text-slate-500"><i class="fa-solid fa-envelope mr-1"></i>' + escHtml(p.correo) + '</div>';
-    if (p.comprobante && String(p.comprobante).indexOf('data:image') === 0) {
-      _comprobantesMap[p.fila] = p.comprobante;
-      html += '<button type="button" data-cb="' + escHtml(p.fila) + '" class="w-full bg-blue-50 hover:bg-blue-100 border border-blue-200 text-blue-700 py-1.5 rounded-lg text-xs font-bold transition">📎 Ver comprobante</button>';
-    }
-    html += '<div class="flex gap-2 pt-1">';
-    html += '<button type="button" onclick="resolverPagoAdmin(' + Number(p.fila) + ',\'APROBADO\', this)" class="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2 rounded-lg text-xs transition">✓ Aprobar</button>';
-    html += '<button type="button" onclick="resolverPagoAdmin(' + Number(p.fila) + ',\'RECHAZADO\', this)" class="flex-1 bg-rose-600 hover:bg-rose-700 text-white font-bold py-2 rounded-lg text-xs transition">✗ Rechazar</button>';
-    html += '</div></div>';
-  }
-  return html;
-}
-
-async function cargarPorVencerAdmin() {
-  $('adminViewVnc').innerHTML = '<div class="subcard text-center text-slate-500 py-4 text-xs"><i class="fa-solid fa-spinner fa-spin mr-1"></i> Cargando reservas...</div>';
-  try {
-    var res = await apiCall('listarReservasPorVencer', { pin: window._adminPin });
-    if (!res || !res.success) {
-      $('adminViewVnc').innerHTML = '<p class="text-center text-rose-600 py-4 text-xs">Error: ' + escHtml((res && res.error) || '') + '</p>';
-      return;
-    }
-    var lista = res.lista || [];
-    if (!lista.length) {
-      $('adminViewVnc').innerHTML = '<div class="subcard text-center text-slate-500 py-6 text-xs">🎉 No hay reservas por vencer ni vencidas.</div>';
-      return;
-    }
-    var html = '<p class="text-xs text-slate-500 font-semibold">Reservas que vencen en ≤3 días o ya vencidas.</p>';
-    for (var i = 0; i < lista.length; i++) {
-      var it = lista[i];
-      var urgente = it.vencida ? 'bg-rose-50 border-rose-300' : 'bg-amber-50 border-amber-300';
-      var badge = it.vencida
-        ? '<span class="text-[10px] font-black text-rose-700 bg-rose-200 px-2 py-0.5 rounded-full">⚠️ VENCIDA hace ' + Math.abs(it.diasRestantes) + 'd</span>'
-        : (it.diasRestantes === 0
-          ? '<span class="text-[10px] font-black text-rose-700 bg-rose-100 px-2 py-0.5 rounded-full">🔴 Vence HOY</span>'
-          : '<span class="text-[10px] font-black text-amber-700 bg-amber-100 px-2 py-0.5 rounded-full">⏰ Vence en ' + escHtml(it.diasRestantes) + 'd</span>');
-      var telLimpio = normalizarTelefono(it.telefono);
-      var msgWA = '¡Hola *' + it.nombre + '*! 👋\n\nTe recordamos que tienes boletos reservados en *Mega Rifas* 🎟️\n\n🎟️ Números: *# ' + it.numeros + '*\n\n⏰ ' + (it.vencida ? 'Tu reserva está *vencida*. Urgente para no perder los números.' : 'Completa tu pago para no perder tus números.') + '\n\nCualquier duda estamos aquí 💬\n*Mega Rifas*';
-
-      html += '<div class="subcard border ' + urgente + ' space-y-1.5">';
-      html += '<div class="flex justify-between items-start gap-2">';
-      html += '<div><b class="text-xs sm:text-sm">' + escHtml(it.nombre) + '</b><br><span class="text-[11px] text-slate-500 font-mono">C.I. ' + escHtml(it.cedula) + '</span></div>';
-      html += badge + '</div>';
-      html += '<div class="text-xs text-blue-600 font-mono font-bold">🎟️ #' + escHtml(it.numeros) + '</div>';
-      if (it.telefono) html += '<div class="text-[11px] text-slate-600"><i class="fa-solid fa-phone mr-1"></i>' + escHtml(it.telefono) + '</div>';
-      if (it.correo) html += '<div class="text-[11px] text-slate-600"><i class="fa-solid fa-envelope mr-1"></i>' + escHtml(it.correo) + '</div>';
-      html += '<div class="flex gap-2 pt-1">';
-      if (it.correo) {
-        html += '<a href="mailto:' + escHtml(it.correo) + '?subject=' + encodeURIComponent('Recordatorio - Mega Rifas') + '&body=' + encodeURIComponent('Hola ' + it.nombre + ',\n\nTe recordamos que tienes boletos reservados en Mega Rifas:\n\nNúmeros: #' + it.numeros + '\n\n' + (it.vencida ? 'Tu reserva ya venció. Urgente para no perder los números.' : 'Completa tu pago antes del límite.') + '\n\n— Mega Rifas') + '" class="flex-1 bg-blue-600 text-white font-bold py-2 rounded-lg text-xs text-center">📧 Correo</a>';
-      }
-      if (telLimpio) {
-        html += '<a href="https://wa.me/' + telLimpio + '?text=' + encodeURIComponent(msgWA) + '" target="_blank" rel="noopener noreferrer" class="flex-1 bg-emerald-600 text-white font-bold py-2 rounded-lg text-xs text-center">📱 WhatsApp</a>';
-      }
-      html += '</div></div>';
-    }
-    $('adminViewVnc').innerHTML = html;
-  } catch (e) {
-    $('adminViewVnc').innerHTML = '<p class="text-center text-rose-600 py-4 text-xs">Error: ' + escHtml(e.message) + '</p>';
-  }
-}
-
-function resolverPagoAdmin(fila, acc, btn) {
-  var pagoData = _pagosMap[fila];
-  if (acc === 'RECHAZADO') {
-    pedirPin('Rechazar pago', 'Vas a rechazar este pago. Los números volverán a RESERVADO.', function(pin) {
-      ejecutarResolucionPago(fila, acc, pagoData, pin, btn);
-    });
-  } else {
-    ejecutarResolucionPago(fila, acc, pagoData, window._adminPin, btn);
-  }
-}
-
-async function ejecutarResolucionPago(fila, acc, pagoData, pin, btn) {
-  setBtnLoading(btn, true, '...');
-  try {
-    var res = await apiCall('procesarPagoMegaAdmin', { fila: fila, accion: acc, pin: pin });
-    if (!res || !res.success) {
-      notificar('Error: ' + ((res && res.error) || 'No se pudo procesar'), 'error');
-      return;
-    }
-    if (acc === 'APROBADO') {
-      notificar('✅ Pago aprobado. Email enviado 📧', 'success');
-      if (pagoData) abrirModalWAConDatos(pagoData);
-    } else {
-      notificar('❌ Pago rechazado', 'success');
-    }
-    await Promise.all([
-      cargarDatos({ silent: true, force: true }),
-      cargarPagosPendientesAdmin()
-    ]);
-  } catch (e) {
-    notificar('Error: ' + e.message, 'error');
-  } finally {
-    setBtnLoading(btn, false);
-  }
-}
-
-function abrirModalWAConDatos(p) {
-  _waData = { nombre: p.nombre, numeros: p.numeros, ref: p.referencia, monto: fmt(p.montoUSD) };
-  $('waTelefono').value = normalizarTelefono(p.telefono);
-  var msg = '¡Hola *' + p.nombre + '*! 🎉\n\n' +
-    '✅ Tu pago por *$' + fmt(p.montoUSD) + '* (Ref: *' + p.referencia + '*) ha sido *APROBADO*.\n\n' +
-    '🎟️ Números: *# ' + p.numeros + '*\n\n' +
-    '¡Mucha suerte en el sorteo! 🍀\n' +
-    '*Mega Rifas*';
-  $('waPreview').innerHTML = escHtml(msg).replace(/\*(.*?)\*/g, '<b>$1</b>').replace(/\n/g, '<br>');
-  abrirModal('modalWA');
-}
-
-function enviarWAConfirmado() {
-  var tel = normalizarTelefono($('waTelefono').value);
-  if (!tel) { notificar('Ingresa el teléfono WhatsApp', 'error'); return; }
-  if (!_waData) { notificar('Sin datos del pago', 'error'); return; }
-  var msg = encodeURIComponent(
-    '¡Hola *' + _waData.nombre + '*! 🎉\n\n' +
-    '✅ Tu pago por *$' + _waData.monto + '* (Ref: *' + _waData.ref + '*) ha sido *APROBADO*.\n\n' +
-    '🎟️ Números: *# ' + _waData.numeros + '*\n\n' +
-    '¡Mucha suerte en el sorteo! 🍀\n' +
-    '*Mega Rifas*'
-  );
-  var a = document.createElement('a');
-  a.href = 'https://wa.me/' + tel + '?text=' + msg;
-  a.target = '_blank';
-  a.rel = 'noopener noreferrer';
-  a.click();
-  cerrarModal('modalWA');
-  notificar('✅ WhatsApp abierto', 'success');
-}
-
-function resincronizar() {
-  pedirPin('Resincronizar tablero', 'Esta acción revisa todos los pagos y actualiza el tablero.', async function(pin) {
-    notificar('Resincronizando tablero...', 'info');
-    try {
-      var res = await apiCall('resincronizarTableroAdmin', { pin: pin });
-      if (!res || !res.success) { notificar((res && res.error) || 'No se pudo resincronizar', 'error'); return; }
-      notificar('✅ ' + safeNum(res.cambios, 0) + ' registros actualizados', 'success');
-      await cargarDatos({ silent: true, force: true });
-      cargarPagosPendientesAdmin();
-    } catch (e) {
-      notificar('Error: ' + e.message, 'error');
-    }
-  });
-}
-
-function liberarMasivo() {
-  pedirPin('Liberar reservas', 'Vas a liberar todos los números reservados que no han sido pagados.', function(pin) {
-    mostrarConfirm(
-      '¿Liberar todas las reservas?',
-      'Todos los números en estado <b>RESERVADO</b> volverán a estar <b>DISPONIBLES</b>. Los que están en revisión o pagados NO se tocan.',
-      'fa-triangle-exclamation',
-      async function(ok) {
-        if (!ok) return;
-        notificar('Liberando reservas...', 'info');
-        try {
-          var res = await apiCall('liberarTodosReservadosAdmin', { pin: pin, incluirEspera: false });
-          if (!res || !res.success) { notificar((res && res.error) || 'Error al liberar', 'error'); return; }
-          notificar('✅ ' + safeNum(res.liberados, 0) + ' números liberados', 'success');
-          await cargarDatos({ silent: true, force: true });
-          cargarPagosPendientesAdmin();
-        } catch (e) {
-          notificar('Error: ' + e.message, 'error');
-        }
-      },
-      true
-    );
-  });
-}
-
-async function exportarCSV() {
-  if (!window._adminPin) { notificar('Sesión expirada', 'error'); return; }
-  notificar('Generando CSV...', 'info');
-  try {
-    var res = await apiCall('exportarVentasCSV', { pin: window._adminPin });
-    if (!res || !res.success) { notificar((res && res.error) || 'Error al exportar', 'error'); return; }
-    var blob = new Blob([res.csv], { type: 'text/csv;charset=utf-8;' });
-    var url = URL.createObjectURL(blob);
-    var link = document.createElement('a');
-    link.href = url;
-    link.download = 'mega-rifas-' + new Date().toISOString().slice(0, 10) + '.csv';
-    link.click();
-    setTimeout(function() { URL.revokeObjectURL(url); }, 1000);
-    notificar('✅ CSV descargado', 'success');
-  } catch (e) {
-    notificar('Error: ' + e.message, 'error');
-  }
-}
-
-/* ==================== HISTORIAL Y EDICIÓN ==================== */
-
-async function cargarHistorialAdmin() {
-  var cont = $('adminViewHis');
-  cont.innerHTML = '<div class="subcard text-center text-slate-500 py-4 text-xs"><i class="fa-solid fa-spinner fa-spin mr-1"></i> Cargando historial...</div>';
-  try {
-    var lista = await apiCall('obtenerHistorialAdmin', { filtro: historialFiltro });
-    lista = Array.isArray(lista) ? lista : [];
-    _historialMap = {};
-
-    var html = '<div class="flex gap-1.5 mb-2 overflow-x-auto pb-1">';
-    var filters = ['TODOS', 'PAGADO', 'ESPERA', 'RESERVADO'];
-    for (var f = 0; f < filters.length; f++) {
-      var on = historialFiltro === filters[f];
-      html += '<button type="button" onclick="cambiarFiltroHistorial(\'' + filters[f] + '\')" class="px-3 py-1.5 rounded-lg text-xs font-black ' + (on ? 'bg-slate-900 text-white' : 'bg-slate-100 text-slate-600') + ' whitespace-nowrap">' + filters[f] + '</button>';
-    }
-    html += '</div>';
-
-    if (!lista.length) {
-      html += '<div class="subcard text-center text-slate-500 py-5 text-xs">Sin registros en este filtro.</div>';
-      cont.innerHTML = html;
-      return;
-    }
-
-    var colores = {
-      PAGADO: 'bg-slate-50 text-slate-800 border-slate-300',
-      ESPERA: 'bg-purple-50 text-purple-800 border-purple-200',
-      RESERVADO: 'bg-blue-50 text-blue-800 border-blue-200'
-    };
-
-    for (var i = 0; i < lista.length; i++) {
-      var r = lista[i];
-      _historialMap[r.fila] = r;
-      var cls = colores[r.estatus] || 'bg-slate-50 text-slate-700 border-slate-200';
-      html += '<div class="subcard border ' + cls + ' space-y-1">';
-      html += '<div class="flex justify-between items-start">';
-      html += '<div><span class="text-lg font-black font-mono">#' + escHtml(r.numero) + '</span> <span class="text-[10px] font-black px-2 py-0.5 rounded-full border ' + cls + '">' + escHtml(r.estatus) + '</span></div>';
-      html += '<button type="button" onclick="abrirEditarPorFila(' + Number(r.fila) + ')" class="text-xs font-black text-blue-600 hover:underline">✏️ Editar</button>';
-      html += '</div>';
-      if (r.nombre || r.cedula) {
-        html += '<div class="text-xs text-slate-800 font-bold">' + escHtml(r.nombre) + '</div>';
-        html += '<div class="text-[11px] text-slate-500 font-mono">C.I. ' + escHtml(r.cedula) + (r.telefono ? ' · ' + escHtml(r.telefono) : '') + '</div>';
-      }
-      if (r.fechaReserva) html += '<div class="text-[10px] text-slate-500">Reservado: ' + escHtml(r.fechaReserva) + '</div>';
-      if (r.fechaPago) html += '<div class="text-[10px] text-emerald-700 font-bold">Pagado: ' + escHtml(r.fechaPago) + '</div>';
-
-      var acciones = [];
-      if (r.estatus === 'RESERVADO' && r.telefono) {
-        var msg = encodeURIComponent('¡Hola *' + r.nombre + '*! 👋\n\nTe recordamos que tienes el boleto *# ' + r.numero + '* reservado en *Mega Rifas* 🎟️\n\n⏰ Completa tu pago antes del límite.\n\n*Mega Rifas*');
-        acciones.push('<a href="https://wa.me/' + normalizarTelefono(r.telefono) + '?text=' + msg + '" target="_blank" rel="noopener noreferrer" class="flex-1 bg-emerald-600 text-white font-bold py-1.5 rounded-lg text-xs text-center">📱 Recordar</a>');
-      }
-      acciones.push('<button type="button" onclick="liberarNumeroPorFila(' + Number(r.fila) + ')" class="flex-1 bg-amber-600 text-white font-bold py-1.5 rounded-lg text-xs">🔓 Liberar</button>');
-      html += '<div class="flex gap-2 pt-1.5">' + acciones.join('') + '</div>';
-      html += '</div>';
-    }
-    cont.innerHTML = html;
-  } catch (e) {
-    cont.innerHTML = '<p class="text-center text-rose-600 py-4 text-xs">Error: ' + escHtml(e.message) + '</p>';
-  }
-}
-
-function cambiarFiltroHistorial(f) {
-  historialFiltro = f;
-  cargarHistorialAdmin();
-}
-
-function liberarNumeroPorFila(fila) {
-  var r = _historialMap[fila];
-  if (!r) return;
-  var numero = r.numero;
-  pedirPin('Liberar #' + numero, 'Vas a liberar el número #' + numero + '. Volverá a estar disponible para otros clientes.', function(pin) {
-    mostrarConfirm('¿Liberar #' + numero + '?', 'Esta acción es irreversible.', 'fa-unlock', async function(ok) {
-      if (!ok) return;
-      notificar('Liberando #' + numero + '...', 'info');
-      try {
-        var res = await apiCall('liberarNumeroAdmin', { numero: numero, pin: pin });
-        if (!res || !res.success) { notificar((res && res.error) || 'No se pudo liberar', 'error'); return; }
-        notificar('✅ #' + numero + ' liberado', 'success');
-        await Promise.all([cargarDatos({ silent: true, force: true }), cargarHistorialAdmin()]);
-      } catch (e) {
-        notificar('Error: ' + e.message, 'error');
-      }
-    }, true);
-  });
-}
-
-function abrirEditarPorFila(fila) {
-  var r = _historialMap[fila];
-  if (!r) return;
-  $('editFila').value = r.fila;
-  $('editEstatus').value = r.estatus || 'DISPONIBLE';
-  $('editCedula').value = r.cedula || '';
-  $('editNombre').value = r.nombre || '';
-  $('editTelefono').value = r.telefono || '';
-  $('editPin').value = window._adminPin || '';
-  abrirModal('modalEditar');
-}
-
-async function guardarEdicion() {
-  var pin = $('editPin').value.trim();
-  if (pin.length < 6) { notificar('Ingresa el PIN de 6 dígitos', 'error'); return; }
-  var datos = {
-    estatus: $('editEstatus').value,
-    cedula: $('editCedula').value.trim(),
-    nombre: $('editNombre').value.trim(),
-    telefono: $('editTelefono').value.trim()
-  };
-  var btn = $('btnGuardarEdicion');
-  setBtnLoading(btn, true, 'Guardando...');
-  try {
-    var res = await apiCall('editarRegistroAdmin', { fila: parseInt($('editFila').value, 10), datos: datos, pin: pin });
-    if (!res || !res.success) { notificar((res && res.error) || 'No se pudo guardar', 'error'); return; }
-    notificar('✅ Registro actualizado', 'success');
-    cerrarModal('modalEditar');
-    await Promise.all([cargarDatos({ silent: true, force: true }), cargarHistorialAdmin()]);
-  } catch (e) {
-    notificar('Error: ' + e.message, 'error');
-  } finally {
-    setBtnLoading(btn, false);
-  }
-}
-
-/* ==================== CONFIGURACIÓN UNIFICADA (SINGLE SOURCE OF TRUTH) ==================== */
-
-function ocultarFeedbackConfig() {
-  var box = $('cfgSaveFeedback');
-  if (!box) return;
-  box.classList.add('hidden');
-  box.innerHTML = '';
-}
-
-function mostrarFeedbackConfig(tipo, html) {
-  var box = $('cfgSaveFeedback');
-  if (!box) return;
-  var estilos = {
-    success: 'bg-emerald-50 border-emerald-300 text-emerald-900',
-    warn: 'bg-amber-50 border-amber-300 text-amber-900',
-    error: 'bg-rose-50 border-rose-300 text-rose-900'
-  };
-  box.className = 'rounded-xl p-3 text-xs font-semibold border ' + (estilos[tipo] || estilos.warn);
-  box.innerHTML = html;
-  box.classList.remove('hidden');
-}
-
-function cargarFormularioConfigAdmin() {
-  if (!appState) return;
-  CONFIG_SCHEMA.forEach(function(field) {
-    var el = $(field.inputId);
-    if (!el) return;
-    el.classList.remove('inp-warn');
-    var val = appState[field.key];
-    if (field.type === 'optNum') {
-      el.value = (val !== undefined && val !== null && Number(val) > 0) ? String(val) : '';
-    } else if (field.type === 'int' || field.type === 'number') {
-      el.value = String(safeNum(val, field.def));
-    } else {
-      el.value = (val === undefined || val === null) ? field.def : String(val);
-    }
-  });
-
-  var wa = Array.isArray(appState.waList) ? appState.waList : [];
-  $('cfgWA1').value = wa[0] || '';
-  $('cfgWA2').value = wa[1] || '';
-  $('cfgWA3').value = wa[2] || '';
-  $('cfgWA1').classList.remove('inp-warn');
-  $('cfgWA2').classList.remove('inp-warn');
-  $('cfgWA3').classList.remove('inp-warn');
-  $('cfgNuevoPin').value = '';
-  _cfgDirty = false;
-}
-
-async function recargarConfigDesdeServidor() {
-  var btn = $('btnRecargarConfig');
-  setBtnLoading(btn, true, '');
-  ocultarFeedbackConfig();
-  try {
-    var fresh = await cargarDatos({ silent: false, force: true });
-    if (fresh) {
-      _cfgDirty = false;
-      cargarFormularioConfigAdmin();
-      notificar('Datos recargados desde el servidor', 'info');
-    }
-  } finally {
-    setBtnLoading(btn, false);
-  }
-}
-
-function construirPayloadConfig() {
-  var payload = {};
-  var esperado = {};
-  var errores = [];
-
-  CONFIG_SCHEMA.forEach(function(field) {
-    var el = $(field.inputId);
-    var raw = el ? String(el.value).trim() : '';
-    if (field.type === 'int') {
-      var nInt = parseInt(raw, 10);
-      var minVal = field.key === 'diasBloqueo' ? 0 : 1;
-      if (!isFinite(nInt) || nInt < minVal) {
-        errores.push(field.label + ' debe ser un número entero válido (mínimo ' + minVal + ').');
-      } else {
-        payload[field.payloadKey] = nInt;
-        esperado[field.key] = nInt;
-      }
-    } else if (field.type === 'number') {
-      var nDec = parseLocaleNumber(raw);
-      if (!isFinite(nDec) || nDec <= 0) {
-        errores.push(field.label + ' debe ser mayor a 0.');
-      } else {
-        payload[field.payloadKey] = nDec;
-        esperado[field.key] = nDec;
-      }
-    } else if (field.type === 'optNum') {
-      if (!raw) {
-        payload[field.payloadKey] = '';
-        esperado[field.key] = 0;
-      } else {
-        var nOpt = parseLocaleNumber(raw);
-        if (!isFinite(nOpt) || nOpt < 0) {
-          errores.push(field.label + ' debe ser un número válido o quedar vacío.');
-        } else {
-          payload[field.payloadKey] = nOpt === 0 ? '' : nOpt;
-          esperado[field.key] = nOpt;
-        }
-      }
-    } else {
-      payload[field.payloadKey] = raw;
-      esperado[field.key] = raw;
-    }
-  });
-
-  var wa1 = normalizarTelefono($('cfgWA1').value);
-  var wa2 = normalizarTelefono($('cfgWA2').value);
-  var wa3 = normalizarTelefono($('cfgWA3').value);
-  payload.wa1 = wa1;
-  payload.wa2 = wa2;
-  payload.wa3 = wa3;
-  esperado.waList = [wa1, wa2, wa3].filter(Boolean);
-
-  var nuevoPin = $('cfgNuevoPin').value.trim();
-  if (nuevoPin && nuevoPin.length !== 6) {
-    errores.push('El nuevo PIN debe tener exactamente 6 dígitos (o quedar vacío).');
-  }
-  payload.nuevoPin = nuevoPin;
-  if (window._adminPin) payload.pin = window._adminPin;
-
-  return { payload: payload, esperado: esperado, errores: errores };
-}
-
-function verificarCamposPersistidos(esperado, real) {
-  var noGuardados = [];
-
-  CONFIG_SCHEMA.forEach(function(field) {
-    var el = $(field.inputId);
-    var expVal = esperado[field.key];
-    var actVal = real[field.key];
-    var coincide = true;
-
-    if (field.type === 'int') {
-      coincide = Number(expVal) === Number(actVal);
-    } else if (field.type === 'number' || field.type === 'optNum') {
-      coincide = Math.abs(Number(expVal || 0) - Number(actVal || 0)) < 0.01;
-    } else {
-      coincide = String(expVal || '').trim() === String(actVal || '').trim();
-    }
-
-    if (el) el.classList.toggle('inp-warn', !coincide);
-    if (!coincide) {
-      noGuardados.push({ label: field.label, esperado: expVal, actual: actVal });
-    }
-  });
-
-  var expWa = (esperado.waList || []).map(normalizarTelefono).filter(Boolean).join(',');
-  var actWa = (real.waList || []).map(normalizarTelefono).filter(Boolean).join(',');
-  var waOk = expWa === actWa;
-  ['cfgWA1', 'cfgWA2', 'cfgWA3'].forEach(function(id) {
-    $(id).classList.toggle('inp-warn', !waOk);
-  });
-  if (!waOk) {
-    noGuardados.push({ label: 'Teléfonos WhatsApp', esperado: expWa || '(vacío)', actual: actWa || '(vacío)' });
-  }
-
-  return noGuardados;
-}
-
-async function guardarConfigAdmin() {
-  ocultarFeedbackConfig();
-  var built = construirPayloadConfig();
-  if (built.errores.length) {
-    mostrarFeedbackConfig('error', '<b>Revisa estos datos antes de guardar:</b><br>• ' + built.errores.map(escHtml).join('<br>• '));
-    notificar(built.errores[0], 'error');
-    return;
-  }
-
-  var btn = $('btnGuardarConfig');
-  setBtnLoading(btn, true, 'Guardando y verificando...');
-
-  // Actualización optimista inmediata en pantalla
-  var snapshotPrevio = appState ? Object.assign({}, appState) : null;
-  var optimista = Object.assign({}, built.esperado);
-  if (optimista.tasaManual > 0) {
-    optimista.tasa = optimista.tasaManual;
-    optimista.precioTicketBs = Number((optimista.precioTicketUSD * optimista.tasaManual).toFixed(2));
-  } else if (appState && appState.tasa > 0) {
-    optimista.precioTicketBs = Number((optimista.precioTicketUSD * appState.tasa).toFixed(2));
-  }
-  aplicarDatos(optimista, { persistCache: false });
-
-  try {
-    var res = await apiCall('guardarConfiguracionAdminMega', built.payload);
-    if (!res || !res.success) {
-      if (snapshotPrevio) aplicarDatos(snapshotPrevio, { persistCache: false });
-      var errMsg = (res && res.error) || 'El servidor rechazó el guardado.';
-      mostrarFeedbackConfig('error', '<b>No se pudo guardar:</b> ' + escHtml(errMsg));
-      notificar('Error: ' + errMsg, 'error');
-      return;
-    }
-
-    if (built.payload.nuevoPin) {
-      window._adminPin = built.payload.nuevoPin;
-    }
-
-    // Fusionar respuesta del guardado y verificar lectura real desde Google Sheets
-    aplicarDatos(res, { persistCache: true });
-    var verificado = await apiCall('obtenerInicioMega', {});
-    var estadoFinal = (verificado && verificado.success) ? verificado : appState;
-    aplicarDatos(estadoFinal, { persistCache: true });
-
-    _cfgDirty = false;
-    cargarFormularioConfigAdmin();
-
-    var faltantes = verificarCamposPersistidos(built.esperado, appState);
-    if (faltantes.length) {
-      var nombres = faltantes.map(function(f) { return escHtml(f.label); }).join(', ');
-      mostrarFeedbackConfig(
-        'warn',
-        '<b>⚠️ Guardado parcial detectado:</b> El servidor no persistió estos campos: <b>' + nombres + '</b>. Se resaltaron en amarillo y se muestran los valores reales que quedaron guardados en tu hoja.'
-      );
-      notificar('Guardado parcial: revisa ' + faltantes.map(function(f) { return f.label; }).join(', '), 'warn');
-    } else {
-      mostrarFeedbackConfig(
-        'success',
-        '✅ Todos los cambios se guardaron y verificaron correctamente. Boleto actual: <b>$' + fmt(appState.precioTicketUSD) + '</b> → <b>Bs ' + fmt(appState.precioTicketBs) + '</b>.'
-      );
-      notificar('✅ Configuración guardada y verificada', 'success');
-    }
-  } catch (e) {
-    if (snapshotPrevio) aplicarDatos(snapshotPrevio, { persistCache: false });
-    mostrarFeedbackConfig('error', '<b>Error de conexión:</b> ' + escHtml(e.message) + '. Los cambios no fueron confirmados por el servidor.');
-    notificar('Error al guardar: ' + e.message, 'error');
-  } finally {
-    setBtnLoading(btn, false);
-  }
-}
-
-/* ==================== REINICIAR RIFA ==================== */
-
-function ejecutarNuevaRifa() {
-  var pin = $('pinReiniciarRifa').value.trim();
-  if (pin.length < 6) { notificar('Ingresa tu PIN de 6 dígitos', 'error'); return; }
-  mostrarConfirm(
-    '⚠️ Reiniciar TODA la rifa',
-    'Esto borrará <b>TODOS</b> los números del tablero y <b>TODOS</b> los pagos registrados. <b>Esta acción no se puede deshacer.</b>',
-    'fa-triangle-exclamation',
-    async function(ok) {
-      if (!ok) return;
-      var btn = $('btnReiniciarRifa');
-      setBtnLoading(btn, true, 'Reiniciando...');
-      try {
-        var res = await apiCall('iniciarNuevaRifaAdmin', { pin: pin });
-        if (!res || !res.success) { notificar((res && res.error) || 'Error al reiniciar', 'error'); return; }
-        seleccionados = [];
-        participanteConsultado = null;
-        $('resultadoConsultaParticipante').classList.add('hidden');
-        $('pinReiniciarRifa').value = '';
-        notificar('✅ Rifa reiniciada', 'success');
-        cerrarModal('modalPanelAdmin');
-        await cargarDatos({ silent: true, force: true });
-      } catch (e) {
-        notificar('Error: ' + e.message, 'error');
-      } finally {
-        setBtnLoading(btn, false);
-      }
-    },
-    true
-  );
-}
-
-/* ==================== EVENTOS E INICIALIZACIÓN RÁPIDA ==================== */
-
-document.addEventListener('DOMContentLoaded', function() {
-  // Delegación O(1) para clicks en el tablero
-  var grid = $('gridTablero');
-  if (grid) {
-    grid.addEventListener('click', function(e) {
-      var btn = e.target.closest('button[data-num]');
-      if (!btn) return;
-      tocarNumero(btn.dataset.num, btn.dataset.est);
-    });
-  }
-
-  // Delegación para ver comprobantes
-  document.addEventListener('click', function(e) {
-    var btn = e.target.closest ? e.target.closest('[data-cb]') : null;
-    if (!btn) return;
-    var fila = btn.getAttribute('data-cb');
-    var cb = _comprobantesMap[fila] || '';
-    if (!cb) { notificar('Sin comprobante adjunto', 'error'); return; }
-    $('imgComprobante').src = cb;
-    abrirModal('modalImagen');
-  }, true);
-
-  // Detección de cambios sin guardar en Config Admin
-  var cfgView = $('adminViewCfg');
-  if (cfgView) {
-    cfgView.addEventListener('input', function() { _cfgDirty = true; });
-    cfgView.addEventListener('change', function() { _cfgDirty = true; });
-  }
-
-  // Autocompletado de cédula en checkout
-  var chkCedula = $('chkCedula');
-  if (chkCedula) {
-    chkCedula.addEventListener('input', function() {
-      clearTimeout(_debounceTimer);
-      var ced = chkCedula.value.trim();
-      var aviso = $('avisoCedula');
-      if (ced.length < 5) {
-        aviso.classList.add('hidden');
-        aviso.innerHTML = '';
-        chkCedula.classList.remove('inp-ok');
-        _cedulaVerificada = null;
-        return;
-      }
-      _debounceTimer = setTimeout(function() { verificarCedula(ced); }, 600);
-    });
-  }
-
-  // 1) Pintar inmediatamente desde caché local (0ms de espera) o skeleton limpio
-  var cached = leerCacheLocal();
-  if (cached) {
-    aplicarDatos(cached, { persistCache: false });
-    cargarDatos({ silent: true });
-  } else {
-    renderizarSkeletonTablero();
-    cargarDatos({ silent: false });
-  }
-});
-</script>
+<script type="module" src="/app.bundle.js"></script>
 </body>
 </html>

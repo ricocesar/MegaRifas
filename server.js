@@ -1,35 +1,27 @@
 import express from 'express';
+import fs from 'fs';
 import path from 'path';
+import { execSync } from 'child_process';
 import { fileURLToPath } from 'url';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+const publicDir = path.join(__dirname, 'public');
+
+if (!fs.existsSync(path.join(publicDir, 'app.bundle.js'))) {
+  execSync('node scripts/build.mjs', { cwd: __dirname, stdio: 'inherit' });
+}
 
 const app = express();
 const PORT = Number(process.env.PORT) || 3000;
 const HOST = '0.0.0.0';
 
-const BLOCKED_FILES = new Set([
-  '/server.js',
-  '/package.json',
-  '/package-lock.json',
-  '/metadata.json',
-  '/vercel.json',
-]);
-
-app.use((req, res, next) => {
-  if (BLOCKED_FILES.has(req.path) || req.path.startsWith('/scripts/')) {
-    return res.status(404).end();
-  }
-  next();
-});
-
 app.use(
-  express.static(__dirname, {
+  express.static(publicDir, {
     index: 'index.html',
     dotfiles: 'ignore',
     setHeaders: (res, filePath) => {
-      if (filePath.endsWith('.html')) {
+      if (filePath.endsWith('.html') || filePath.endsWith('.js')) {
         res.setHeader('Cache-Control', 'no-cache');
       }
     },
@@ -39,7 +31,7 @@ app.use(
 app.use((req, res, next) => {
   if (req.method !== 'GET') return next();
   res.setHeader('Cache-Control', 'no-cache');
-  res.sendFile(path.join(__dirname, 'index.html'));
+  res.sendFile(path.join(publicDir, 'index.html'));
 });
 
 app.listen(PORT, HOST, () => {
