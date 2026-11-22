@@ -98,17 +98,46 @@ export function observeAuth(callback: (user: User | null) => void): () => void {
   return onAuthStateChanged(auth, callback);
 }
 
-export async function checkIsCurrentUserAdmin(user: User | null): Promise<boolean> {
-  if (!user || !user.emailVerified) return false;
-  if ((user.email || '').toLowerCase() === ADMIN_BOOTSTRAP_EMAIL.toLowerCase()) {
+export async function checkIsCurrentUserAdmin(
+  user: User | null,
+  configAdminEmails?: string[]
+): Promise<boolean> {
+  if (!user || !user.emailVerified || !user.email) return false;
+  const normalizedEmail = user.email.trim().toLowerCase();
+  if (normalizedEmail === ADMIN_BOOTSTRAP_EMAIL.toLowerCase()) {
     return true;
   }
+
+  // 1) Check in-memory authorized adminEmails from raffleConfig/main
+  if (
+    Array.isArray(configAdminEmails) &&
+    configAdminEmails.some((e) => String(e).trim().toLowerCase() === normalizedEmail)
+  ) {
+    return true;
+  }
+
+  // 2) Check fresh raffleConfig/main.adminEmails directly from Firestore
+  try {
+    const cfgSnap = await getDoc(doc(db, 'raffleConfig', 'main'));
+    if (cfgSnap.exists()) {
+      const list = cfgSnap.data()?.adminEmails;
+      if (
+        Array.isArray(list) &&
+        list.some((e) => String(e).trim().toLowerCase() === normalizedEmail)
+      ) {
+        return true;
+      }
+    }
+  } catch (error) {
+    console.warn('Could not verify adminEmails from raffleConfig/main:', error);
+  }
+
+  // 3) Legacy /admins/{uid} fallback
   const adminPath = `admins/${user.uid}`;
   try {
     const snap = await getDoc(doc(db, 'admins', user.uid));
     return snap.exists() && snap.data()?.role === 'admin';
   } catch (error) {
-    // Non-admins may be denied reading other docs, treat safely as non-admin
     console.warn('Admin check failed for', adminPath, error);
     return false;
   }

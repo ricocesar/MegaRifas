@@ -13,7 +13,7 @@ import {
   Timestamp,
   type Unsubscribe,
 } from 'firebase/firestore';
-import { db, handleFirestoreError, OperationType } from './firebase';
+import { ADMIN_BOOTSTRAP_EMAIL, db, handleFirestoreError, OperationType } from './firebase';
 
 export type TicketStatus = 'DISPONIBLE' | 'RESERVADO' | 'ESPERA' | 'PAGADO';
 export type PaymentStatus = 'PENDIENTE' | 'APROBADO' | 'RECHAZADO';
@@ -45,6 +45,7 @@ export interface RaffleConfigData {
   usdtDatos: string;
   igUrl: string;
   waList: string[];
+  adminEmails: string[];
   updatedAtMs?: number;
 }
 
@@ -107,6 +108,7 @@ export const DEFAULT_RAFFLE_CONFIG: RaffleConfigData = {
   usdtDatos: 'Escribe a soporte para coordinar pago por USDT.',
   igUrl: 'https://instagram.com/megarifas',
   waList: ['584129023035'],
+  adminEmails: [ADMIN_BOOTSTRAP_EMAIL.toLowerCase()],
 };
 
 const VALID_METHODS = new Set<PaymentMethodLabel>([
@@ -134,6 +136,34 @@ function clampStr(v: unknown, maxLen: number): string {
 
 export function normalizeDigits(v: unknown): string {
   return String(v === undefined || v === null ? '' : v).replace(/\D/g, '');
+}
+
+export function normalizeAdminEmail(raw: unknown): string {
+  return String(raw === undefined || raw === null ? '' : raw)
+    .trim()
+    .toLowerCase()
+    .slice(0, 120);
+}
+
+export function isValidAdminEmailFormat(email: string): boolean {
+  return email.length >= 5 && email.length <= 120 && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+}
+
+export function normalizeAdminEmails(rawList: unknown): string[] {
+  const primary = ADMIN_BOOTSTRAP_EMAIL.trim().toLowerCase();
+  const seen = new Set<string>([primary]);
+  const result: string[] = [primary];
+
+  if (Array.isArray(rawList)) {
+    for (const item of rawList) {
+      const clean = normalizeAdminEmail(item);
+      if (!clean || seen.has(clean) || !isValidAdminEmailFormat(clean)) continue;
+      seen.add(clean);
+      result.push(clean);
+      if (result.length >= 20) break;
+    }
+  }
+  return result;
 }
 
 export function maskDisplayName(fullName: string): string {
@@ -247,6 +277,7 @@ function parseConfigSnapshot(raw: Record<string, unknown> | undefined): RaffleCo
     usdtDatos: raw.usdtDatos !== undefined ? clampStr(raw.usdtDatos, 300) : DEFAULT_RAFFLE_CONFIG.usdtDatos,
     igUrl: raw.igUrl !== undefined ? clampStr(raw.igUrl, 200) : DEFAULT_RAFFLE_CONFIG.igUrl,
     waList: waRaw.map((w) => normalizeDigits(w)).filter(Boolean).slice(0, 3),
+    adminEmails: normalizeAdminEmails(raw.adminEmails),
     updatedAtMs: toMillis(raw.updatedAt) || undefined,
   };
 }
@@ -272,6 +303,7 @@ function buildConfigPayload(cfg: RaffleConfigData) {
     usdtDatos: clampStr(cfg.usdtDatos, 300),
     igUrl: clampStr(cfg.igUrl, 200),
     waList: (cfg.waList || []).map((w) => normalizeDigits(w).slice(0, 25)).filter(Boolean).slice(0, 3),
+    adminEmails: normalizeAdminEmails(cfg.adminEmails),
     updatedAt: serverTimestamp(),
   };
 }

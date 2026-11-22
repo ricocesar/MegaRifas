@@ -28,15 +28,26 @@ service cloud.firestore {
     }
 
     function isVerifiedUser() {
-      return isSignedIn() && request.auth.token.email_verified == true;
+      return isSignedIn()
+        && request.auth.token.email is string
+        && request.auth.token.email_verified == true;
     }
 
     function isBootstrappedAdmin() {
-      return isVerifiedUser() && request.auth.token.email == 'ricocesar86@gmail.com';
+      return isVerifiedUser() && request.auth.token.email.lower() == 'ricocesar86@gmail.com';
+    }
+
+    function isConfigAdmin() {
+      return isVerifiedUser()
+        && exists(/databases/$(database)/documents/raffleConfig/main)
+        && get(/databases/$(database)/documents/raffleConfig/main).data.keys().hasAny(['adminEmails'])
+        && get(/databases/$(database)/documents/raffleConfig/main).data.adminEmails is list
+        && request.auth.token.email.lower() in get(/databases/$(database)/documents/raffleConfig/main).data.adminEmails;
     }
 
     function isAdmin() {
       return isBootstrappedAdmin()
+        || isConfigAdmin()
         || (isVerifiedUser() && exists(/databases/$(database)/documents/admins/$(request.auth.uid)));
     }
 
@@ -46,13 +57,13 @@ service cloud.firestore {
         'tituloRifa', 'totalNumeros', 'precioTicketUSD', 'tasa', 'tasaManual',
         'premios', 'noticias', 'tickerNoticias', 'fechaSorteo', 'diasLimitePago',
         'diasBloqueo', 'pmDatos', 'trDatos', 'binanceDatos', 'zelleDatos',
-        'efectivoDatos', 'usdtDatos', 'igUrl', 'waList', 'updatedAt'
+        'efectivoDatos', 'usdtDatos', 'igUrl', 'waList', 'adminEmails', 'updatedAt'
       ])
       && data.keys().hasOnly([
         'tituloRifa', 'totalNumeros', 'precioTicketUSD', 'tasa', 'tasaManual',
         'premios', 'noticias', 'tickerNoticias', 'fechaSorteo', 'diasLimitePago',
         'diasBloqueo', 'pmDatos', 'trDatos', 'binanceDatos', 'zelleDatos',
-        'efectivoDatos', 'usdtDatos', 'igUrl', 'waList', 'updatedAt'
+        'efectivoDatos', 'usdtDatos', 'igUrl', 'waList', 'adminEmails', 'updatedAt'
       ])
       && data.tituloRifa is string && data.tituloRifa.size() <= 120
       && data.totalNumeros is int && data.totalNumeros >= 1 && data.totalNumeros <= 1000
@@ -76,6 +87,9 @@ service cloud.firestore {
       && (data.waList.size() < 1 || (data.waList[0] is string && data.waList[0].size() <= 25))
       && (data.waList.size() < 2 || (data.waList[1] is string && data.waList[1].size() <= 25))
       && (data.waList.size() < 3 || (data.waList[2] is string && data.waList[2].size() <= 25))
+      && data.adminEmails is list && data.adminEmails.size() >= 1 && data.adminEmails.size() <= 20
+      && data.adminEmails[0] is string && data.adminEmails[0].size() >= 5 && data.adminEmails[0].size() <= 120
+      && 'ricocesar86@gmail.com' in data.adminEmails
       && data.updatedAt is timestamp;
     }
 
@@ -166,7 +180,7 @@ service cloud.firestore {
           'tituloRifa', 'totalNumeros', 'precioTicketUSD', 'tasa', 'tasaManual',
           'premios', 'noticias', 'tickerNoticias', 'fechaSorteo', 'diasLimitePago',
           'diasBloqueo', 'pmDatos', 'trDatos', 'binanceDatos', 'zelleDatos',
-          'efectivoDatos', 'usdtDatos', 'igUrl', 'waList', 'updatedAt'
+          'efectivoDatos', 'usdtDatos', 'igUrl', 'waList', 'adminEmails', 'updatedAt'
         ]);
       allow delete: if false;
     }
@@ -228,7 +242,7 @@ service cloud.firestore {
 
     match /ticketContacts/{ticketId} {
       allow get: if isValidTicketId(ticketId) && isAdmin();
-      allow list: if isBootstrappedAdmin() && resource.data.numero >= '0';
+      allow list: if isAdmin() && resource.data.numero >= '0';
       allow create: if isValidTicketId(ticketId)
         && isValidTicketContact(incoming())
         && incoming().numero == ticketId
@@ -264,7 +278,7 @@ service cloud.firestore {
 
     match /paymentReports/{reportId} {
       allow get: if isValidId(reportId) && isAdmin();
-      allow list: if isBootstrappedAdmin() && resource.data.estatus in ['PENDIENTE', 'APROBADO', 'RECHAZADO'];
+      allow list: if isAdmin() && resource.data.estatus in ['PENDIENTE', 'APROBADO', 'RECHAZADO'];
       allow create: if isValidId(reportId)
         && isValidPaymentReport(incoming())
         && incoming().estatus == 'PENDIENTE'

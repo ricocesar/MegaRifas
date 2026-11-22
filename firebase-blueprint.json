@@ -24,6 +24,7 @@
         "usdtDatos": { "type": "string", "maxLength": 300, "description": "USDT payment instructions" },
         "igUrl": { "type": "string", "maxLength": 200, "description": "Instagram profile URL or handle" },
         "waList": { "type": "array", "description": "Up to 3 WhatsApp support numbers" },
+        "adminEmails": { "type": "array", "description": "Normalized lowercase Google emails authorized to administer the raffle (max 20, always includes primary admin)" },
         "updatedAt": { "type": "string", "format": "date-time", "description": "Server timestamp of last update" }
       },
       "required": [
@@ -46,6 +47,7 @@
         "usdtDatos",
         "igUrl",
         "waList",
+        "adminEmails",
         "updatedAt"
       ]
     },

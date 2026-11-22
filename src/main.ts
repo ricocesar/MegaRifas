@@ -14,6 +14,9 @@ import {
   ensureConfigSeeded,
   fetchAdminAllData,
   fetchLiveBcvRate,
+  isValidAdminEmailFormat,
+  normalizeAdminEmail,
+  normalizeAdminEmails,
   normalizeDigits,
   releaseAllReservedInFirestore,
   releaseSingleTicketInFirestore,
@@ -33,6 +36,7 @@ import {
   type TicketDoc,
   type TicketStatus,
 } from './raffleService';
+import { exportHistorialToPdf, exportPaymentsToPdf } from './pdfExport';
 
 const CACHE_KEY = 'mega_rifas_fb_cache_v1';
 const MY_PROFILE_KEY = 'mega_rifas_my_profile_v1';
@@ -1058,6 +1062,13 @@ function exigirSesionAdminEnPanel(): boolean {
   return false;
 }
 
+function isEmailAuthorizedInConfig(user: User | null, emails: string[]): boolean {
+  if (!user || !user.emailVerified || !user.email) return false;
+  const norm = normalizeAdminEmail(user.email);
+  if (norm === ADMIN_BOOTSTRAP_EMAIL.toLowerCase()) return true;
+  return normalizeAdminEmails(emails).includes(norm);
+}
+
 async function abrirModalAdminSeguro(): Promise<void> {
   const errEl = $('adminAuthError');
   if (errEl) {
@@ -1065,13 +1076,13 @@ async function abrirModalAdminSeguro(): Promise<void> {
     errEl.textContent = '';
   }
   if (currentAdminUser) {
-    isCurrentUserAdmin = await checkIsCurrentUserAdmin(currentAdminUser);
+    isCurrentUserAdmin = await checkIsCurrentUserAdmin(currentAdminUser, currentConfig.adminEmails);
     if (isCurrentUserAdmin) {
       abrirPanelAdmin();
       return;
     }
     mostrarErrorAuthAdmin(
-      `La cuenta ${currentAdminUser.email || ''} no tiene permisos de administrador (cuenta autorizada: ${ADMIN_BOOTSTRAP_EMAIL}). Inicia sesión con otra cuenta.`
+      `La cuenta ${currentAdminUser.email || ''} no está autorizada como administrador. Inicia sesión con una cuenta autorizada.`
     );
   }
   abrirModal('modalAuthAdmin');
@@ -1084,14 +1095,14 @@ async function iniciarSesionAdminGoogle(): Promise<void> {
   setBtnLoading(btn, true, 'Conectando con Google...');
   try {
     const user = await signInAdminWithGoogle();
-    const ok = await checkIsCurrentUserAdmin(user);
+    const ok = await checkIsCurrentUserAdmin(user, currentConfig.adminEmails);
     currentAdminUser = user;
     isCurrentUserAdmin = ok;
     if (!ok) {
       await signOutAdmin();
       currentAdminUser = null;
       isCurrentUserAdmin = false;
-      const msg = `La cuenta ${user.email || ''} no tiene permisos de administrador (cuenta autorizada: ${ADMIN_BOOTSTRAP_EMAIL}).`;
+      const msg = `La cuenta ${user.email || ''} no está en la lista de administradores autorizados.`;
       mostrarErrorAuthAdmin(msg);
       return;
     }
@@ -1281,10 +1292,11 @@ async function cargarPagosPendientesAdmin(): Promise<void> {
     html += `<div>🔴 Vendidos: <b>${vendidos}</b></div>`;
     html += '</div></div>';
 
-    html += '<div class="grid grid-cols-3 gap-2">';
+    html += '<div class="grid grid-cols-2 sm:grid-cols-4 gap-2">';
     html += '<button type="button" data-admin-action="resinc" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 rounded-lg text-xs transition">🔄 Re-sinc</button>';
     html += '<button type="button" data-admin-action="liberar-masivo" class="bg-amber-600 hover:bg-amber-700 text-white font-bold py-2 rounded-lg text-xs transition">🔓 Liberar</button>';
     html += '<button type="button" data-admin-action="csv" class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2 rounded-lg text-xs transition">📥 CSV</button>';
+    html += '<button type="button" data-admin-action="pdf-pagos" class="bg-slate-900 hover:bg-slate-800 text-white font-bold py-2 rounded-lg text-xs transition">📄 PDF Pagos</button>';
     html += '</div>';
 
     html += '<div class="space-y-2.5">';
@@ -1446,11 +1458,14 @@ async function cargarHistorialAdmin(): Promise<void> {
   try {
     const data = await refrescarDatosAdmin();
     const filters: Array<'TODOS' | 'PAGADO' | 'ESPERA' | 'RESERVADO'> = ['TODOS', 'PAGADO', 'ESPERA', 'RESERVADO'];
-    let html = '<div class="flex gap-1.5 mb-2 overflow-x-auto pb-1">';
+    let html = '<div class="flex items-center justify-between gap-2 mb-2">';
+    html += '<div class="flex gap-1.5 overflow-x-auto pb-1">';
     for (const f of filters) {
       const on = historialFiltro === f;
       html += `<button type="button" data-hist-filter="${f}" class="px-3 py-1.5 rounded-lg text-xs font-black ${on ? 'bg-slate-900 text-white' : 'bg-slate-100 text-slate-600'} whitespace-nowrap">${f}</button>`;
     }
+    html += '</div>';
+    html += '<button type="button" data-admin-action="pdf-hist" class="bg-slate-900 hover:bg-slate-800 text-white font-bold px-3 py-1.5 rounded-lg text-xs whitespace-nowrap shrink-0 transition">📄 PDF</button>';
     html += '</div>';
 
     const lista = Object.values(data.tickets)
@@ -1656,6 +1671,150 @@ async function exportarCSVAdmin(): Promise<void> {
   }
 }
 
+async function exportarPagosPDFAdmin(): Promise<void> {
+  if (!exigirSesionAdminEnPanel()) return;
+  try {
+    const data = adminDataCache || (await refrescarDatosAdmin());
+    exportPaymentsToPdf({
+      payments: data.payments,
+      config: currentConfig,
+      effectiveRate: getEffectiveRate(),
+    });
+    notificar('✅ PDF de Pagos descargado', 'success');
+  } catch (e) {
+    notificar(formatErrorMessage(e, 'admin'), 'error');
+  }
+}
+
+async function exportarHistorialPDFAdmin(): Promise<void> {
+  if (!exigirSesionAdminEnPanel()) return;
+  try {
+    const data = adminDataCache || (await refrescarDatosAdmin());
+    exportHistorialToPdf({
+      tickets: data.tickets,
+      contacts: data.contacts,
+      config: currentConfig,
+      filtro: historialFiltro,
+    });
+    notificar('✅ PDF de Historial descargado', 'success');
+  } catch (e) {
+    notificar(formatErrorMessage(e, 'admin'), 'error');
+  }
+}
+
+/* ==================== ADMINISTRADORES AUTORIZADOS ==================== */
+
+function mostrarFeedbackAdminEmails(tipo: 'success' | 'error' | 'clear', msg = ''): void {
+  const el = $('adminEmailsFeedback');
+  if (!el) return;
+  if (tipo === 'clear') {
+    el.classList.add('hidden');
+    el.textContent = '';
+    return;
+  }
+  el.className = `text-[11px] font-semibold ${tipo === 'success' ? 'text-emerald-700' : 'text-rose-600'}`;
+  el.textContent = msg;
+  el.classList.remove('hidden');
+}
+
+function renderizarListaAdminEmails(): void {
+  const cont = $('listaAdminEmails');
+  if (!cont) return;
+  const primary = ADMIN_BOOTSTRAP_EMAIL.toLowerCase();
+  const emails = normalizeAdminEmails(currentConfig.adminEmails);
+
+  cont.innerHTML = emails
+    .map((email) => {
+      const isPrimary = email === primary;
+      return `<div class="flex items-center justify-between gap-2 bg-white border border-slate-200 rounded-lg px-2.5 py-2">
+        <div class="flex items-center gap-2 min-w-0">
+          <i class="fa-solid ${isPrimary ? 'fa-crown text-amber-500' : 'fa-user-shield text-slate-500'} text-xs shrink-0"></i>
+          <span class="text-xs font-mono font-bold text-slate-800 truncate">${escHtml(email)}</span>
+        </div>
+        ${
+          isPrimary
+            ? '<span class="text-[10px] font-black text-amber-800 bg-amber-100 border border-amber-200 px-2 py-0.5 rounded-full shrink-0">Principal</span>'
+            : `<button type="button" data-remove-admin-email="${escHtml(email)}" class="text-xs font-bold text-rose-600 hover:text-rose-700 bg-rose-50 hover:bg-rose-100 px-2 py-1 rounded-md shrink-0 transition" title="Eliminar administrador"><i class="fa-solid fa-trash-can"></i></button>`
+        }
+      </div>`;
+    })
+    .join('');
+}
+
+async function agregarAdminEmail(): Promise<void> {
+  if (!exigirSesionAdminEnPanel()) return;
+  mostrarFeedbackAdminEmails('clear');
+  const inp = $<HTMLInputElement>('inputNuevoAdminEmail');
+  const btn = $<HTMLButtonElement>('btnAgregarAdminEmail');
+  const email = normalizeAdminEmail(inp?.value || '');
+
+  if (!isValidAdminEmailFormat(email)) {
+    mostrarFeedbackAdminEmails('error', 'Ingresa un correo electrónico válido.');
+    return;
+  }
+
+  const currentList = normalizeAdminEmails(currentConfig.adminEmails);
+  if (currentList.includes(email)) {
+    mostrarFeedbackAdminEmails('error', 'Ese correo ya está autorizado.');
+    return;
+  }
+  if (currentList.length >= 20) {
+    mostrarFeedbackAdminEmails('error', 'Se alcanzó el límite máximo de 20 administradores.');
+    return;
+  }
+
+  const nextEmails = normalizeAdminEmails([...currentList, email]);
+  setBtnLoading(btn, true, 'Guardando...');
+  try {
+    const saved = await saveRaffleConfigInFirestore({
+      ...currentConfig,
+      adminEmails: nextEmails,
+    });
+    currentConfig = saved;
+    configExistsInDb = true;
+    guardarCacheLocal();
+    if (inp) inp.value = '';
+    renderizarListaAdminEmails();
+    mostrarFeedbackAdminEmails('success', `✅ ${email} agregado y guardado en Firebase.`);
+    notificar('✅ Administrador agregado', 'success');
+  } catch (e) {
+    const msg = formatErrorMessage(e, 'admin');
+    mostrarFeedbackAdminEmails('error', msg);
+    notificar(msg, 'error');
+  } finally {
+    setBtnLoading(btn, false);
+  }
+}
+
+async function eliminarAdminEmail(emailToRemove: string): Promise<void> {
+  if (!exigirSesionAdminEnPanel()) return;
+  const target = normalizeAdminEmail(emailToRemove);
+  if (target === ADMIN_BOOTSTRAP_EMAIL.toLowerCase()) {
+    mostrarFeedbackAdminEmails('error', 'El administrador principal no puede eliminarse.');
+    return;
+  }
+  const currentList = normalizeAdminEmails(currentConfig.adminEmails);
+  const nextEmails = normalizeAdminEmails(currentList.filter((e) => e !== target));
+
+  mostrarFeedbackAdminEmails('clear');
+  try {
+    const saved = await saveRaffleConfigInFirestore({
+      ...currentConfig,
+      adminEmails: nextEmails,
+    });
+    currentConfig = saved;
+    configExistsInDb = true;
+    guardarCacheLocal();
+    renderizarListaAdminEmails();
+    mostrarFeedbackAdminEmails('success', `✅ ${target} eliminado de los administradores.`);
+    notificar('✅ Administrador eliminado', 'success');
+  } catch (e) {
+    const msg = formatErrorMessage(e, 'admin');
+    mostrarFeedbackAdminEmails('error', msg);
+    notificar(msg, 'error');
+  }
+}
+
 /* ==================== CONFIGURACIÓN ADMIN (FIRESTORE) ==================== */
 
 function ocultarFeedbackConfig(): void {
@@ -1709,6 +1868,7 @@ function cargarFormularioConfigAdmin(): void {
     const rate = liveBcvRate || c.tasa;
     bcvHint.textContent = rate > 0 ? `Tasa BCV actual: Bs ${fmt(rate)}` : 'Vacío = tasa BCV automática';
   }
+  renderizarListaAdminEmails();
   cfgDirty = false;
 }
 
@@ -1772,6 +1932,7 @@ async function guardarConfigAdmin(): Promise<void> {
     usdtDatos: getVal('cfgUS'),
     igUrl: getVal('cfgIG'),
     waList,
+    adminEmails: normalizeAdminEmails(currentConfig.adminEmails),
   };
 
   const btn = $<HTMLButtonElement>('btnGuardarConfig');
@@ -1891,11 +2052,17 @@ function wireEvents(): void {
       if (act === 'resinc') ejecutarResincronizar();
       if (act === 'liberar-masivo') ejecutarLiberarMasivo();
       if (act === 'csv') void exportarCSVAdmin();
+      if (act === 'pdf-pagos') void exportarPagosPDFAdmin();
     }
   });
 
   $('adminViewHis')?.addEventListener('click', (e) => {
     const target = e.target as HTMLElement;
+    const admAct = target.closest<HTMLElement>('[data-admin-action]');
+    if (admAct?.dataset.adminAction === 'pdf-hist') {
+      void exportarHistorialPDFAdmin();
+      return;
+    }
     const filterBtn = target.closest<HTMLElement>('[data-hist-filter]');
     if (filterBtn) {
       historialFiltro = (filterBtn.dataset.histFilter || 'TODOS') as typeof historialFiltro;
@@ -1911,6 +2078,22 @@ function wireEvents(): void {
     if (relBtn) {
       confirmarLiberarTicket(relBtn.dataset.releaseTicket || '');
     }
+  });
+
+  $('listaAdminEmails')?.addEventListener('click', (e) => {
+    const btn = (e.target as HTMLElement).closest<HTMLElement>('[data-remove-admin-email]');
+    if (!btn) return;
+    const email = btn.dataset.removeAdminEmail || '';
+    if (!email) return;
+    mostrarConfirm(
+      '¿Quitar administrador?',
+      `La cuenta <b>${escHtml(email)}</b> dejará de tener acceso al Panel Admin.`,
+      'fa-user-minus',
+      (ok) => {
+        if (ok) void eliminarAdminEmail(email);
+      },
+      true
+    );
   });
 
   // Static buttons
@@ -1958,8 +2141,22 @@ function wireEvents(): void {
     if (e.target === $('modalImagen')) cerrarModal('modalImagen');
   });
 
-  $('adminViewCfg')?.addEventListener('input', () => { cfgDirty = true; });
-  $('adminViewCfg')?.addEventListener('change', () => { cfgDirty = true; });
+  $('btnAgregarAdminEmail')?.addEventListener('click', () => void agregarAdminEmail());
+  $('inputNuevoAdminEmail')?.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      void agregarAdminEmail();
+    }
+  });
+
+  $('adminViewCfg')?.addEventListener('input', (e) => {
+    if ((e.target as HTMLElement)?.id === 'inputNuevoAdminEmail') return;
+    cfgDirty = true;
+  });
+  $('adminViewCfg')?.addEventListener('change', (e) => {
+    if ((e.target as HTMLElement)?.id === 'inputNuevoAdminEmail') return;
+    cfgDirty = true;
+  });
 
   // Input digit guards
   $('chkCedula')?.addEventListener('input', (e) => {
@@ -2003,6 +2200,9 @@ function initApp(): void {
     (config, exists) => {
       configExistsInDb = exists;
       currentConfig = config;
+      if (currentAdminUser) {
+        isCurrentUserAdmin = isEmailAuthorizedInConfig(currentAdminUser, config.adminEmails);
+      }
       guardarCacheLocal();
       renderAll();
     },
@@ -2032,11 +2232,8 @@ function initApp(): void {
       adminDataCache = null;
       return;
     }
-    const isBootstrap =
-      user.emailVerified &&
-      (user.email || '').toLowerCase() === ADMIN_BOOTSTRAP_EMAIL.toLowerCase();
-    isCurrentUserAdmin = isBootstrap;
-    if (isBootstrap) {
+    isCurrentUserAdmin = isEmailAuthorizedInConfig(user, currentConfig.adminEmails);
+    if (isCurrentUserAdmin) {
       const badge = $('adminEmailBadge');
       if (badge && user.email) badge.textContent = user.email;
     }
