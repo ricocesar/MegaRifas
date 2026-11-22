@@ -23,10 +23,21 @@ app.use((req, res, next) => {
   next();
 });
 
-app.use(express.static(__dirname, { index: 'index.html', dotfiles: 'ignore' }));
+app.use(
+  express.static(__dirname, {
+    index: 'index.html',
+    dotfiles: 'ignore',
+    setHeaders: (res, filePath) => {
+      if (filePath.endsWith('.html')) {
+        res.setHeader('Cache-Control', 'no-cache');
+      }
+    },
+  })
+);
 
 app.use((req, res, next) => {
   if (req.method !== 'GET') return next();
+  res.setHeader('Cache-Control', 'no-cache');
   res.sendFile(path.join(__dirname, 'index.html'));
 });
 

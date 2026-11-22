@@ -7,250 +7,558 @@
 <meta name="description" content="Plataforma interactiva de rifas para elegir números, consultar boletos, reportar pagos y administrar sorteos.">
 <meta property="og:title" content="Mega Rifas">
 <meta property="og:description" content="Plataforma interactiva de rifas para elegir números, consultar boletos, reportar pagos y administrar sorteos.">
+<link rel="preconnect" href="https://script.google.com">
+<link rel="preconnect" href="https://script.googleusercontent.com">
+<link rel="preconnect" href="https://cdnjs.cloudflare.com" crossorigin>
 <script src="https://cdn.tailwindcss.com"></script>
 <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
 <style>
-  :root { --gold:#FFC107; --gold-dark:#F59E0B; }
-  * { -webkit-tap-highlight-color: transparent; }
-  body { background:#F5F7FA; color:#1F2937; font-family: var(--fuente-custom, system-ui, sans-serif); margin:0; overflow-x:hidden; }
-  .card { background:#FFF; border-radius:1rem; padding:.85rem; box-shadow:0 1px 3px rgba(0,0,0,.04), 0 4px 12px rgba(0,0,0,.03); }
-  .subcard { background:#F9FAFB; border-radius:.75rem; padding:.65rem; }
-  .inp { width:100%; background:#FFF; border:1.5px solid #E5E7EB; border-radius:.7rem; padding:.7rem .8rem; color:#111827; font-size:.85rem; outline:none; transition:.15s; }
-  .inp:focus { border-color:var(--gold); box-shadow:0 0 0 3px rgba(255,193,7,.15); }
-  .inp-ok { border-color:#10B981 !important; background:#ECFDF5 !important; }
-  .lbl { display:block; font-size:.72rem; font-weight:700; color:#4B5563; margin-bottom:.3rem; }
-  .lbl-req::after { content:" *"; color:#EF4444; font-weight:900; }
-  .btn-primary { background:linear-gradient(135deg,#FFC107,#F59E0B); color:#111827; font-weight:800; border-radius:.75rem; padding:.75rem 1.1rem; font-size:.85rem; cursor:pointer; transition:.15s; border:none; box-shadow:0 4px 12px rgba(255,193,7,.35); }
-  .btn-primary:active { transform:scale(.97); }
-  .btn-primary:disabled { opacity:.6; cursor:not-allowed; }
-  .btn-secondary { background:#F3F4F6; color:#374151; font-weight:700; border-radius:.75rem; padding:.75rem 1.1rem; font-size:.85rem; cursor:pointer; border:none; }
-  .btn-danger { background:linear-gradient(135deg,#EF4444,#DC2626); color:#FFF; font-weight:800; border-radius:.75rem; padding:.75rem 1.1rem; font-size:.85rem; cursor:pointer; transition:.15s; border:none; box-shadow:0 4px 12px rgba(239,68,68,.35); }
-  .btn-danger:active { transform:scale(.97); }
-  .num-grid { display:grid; gap:2px; }
-  .num-btn { height:1.9rem; border-radius:.4rem; font-weight:700; font-size:9px; display:flex; align-items:center; justify-content:center; transition:all .15s; cursor:pointer; border:1.5px solid transparent; font-family:ui-monospace,monospace; letter-spacing:-.5px; padding:0; }
-  .num-DISPONIBLE { background:#FFF; border-color:#E5E7EB; color:#374151; }
-  .num-SELECCIONADO { background:linear-gradient(135deg,#FFC107,#F59E0B); color:#111827; font-weight:900; box-shadow:0 2px 8px rgba(255,193,7,.5); transform:scale(1.06); border-color:#D97706; }
-  .num-RESERVADO { background:#3B82F6; color:#FFF; border-color:#2563EB; opacity:.9; cursor:not-allowed; }
-  .num-ESPERA { background:linear-gradient(135deg,#A855F7,#8B5CF6); color:#FFF; border-color:#7C3AED; }
-  .num-PAGADO { background:#1F2937; color:#9CA3AF; cursor:not-allowed; opacity:.85; border-color:#111827; }
-  .m-bg { position:fixed; inset:0; background:rgba(15,23,42,.75); backdrop-filter:blur(4px); z-index:9000; display:flex; align-items:flex-end; justify-content:center; padding:0; animation:fadeIn .2s; }
-  .m-bg-front { z-index:12000 !important; }
-  .m-box { background:#FFF; width:100%; max-width:32rem; border-radius:1.75rem 1.75rem 0 0; padding:1.15rem; max-height:95vh; overflow-y:auto; color:#1F2937; animation:slideUp .25s cubic-bezier(.16,1,.3,1); }
-  .m-box::before { content:''; display:block; width:40px; height:4px; background:#D1D5DB; border-radius:4px; margin:0 auto .9rem; }
-  .m-full { max-width:100% !important; height:100vh !important; max-height:100vh !important; border-radius:0 !important; }
-  @keyframes slideUp { from{transform:translateY(100%);}to{transform:translateY(0);} }
-  @keyframes fadeIn { from{opacity:0;}to{opacity:1;} }
-  @keyframes slideDown { from{opacity:0;transform:translateY(-15px);}to{opacity:1;transform:translateY(0);} }
-  @keyframes spin { to{transform:rotate(360deg);} }
-  .hidden { display:none !important; }
-  .toast-wrap { position:fixed; top:1rem; left:50%; transform:translateX(-50%); z-index:99999; width:92%; max-width:24rem; pointer-events:none; }
-  .toast { background:#111827; color:#FFF; border-radius:.85rem; padding:.85rem 1rem; font-size:.78rem; font-weight:600; box-shadow:0 10px 25px rgba(0,0,0,.25); margin-bottom:.5rem; pointer-events:auto; animation:slideDown .25s; display:flex; align-items:center; gap:.5rem; }
-  .toast.success { background:#059669; } .toast.error { background:#DC2626; } .toast.info { background:#2563EB; }
-  .loading-overlay { position:fixed; inset:0; background:rgba(255,255,255,.9); z-index:99998; display:flex; align-items:center; justify-content:center; flex-direction:column; gap:1rem; }
-  .spinner { width:44px; height:44px; border:4px solid #E5E7EB; border-top-color:var(--gold); border-radius:50%; animation:spin .8s linear infinite; }
-  .chip { display:inline-flex; align-items:center; gap:.3rem; padding:.35rem .6rem; border-radius:.55rem; font-size:.72rem; font-weight:800; font-family:ui-monospace,monospace; cursor:pointer; transition:.15s; border:1.5px solid #E5E7EB; background:#FFF; color:#374151; }
-  .chip.on { background:linear-gradient(135deg,#FFC107,#F59E0B); color:#111827; border-color:#D97706; box-shadow:0 2px 8px rgba(255,193,7,.4); }
-  .chip.reserved { background:#EFF6FF; color:#1D4ED8; border-color:#BFDBFE; }
-  .chip.reserved.on { background:linear-gradient(135deg,#FFC107,#F59E0B); color:#111827; border-color:#D97706; }
-  .chip.esp { background:#F3E8FF; color:#7C3AED; border-color:#DDD6FE; cursor:default; }
-  .chip.paid { background:#ECFDF5; color:#047857; border-color:#A7F3D0; cursor:default; }
-  .tab-btn { padding:.5rem; border-radius:.6rem; font-weight:800; font-size:.68rem; transition:.15s; cursor:pointer; border:none; }
-  .tab-on { background:#111827; color:#FFF; } .tab-off { background:#F3F4F6; color:#4B5563; }
-  .tab-danger-on { background:#DC2626; color:#FFF; } .tab-danger-off { background:#FEE2E2; color:#DC2626; }
-  .tab-warn-on { background:#D97706; color:#FFF; } .tab-warn-off { background:#FEF3C7; color:#92400E; }
-  .logo-img { max-width:150px; height:auto; max-height:50px; object-fit:contain; }
-  .pay-method { padding:.6rem .4rem; border-radius:.7rem; border:1.5px solid #E5E7EB; background:#FFF; font-size:.65rem; font-weight:700; cursor:pointer; transition:.15s; display:flex; flex-direction:column; align-items:center; gap:.25rem; }
-  .pay-method.on { border-color:var(--gold); background:#FFFBEB; box-shadow:0 2px 8px rgba(255,193,7,.3); }
-  .pay-method i { font-size:.95rem; }
-  .ticker-wrap { overflow:hidden; white-space:nowrap; background:linear-gradient(90deg,#111827 0%,#1F2937 100%); border-radius:.75rem; padding:.45rem 0; position:relative; }
-  .ticker-content { display:inline-flex; animation:ticker 45s linear infinite; padding-left:100%; }
-  .ticker-content > span { padding-right:2.5rem; color:#FFC107; font-size:.72rem; font-weight:800; }
-  @keyframes ticker { 0%{transform:translateX(0);} 100%{transform:translateX(-100%);} }
-  .ticker-wrap::before, .ticker-wrap::after { content:''; position:absolute; top:0; bottom:0; width:18px; z-index:2; pointer-events:none; }
-  .ticker-wrap::before { left:0; background:linear-gradient(90deg,#111827,transparent); }
-  .ticker-wrap::after { right:0; background:linear-gradient(270deg,#111827,transparent); }
-  .feed-wrap { overflow:hidden; white-space:nowrap; background:#FFF; border:1.5px solid #E5E7EB; border-radius:.75rem; padding:.4rem 0; position:relative; }
-  .feed-content { display:inline-flex; animation:ticker 60s linear infinite; padding-left:100%; }
-  .feed-content > span { padding-right:2rem; color:#374151; font-size:.68rem; font-weight:700; display:inline-flex; align-items:center; gap:.3rem; }
-  .feed-content .feed-num { color:#1D4ED8; font-family:ui-monospace,monospace; }
-  .feed-content .feed-time { color:#9CA3AF; font-size:.6rem; font-weight:600; }
-  .feed-wrap::before, .feed-wrap::after { content:''; position:absolute; top:0; bottom:0; width:18px; z-index:2; pointer-events:none; }
-  .feed-wrap::before { left:0; background:linear-gradient(90deg,#FFF,transparent); }
-  .feed-wrap::after { right:0; background:linear-gradient(270deg,#FFF,transparent); }
-  .feed-label { display:flex; align-items:center; gap:.3rem; font-size:.6rem; font-weight:900; color:#059669; text-transform:uppercase; letter-spacing:.5px; padding:0 .5rem; }
-  .progress-bar { width:100%; background:#E5E7EB; border-radius:999px; height:12px; overflow:hidden; }
-  .progress-fill { height:12px; border-radius:999px; background:linear-gradient(90deg,#FFC107,#F59E0B); transition:width .8s cubic-bezier(.16,1,.3,1); }
-  .top-mini { display:flex; align-items:center; gap:.35rem; padding:.4rem .55rem; background:#F9FAFB; border-radius:.55rem; border:1px solid #F3F4F6; }
-  .wa-preview { background:#DCF8C6; padding:.7rem; border-radius:.75rem; font-size:.72rem; color:#111827; line-height:1.5; font-family:system-ui; white-space:pre-wrap; word-break:break-word; }
-  .pin-display { display:flex; justify-content:center; gap:.5rem; margin-bottom:.9rem; }
-  .pin-dot { width:14px; height:14px; border-radius:50%; background:#E5E7EB; border:1.5px solid #D1D5DB; transition:.15s; }
-  .pin-dot.on { background:var(--gold); border-color:var(--gold-dark); box-shadow:0 0 8px rgba(255,193,7,.5); }
+  :root {
+    --brand: #F59E0B;
+    --brand-light: #FFC107;
+    --brand-dark: #D97706;
+    --ink: #0F172A;
+    --muted: #64748B;
+    --surface: #FFFFFF;
+    --canvas: #F4F6FA;
+    --border: #E2E8F0;
+  }
+  * { -webkit-tap-highlight-color: transparent; box-sizing: border-box; }
+  body {
+    background: var(--canvas);
+    color: var(--ink);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    margin: 0;
+    overflow-x: hidden;
+    -webkit-font-smoothing: antialiased;
+  }
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 1rem;
+    padding: 1rem;
+    box-shadow: 0 1px 2px rgba(15, 23, 42, .04), 0 6px 16px rgba(15, 23, 42, .03);
+  }
+  .subcard {
+    background: #F8FAFC;
+    border: 1px solid #EEF2F6;
+    border-radius: .75rem;
+    padding: .75rem;
+  }
+  .inp {
+    width: 100%;
+    background: #FFF;
+    border: 1.5px solid #CBD5E1;
+    border-radius: .7rem;
+    padding: .65rem .8rem;
+    color: var(--ink);
+    font-size: .875rem;
+    outline: none;
+    transition: border-color .15s, box-shadow .15s;
+  }
+  .inp:focus {
+    border-color: var(--brand);
+    box-shadow: 0 0 0 3px rgba(245, 158, 11, .18);
+  }
+  .inp-ok { border-color: #10B981 !important; background: #ECFDF5 !important; }
+  .inp-warn { border-color: #F59E0B !important; background: #FFFBEB !important; }
+  .lbl {
+    display: block;
+    font-size: .74rem;
+    font-weight: 700;
+    color: #334155;
+    margin-bottom: .3rem;
+  }
+  .lbl-req::after { content: " *"; color: #EF4444; font-weight: 900; }
+  .btn-primary {
+    background: linear-gradient(135deg, #FFC107, #F59E0B);
+    color: #0F172A;
+    font-weight: 800;
+    border-radius: .75rem;
+    padding: .72rem 1.1rem;
+    font-size: .85rem;
+    cursor: pointer;
+    transition: transform .12s, box-shadow .15s, opacity .15s;
+    border: none;
+    box-shadow: 0 4px 12px rgba(245, 158, 11, .32);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: .4rem;
+  }
+  .btn-primary:hover:not(:disabled) { box-shadow: 0 6px 16px rgba(245, 158, 11, .42); }
+  .btn-primary:active:not(:disabled) { transform: scale(.97); }
+  .btn-primary:disabled { opacity: .6; cursor: not-allowed; }
+  .btn-secondary {
+    background: #F1F5F9;
+    color: #334155;
+    font-weight: 700;
+    border-radius: .75rem;
+    padding: .72rem 1.1rem;
+    font-size: .85rem;
+    cursor: pointer;
+    border: 1px solid #E2E8F0;
+    transition: background .15s;
+  }
+  .btn-secondary:hover:not(:disabled) { background: #E2E8F0; }
+  .btn-secondary:disabled { opacity: .6; cursor: not-allowed; }
+  .btn-danger {
+    background: linear-gradient(135deg, #EF4444, #DC2626);
+    color: #FFF;
+    font-weight: 800;
+    border-radius: .75rem;
+    padding: .72rem 1.1rem;
+    font-size: .85rem;
+    cursor: pointer;
+    transition: transform .12s, opacity .15s;
+    border: none;
+    box-shadow: 0 4px 12px rgba(239, 68, 68, .3);
+  }
+  .btn-danger:active:not(:disabled) { transform: scale(.97); }
+  .btn-danger:disabled { opacity: .6; cursor: not-allowed; }
+
+  .num-grid {
+    display: grid;
+    grid-template-columns: repeat(10, minmax(0, 1fr));
+    gap: 4px;
+  }
+  @media (min-width: 640px) {
+    .num-grid { gap: 6px; }
+  }
+  .num-btn {
+    height: 2.1rem;
+    border-radius: .45rem;
+    font-weight: 800;
+    font-size: 11px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: transform .12s, background .12s, border-color .12s, box-shadow .12s;
+    cursor: pointer;
+    border: 1.5px solid transparent;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    letter-spacing: -.3px;
+    padding: 0;
+    user-select: none;
+  }
+  @media (min-width: 640px) {
+    .num-btn { height: 2.55rem; font-size: 13px; border-radius: .55rem; }
+  }
+  .num-DISPONIBLE { background: #FFF; border-color: #CBD5E1; color: #1E293B; }
+  .num-DISPONIBLE:hover { border-color: var(--brand); background: #FFFBEB; }
+  .num-SELECCIONADO {
+    background: linear-gradient(135deg, #FFC107, #F59E0B);
+    color: #0F172A;
+    font-weight: 900;
+    box-shadow: 0 2px 8px rgba(245, 158, 11, .45);
+    transform: scale(1.05);
+    border-color: #D97706;
+  }
+  .num-RESERVADO { background: #3B82F6; color: #FFF; border-color: #2563EB; opacity: .92; cursor: not-allowed; }
+  .num-ESPERA { background: linear-gradient(135deg, #A855F7, #8B5CF6); color: #FFF; border-color: #7C3AED; cursor: not-allowed; }
+  .num-PAGADO { background: #1E293B; color: #94A3B8; cursor: not-allowed; opacity: .88; border-color: #0F172A; }
+
+  .m-bg {
+    position: fixed;
+    inset: 0;
+    background: rgba(15, 23, 42, .72);
+    backdrop-filter: blur(4px);
+    z-index: 9000;
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+    padding: 0;
+    animation: fadeIn .18s ease-out;
+  }
+  @media (min-width: 640px) {
+    .m-bg { align-items: center; padding: 1rem; }
+  }
+  .m-bg-front { z-index: 12000 !important; }
+  .m-box {
+    background: #FFF;
+    width: 100%;
+    max-width: 32rem;
+    border-radius: 1.5rem 1.5rem 0 0;
+    padding: 1.2rem;
+    max-height: 94vh;
+    overflow-y: auto;
+    color: var(--ink);
+    animation: slideUp .22s cubic-bezier(.16, 1, .3, 1);
+  }
+  @media (min-width: 640px) {
+    .m-box { border-radius: 1.25rem; max-height: 90vh; }
+    .m-box::before { display: none !important; }
+  }
+  .m-box::before {
+    content: '';
+    display: block;
+    width: 40px;
+    height: 4px;
+    background: #CBD5E1;
+    border-radius: 4px;
+    margin: 0 auto .85rem;
+  }
+  .m-admin {
+    max-width: 100% !important;
+    height: 100vh !important;
+    max-height: 100vh !important;
+    border-radius: 0 !important;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden !important;
+  }
+  @media (min-width: 768px) {
+    .m-admin {
+      max-width: 54rem !important;
+      height: 88vh !important;
+      max-height: 88vh !important;
+      border-radius: 1.25rem !important;
+    }
+  }
+  @keyframes slideUp { from { transform: translateY(40px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+  @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+  @keyframes slideDown { from { opacity: 0; transform: translateY(-12px); } to { opacity: 1; transform: translateY(0); } }
+  @keyframes shimmer { 0% { background-position: -200% 0; } 100% { background-position: 200% 0; } }
+  .skeleton {
+    background: linear-gradient(90deg, #E2E8F0 25%, #F1F5F9 50%, #E2E8F0 75%);
+    background-size: 200% 100%;
+    animation: shimmer 1.3s infinite;
+    border-radius: .5rem;
+  }
+  .hidden { display: none !important; }
+
+  .toast-wrap {
+    position: fixed;
+    top: 1rem;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 99999;
+    width: 92%;
+    max-width: 26rem;
+    pointer-events: none;
+  }
+  .toast {
+    background: #0F172A;
+    color: #FFF;
+    border-radius: .85rem;
+    padding: .85rem 1rem;
+    font-size: .8rem;
+    font-weight: 600;
+    box-shadow: 0 10px 25px rgba(15, 23, 42, .25);
+    margin-bottom: .5rem;
+    pointer-events: auto;
+    animation: slideDown .22s;
+    display: flex;
+    align-items: flex-start;
+    gap: .55rem;
+    line-height: 1.35;
+  }
+  .toast.success { background: #059669; }
+  .toast.error { background: #DC2626; }
+  .toast.warn { background: #D97706; }
+  .toast.info { background: #2563EB; }
+
+  .chip {
+    display: inline-flex;
+    align-items: center;
+    gap: .3rem;
+    padding: .35rem .6rem;
+    border-radius: .55rem;
+    font-size: .75rem;
+    font-weight: 800;
+    font-family: ui-monospace, monospace;
+    cursor: pointer;
+    transition: .12s;
+    border: 1.5px solid #CBD5E1;
+    background: #FFF;
+    color: #334155;
+  }
+  .chip.on {
+    background: linear-gradient(135deg, #FFC107, #F59E0B);
+    color: #0F172A;
+    border-color: #D97706;
+    box-shadow: 0 2px 8px rgba(245, 158, 11, .35);
+  }
+  .chip.reserved { background: #EFF6FF; color: #1D4ED8; border-color: #BFDBFE; }
+  .chip.reserved.on { background: linear-gradient(135deg, #FFC107, #F59E0B); color: #0F172A; border-color: #D97706; }
+  .chip.esp { background: #F3E8FF; color: #7C3AED; border-color: #DDD6FE; cursor: default; }
+  .chip.paid { background: #ECFDF5; color: #047857; border-color: #A7F3D0; cursor: default; }
+
+  .tab-btn {
+    padding: .55rem .4rem;
+    border-radius: .65rem;
+    font-weight: 800;
+    font-size: .72rem;
+    transition: .15s;
+    cursor: pointer;
+    border: none;
+  }
+  .tab-on { background: #0F172A; color: #FFF; }
+  .tab-off { background: #F1F5F9; color: #475569; }
+  .tab-danger-on { background: #DC2626; color: #FFF; }
+  .tab-danger-off { background: #FEE2E2; color: #DC2626; }
+  .tab-warn-on { background: #D97706; color: #FFF; }
+  .tab-warn-off { background: #FEF3C7; color: #92400E; }
+
+  .pay-method {
+    padding: .65rem .4rem;
+    border-radius: .7rem;
+    border: 1.5px solid #E2E8F0;
+    background: #FFF;
+    font-size: .7rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: .15s;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: .25rem;
+  }
+  .pay-method.on {
+    border-color: var(--brand);
+    background: #FFFBEB;
+    box-shadow: 0 2px 8px rgba(245, 158, 11, .28);
+  }
+  .pay-method i { font-size: 1rem; }
+
+  .ticker-wrap {
+    overflow: hidden;
+    white-space: nowrap;
+    background: linear-gradient(90deg, #0F172A 0%, #1E293B 100%);
+    border-radius: .8rem;
+    padding: .5rem 0;
+    position: relative;
+  }
+  .ticker-content { display: inline-flex; animation: ticker 42s linear infinite; padding-left: 100%; }
+  .ticker-content > span { padding-right: 2.5rem; color: #FBBF24; font-size: .78rem; font-weight: 700; }
+  @keyframes ticker { 0% { transform: translateX(0); } 100% { transform: translateX(-100%); } }
+  .ticker-wrap::before, .ticker-wrap::after { content: ''; position: absolute; top: 0; bottom: 0; width: 20px; z-index: 2; pointer-events: none; }
+  .ticker-wrap::before { left: 0; background: linear-gradient(90deg, #0F172A, transparent); }
+  .ticker-wrap::after { right: 0; background: linear-gradient(270deg, #0F172A, transparent); }
+
+  .feed-wrap {
+    overflow: hidden;
+    white-space: nowrap;
+    background: #FFF;
+    border: 1px solid var(--border);
+    border-radius: .8rem;
+    padding: .48rem 0;
+    position: relative;
+  }
+  .feed-content { display: inline-flex; animation: ticker 58s linear infinite; padding-left: 100%; }
+  .feed-content > span { padding-right: 2rem; color: #334155; font-size: .74rem; font-weight: 700; display: inline-flex; align-items: center; gap: .3rem; }
+  .feed-content .feed-num { color: #1D4ED8; font-family: ui-monospace, monospace; }
+  .feed-content .feed-time { color: #94A3B8; font-size: .65rem; font-weight: 600; }
+  .feed-wrap::before, .feed-wrap::after { content: ''; position: absolute; top: 0; bottom: 0; width: 20px; z-index: 2; pointer-events: none; }
+  .feed-wrap::before { left: 0; background: linear-gradient(90deg, #FFF, transparent); }
+  .feed-wrap::after { right: 0; background: linear-gradient(270deg, #FFF, transparent); }
+  .feed-label { display: flex; align-items: center; gap: .35rem; font-size: .65rem; font-weight: 800; color: #059669; text-transform: uppercase; letter-spacing: .4px; padding: 0 .25rem; }
+
+  .progress-bar { width: 100%; background: #E2E8F0; border-radius: 999px; height: 11px; overflow: hidden; }
+  .progress-fill { height: 11px; border-radius: 999px; background: linear-gradient(90deg, #FFC107, #F59E0B); transition: width .6s cubic-bezier(.16, 1, .3, 1); }
+  .top-mini { display: flex; align-items: center; gap: .45rem; padding: .48rem .65rem; background: #F8FAFC; border-radius: .6rem; border: 1px solid #EEF2F6; }
+  .wa-preview { background: #DCF8C6; padding: .75rem; border-radius: .75rem; font-size: .78rem; color: #0F172A; line-height: 1.5; white-space: pre-wrap; word-break: break-word; }
+  .pin-display { display: flex; justify-content: center; gap: .5rem; margin-bottom: .9rem; }
+  .pin-dot { width: 14px; height: 14px; border-radius: 50%; background: #E2E8F0; border: 1.5px solid #CBD5E1; transition: .15s; }
+  .pin-dot.on { background: var(--brand); border-color: var(--brand-dark); box-shadow: 0 0 8px rgba(245, 158, 11, .45); }
 </style>
 </head>
-<body class="pb-24">
+<body class="pb-28">
 
 <div id="toastWrap" class="toast-wrap"></div>
-<div id="loadingOverlay" class="loading-overlay hidden"><div class="spinner"></div><b class="text-gray-700 text-sm">Cargando...</b></div>
 
-<header class="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-gray-100">
-  <div class="max-w-md mx-auto px-3 py-2 flex items-center justify-between">
-    <div class="flex items-center gap-2">
-      <img id="logoHeader" class="logo-img hidden" src="" alt="">
-      <div id="logoText">
-        <div class="text-sm font-black text-gray-900 leading-tight">MEGA RIFAS</div>
-        <div class="text-[9px] font-bold text-amber-600 tracking-wide">JUEGA Y GANA</div>
+<header class="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-slate-200">
+  <div class="max-w-5xl mx-auto px-3 sm:px-5 py-2.5 flex items-center justify-between gap-3">
+    <div class="flex items-center gap-2.5 min-w-0">
+      <div class="w-9 h-9 rounded-xl bg-slate-900 text-amber-400 flex items-center justify-center shrink-0 shadow-sm">
+        <i class="fa-solid fa-ticket text-base"></i>
+      </div>
+      <div class="min-w-0">
+        <div class="text-sm sm:text-base font-black text-slate-900 leading-tight tracking-tight truncate">MEGA RIFAS</div>
+        <div id="txtSubtituloRifa" class="text-[10px] sm:text-xs font-bold text-amber-600 tracking-wide truncate">JUEGA Y GANA</div>
       </div>
     </div>
-    <div class="text-right">
-      <div id="badgePrecioBs" class="text-sm font-black text-gray-900">Bs --</div>
-      <div class="text-[9px] text-gray-500 font-semibold">por boleto</div>
+    <div class="text-right shrink-0">
+      <div id="badgePrecioBs" class="text-sm sm:text-base font-black text-slate-900 font-mono">Bs --</div>
+      <div id="badgePrecioUSD" class="text-[10px] text-slate-500 font-semibold">por boleto</div>
     </div>
   </div>
 </header>
 
-<main class="max-w-md mx-auto px-3 pt-2.5 space-y-2.5">
-  <section class="ticker-wrap"><div id="tickerContent" class="ticker-content"><span>Cargando...</span></div></section>
-
-  <section class="card !p-2.5">
-    <div class="flex items-center gap-2">
-      <div class="text-xl">🏆</div>
-      <div class="flex-1 min-w-0">
-        <div class="text-[9px] font-black text-amber-600 tracking-wide">PREMIO MAYOR</div>
-        <div id="txtPremiosHeader" class="text-[11px] font-black text-gray-900 leading-snug">Cargando...</div>
-      </div>
-      <div id="alertaSorteo" class="hidden text-[9px] font-black text-amber-700 bg-amber-100 px-2 py-1 rounded-full shrink-0"></div>
-    </div>
-    <p id="txtNoticiasDisplay" class="text-[10px] text-gray-600 leading-snug mt-1.5 pt-1.5 border-t border-gray-100"></p>
+<main class="max-w-5xl mx-auto px-3 sm:px-5 pt-3 sm:pt-5 space-y-3 sm:space-y-4">
+  <section class="ticker-wrap">
+    <div id="tickerContent" class="ticker-content"><span>• Bienvenidos a Mega Rifas</span></div>
   </section>
 
-  <section class="card">
-    <div class="flex items-center gap-2 mb-2">
-      <div class="w-7 h-7 rounded-lg bg-blue-100 flex items-center justify-center text-blue-600 text-xs"><i class="fa-solid fa-magnifying-glass"></i></div>
-      <div class="flex-1">
-        <h3 class="text-[11px] font-black text-gray-900 leading-tight">Mis Boletos</h3>
-        <p class="text-[9px] text-gray-500 font-semibold leading-tight">Consulta con tu cédula</p>
-      </div>
-    </div>
-    <div class="flex gap-2">
-      <input type="tel" id="inputCedulaConsulta" placeholder="Ej: 12345678" class="inp flex-1 !py-2 !text-sm" onkeydown="if(event.key==='Enter')consultarParticipante()">
-      <button type="button" onclick="consultarParticipante()" class="btn-primary !px-3.5 !py-2"><i class="fa-solid fa-search text-xs"></i></button>
-    </div>
-    <div id="resultadoConsultaParticipante" class="hidden mt-2"></div>
-  </section>
-
-  <section class="card">
-    <div class="flex items-center justify-between mb-2">
-      <div class="flex items-center gap-2">
-        <div class="w-7 h-7 rounded-lg bg-amber-100 flex items-center justify-center text-amber-600 text-xs"><i class="fa-solid fa-table-cells"></i></div>
-        <div>
-          <h3 class="text-[11px] font-black text-gray-900 leading-tight">Elige tus Números</h3>
-          <p class="text-[9px] text-gray-500 font-semibold leading-tight">Toca los que quieras jugar</p>
+  <div class="grid grid-cols-1 lg:grid-cols-12 gap-3 sm:gap-4 items-start">
+    <!-- Columna principal: Tablero y progreso -->
+    <div class="lg:col-span-7 space-y-3 sm:space-y-4 order-2 lg:order-1">
+      <section class="card">
+        <div class="flex items-center justify-between gap-2 mb-3">
+          <div class="flex items-center gap-2.5">
+            <div class="w-8 h-8 rounded-lg bg-amber-100 flex items-center justify-center text-amber-600 text-sm shrink-0">
+              <i class="fa-solid fa-table-cells"></i>
+            </div>
+            <div>
+              <h2 class="text-xs sm:text-sm font-black text-slate-900 leading-tight">Elige tus Números</h2>
+              <p class="text-[10px] sm:text-xs text-slate-500 font-semibold leading-tight">Toca los números que quieras jugar</p>
+            </div>
+          </div>
+          <div class="flex items-center gap-1.5">
+            <button type="button" id="btnLimpiarSel" onclick="limpiarSeleccion()" class="hidden bg-slate-100 hover:bg-slate-200 text-slate-700 text-[10px] sm:text-xs font-bold px-2.5 py-1.5 rounded-lg transition">
+              Limpiar
+            </button>
+            <button type="button" onclick="seleccionarAzar()" class="bg-blue-600 hover:bg-blue-700 text-white text-[10px] sm:text-xs font-black px-3 py-1.5 rounded-lg transition flex items-center gap-1.5">
+              <i class="fa-solid fa-wand-magic-sparkles"></i> Azar
+            </button>
+          </div>
         </div>
-      </div>
-      <button type="button" onclick="seleccionarAzar()" class="bg-blue-600 text-white text-[9px] font-black px-2 py-1.5 rounded-lg">
-        <i class="fa-solid fa-wand-magic-sparkles"></i> Azar
-      </button>
-    </div>
-    <div id="gridTablero" class="num-grid" style="grid-template-columns:repeat(10, minmax(0,1fr));"></div>
-    <div class="grid grid-cols-5 gap-1 mt-2 pt-2 border-t border-gray-100 text-[8px] font-bold text-gray-600">
-      <div class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded border border-gray-300 bg-white"></span> Libre</div>
-      <div class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded" style="background:#3B82F6"></span> Reserva</div>
-      <div class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded" style="background:#A855F7"></span> Revisión</div>
-      <div class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded" style="background:#FFC107"></span> Tuyo</div>
-      <div class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded" style="background:#1F2937"></span> Vendido</div>
-    </div>
-  </section>
 
-  <section class="card">
-    <div class="flex items-center justify-between mb-1.5">
-      <div class="flex items-center gap-1.5">
-        <span class="text-base">🎯</span>
-        <span class="text-[11px] font-black text-gray-800">Progreso del Sorteo</span>
-      </div>
-      <span id="txtPorcentajeGeneral" class="text-base font-black" style="color:var(--gold-dark);">0%</span>
-    </div>
-    <div class="progress-bar"><div id="barraProgreso" class="progress-fill" style="width:0%;"></div></div>
-    <div class="flex justify-between mt-1.5 text-[9px] font-bold">
-      <span id="txtProgresoDetalle" class="text-gray-500">Cargando...</span>
-      <span id="txtProgresoUrgente" class="text-amber-600"></span>
-    </div>
-  </section>
+        <div id="gridTablero" class="num-grid" aria-label="Tablero de números"></div>
 
-  <section class="card">
-    <div class="flex items-center gap-1.5 mb-2">
-      <span class="text-sm">👑</span>
-      <h3 class="text-[10px] font-black text-gray-900">Top 3 Compradores</h3>
+        <div class="grid grid-cols-5 gap-1 mt-3 pt-2.5 border-t border-slate-100 text-[9px] sm:text-[11px] font-bold text-slate-600">
+          <div class="flex items-center gap-1.5"><span class="w-3 h-3 rounded border border-slate-300 bg-white shrink-0"></span> Libre</div>
+          <div class="flex items-center gap-1.5"><span class="w-3 h-3 rounded shrink-0" style="background:#3B82F6"></span> Reserva</div>
+          <div class="flex items-center gap-1.5"><span class="w-3 h-3 rounded shrink-0" style="background:#A855F7"></span> Revisión</div>
+          <div class="flex items-center gap-1.5"><span class="w-3 h-3 rounded shrink-0" style="background:#F59E0B"></span> Tuyo</div>
+          <div class="flex items-center gap-1.5"><span class="w-3 h-3 rounded shrink-0" style="background:#1E293B"></span> Vendido</div>
+        </div>
+      </section>
+
+      <section class="card">
+        <div class="flex items-center justify-between mb-2">
+          <div class="flex items-center gap-1.5">
+            <span class="text-base">🎯</span>
+            <span class="text-xs sm:text-sm font-black text-slate-800">Progreso del Sorteo</span>
+          </div>
+          <span id="txtPorcentajeGeneral" class="text-base sm:text-lg font-black text-amber-600 font-mono">0%</span>
+        </div>
+        <div class="progress-bar"><div id="barraProgreso" class="progress-fill" style="width:0%;"></div></div>
+        <div class="flex justify-between mt-2 text-[10px] sm:text-xs font-bold">
+          <span id="txtProgresoDetalle" class="text-slate-500">Cargando tablero...</span>
+          <span id="txtProgresoUrgente" class="text-amber-600"></span>
+        </div>
+      </section>
+
+      <section id="feedSection" class="hidden">
+        <div class="feed-label"><span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span> Últimas compras en vivo</div>
+        <div class="feed-wrap mt-1">
+          <div id="feedContent" class="feed-content"></div>
+        </div>
+      </section>
     </div>
-    <div id="listaTopCompradores" class="text-center"><span class="text-gray-400 text-[10px]">Cargando...</span></div>
-  </section>
 
-  <section class="card text-center">
-    <p class="text-[11px] font-black text-gray-700 mb-2">¿Necesitas ayuda?</p>
-    <div id="contenedorBotonesSoporte" class="flex flex-wrap justify-center gap-2"></div>
-  </section>
+    <!-- Columna secundaria: Premio, consulta, top y soporte -->
+    <div class="lg:col-span-5 space-y-3 sm:space-y-4 order-1 lg:order-2">
+      <section class="card">
+        <div class="flex items-center gap-2.5">
+          <div class="w-10 h-10 rounded-xl bg-amber-50 border border-amber-200 flex items-center justify-center text-xl shrink-0">🏆</div>
+          <div class="flex-1 min-w-0">
+            <div class="text-[10px] font-black text-amber-600 tracking-wider uppercase">PREMIO MAYOR</div>
+            <div id="txtPremiosHeader" class="text-xs sm:text-sm font-black text-slate-900 leading-snug">Cargando...</div>
+          </div>
+          <div id="alertaSorteo" class="hidden text-[10px] font-black text-amber-800 bg-amber-100 border border-amber-200 px-2.5 py-1 rounded-full shrink-0"></div>
+        </div>
+        <p id="txtNoticiasDisplay" class="text-xs text-slate-600 leading-relaxed mt-2.5 pt-2.5 border-t border-slate-100 hidden"></p>
+      </section>
 
-  <section id="feedSection" style="display:none">
-    <div class="feed-label"><span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span> Últimas compras en vivo</div>
-    <div class="feed-wrap mt-1">
-      <div id="feedContent" class="feed-content"></div>
+      <section class="card">
+        <div class="flex items-center gap-2.5 mb-2.5">
+          <div class="w-8 h-8 rounded-lg bg-blue-50 border border-blue-100 flex items-center justify-center text-blue-600 text-xs shrink-0">
+            <i class="fa-solid fa-magnifying-glass"></i>
+          </div>
+          <div class="flex-1">
+            <h3 class="text-xs sm:text-sm font-black text-slate-900 leading-tight">Mis Boletos</h3>
+            <p class="text-[10px] sm:text-xs text-slate-500 font-semibold leading-tight">Consulta el estado con tu cédula</p>
+          </div>
+        </div>
+        <div class="flex gap-2">
+          <input type="tel" id="inputCedulaConsulta" placeholder="Ej: 12345678" inputmode="numeric" class="inp flex-1 !py-2 !text-sm" onkeydown="if(event.key==='Enter')consultarParticipante()">
+          <button type="button" id="btnConsultarCedula" onclick="consultarParticipante()" class="btn-primary !px-4 !py-2 shrink-0">
+            <i class="fa-solid fa-search text-xs"></i>
+          </button>
+        </div>
+        <div id="resultadoConsultaParticipante" class="hidden mt-2.5"></div>
+      </section>
+
+      <section class="card">
+        <div class="flex items-center gap-1.5 mb-2.5">
+          <span class="text-base">👑</span>
+          <h3 class="text-xs sm:text-sm font-black text-slate-900">Top 3 Compradores</h3>
+        </div>
+        <div id="listaTopCompradores" class="text-center"><span class="text-slate-400 text-xs">Aún sin compradores.</span></div>
+      </section>
+
+      <section class="card text-center">
+        <p class="text-xs sm:text-sm font-black text-slate-800 mb-2.5">¿Necesitas ayuda?</p>
+        <div id="contenedorBotonesSoporte" class="flex flex-wrap justify-center gap-2"></div>
+      </section>
     </div>
-  </section>
+  </div>
 
-  <div class="text-center pt-1 pb-2">
-    <button type="button" onclick="abrirModalAdminSeguro()" class="text-[10px] text-gray-400 underline font-semibold">
-      <i class="fa-solid fa-shield-halved mr-1"></i> Admin
+  <div class="text-center pt-2 pb-2">
+    <button type="button" onclick="abrirModalAdminSeguro()" class="text-xs text-slate-400 hover:text-slate-700 underline font-semibold transition">
+      <i class="fa-solid fa-shield-halved mr-1"></i> Panel Admin
     </button>
   </div>
 </main>
 
-<div id="stickyTopBtn" class="fixed top-[46px] left-0 right-0 z-30 hidden">
-  <div class="max-w-md mx-auto px-3 pt-1.5">
-    <button type="button" onclick="abrirModalCheckout('PAGAR')" class="w-full btn-primary !py-2.5 !text-xs shadow-lg flex items-center justify-center gap-1.5">
+<!-- Botón rápido superior móvil cuando hay selección -->
+<div id="stickyTopBtn" class="fixed top-[56px] left-0 right-0 z-30 hidden lg:hidden">
+  <div class="max-w-5xl mx-auto px-3 pt-1.5">
+    <button type="button" onclick="abrirModalCheckout('PAGAR')" class="w-full btn-primary !py-2.5 !text-xs shadow-lg">
       <i class="fa-solid fa-arrow-right"></i> Continuar con <b id="stickyTopCant">0</b> · <span id="stickyTopTotal">Bs 0</span>
     </button>
   </div>
 </div>
 
+<!-- Barra flotante inferior -->
 <div id="barraAccionFlotante" class="fixed bottom-0 left-0 right-0 z-50 hidden">
-  <div class="max-w-md mx-auto p-2.5">
-    <div class="bg-gray-900 text-white rounded-2xl p-2.5 flex items-center justify-between shadow-2xl border border-gray-800">
-      <div class="flex items-center gap-2.5">
-        <div class="w-9 h-9 rounded-xl flex items-center justify-center font-black text-xs" style="background:linear-gradient(135deg,#FFC107,#F59E0B); color:#111827;">
+  <div class="max-w-2xl mx-auto p-3">
+    <div class="bg-slate-900 text-white rounded-2xl p-3 flex items-center justify-between shadow-2xl border border-slate-800 gap-3">
+      <div class="flex items-center gap-3 min-w-0">
+        <div class="w-10 h-10 rounded-xl flex items-center justify-center font-black text-sm shrink-0" style="background:linear-gradient(135deg,#FFC107,#F59E0B); color:#0F172A;">
           <span id="txtCantSeleccionadosBadge">0</span>
         </div>
-        <div>
-          <div class="text-[9px] text-gray-400 font-bold">TOTAL</div>
-          <b id="txtTotalBsBottom" class="text-xs">Bs 0</b>
+        <div class="min-w-0">
+          <div class="text-[10px] text-slate-400 font-bold tracking-wide">TOTAL A PAGAR</div>
+          <b id="txtTotalBsBottom" class="text-sm sm:text-base font-mono block truncate">Bs 0</b>
         </div>
       </div>
-      <div class="flex gap-1.5">
-        <button type="button" id="btnReservarFlotante" onclick="abrirModalCheckout('RESERVADO')" class="bg-white/10 text-white px-2.5 py-1.5 rounded-lg text-[10px] font-bold">Reservar</button>
-        <button type="button" onclick="abrirModalCheckout('PAGAR')" class="btn-primary !py-1.5 !px-2.5 !text-[10px]">Pagar</button>
+      <div class="flex gap-2 shrink-0">
+        <button type="button" id="btnReservarFlotante" onclick="abrirModalCheckout('RESERVADO')" class="bg-white/10 hover:bg-white/20 text-white px-3.5 py-2 rounded-xl text-xs font-bold transition">Reservar</button>
+        <button type="button" onclick="abrirModalCheckout('PAGAR')" class="btn-primary !py-2 !px-4 !text-xs">Pagar</button>
       </div>
     </div>
   </div>
 </div>
 
+<!-- Modal Checkout -->
 <div id="modalCheckout" class="m-bg hidden">
   <div class="m-box">
     <div class="flex justify-between items-center mb-3">
-      <div><h3 id="tituloModalCheckout" class="text-base font-black text-gray-900">Confirmar</h3><p class="text-[10px] text-gray-500 font-semibold" id="subtituloCheckout">Completa los datos</p></div>
-      <button type="button" onclick="cerrarModal('modalCheckout')" class="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center text-gray-600"><i class="fa-solid fa-xmark"></i></button>
+      <div>
+        <h3 id="tituloModalCheckout" class="text-base font-black text-slate-900">Confirmar</h3>
+        <p class="text-xs text-slate-500 font-semibold" id="subtituloCheckout">Completa los datos</p>
+      </div>
+      <button type="button" onclick="cerrarModal('modalCheckout')" class="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 flex items-center justify-center text-slate-600"><i class="fa-solid fa-xmark"></i></button>
     </div>
+
     <div class="subcard mb-3">
       <div class="flex justify-between items-center mb-1">
-        <span class="text-[10px] font-bold text-gray-500">NÚMEROS</span>
-        <span id="chkCantidad" class="text-[10px] font-black text-gray-700"></span>
+        <span class="text-[10px] font-black text-slate-500 uppercase">Números seleccionados</span>
+        <span id="chkCantidad" class="text-xs font-black text-slate-700"></span>
       </div>
       <div id="chkNumerosTxt" class="text-xs font-mono font-bold text-blue-600 leading-relaxed mb-2 break-all"></div>
-      <div class="flex justify-between items-center pt-2 border-t border-gray-200">
-        <span class="text-xs font-black text-gray-700">Total:</span>
+      <div class="flex justify-between items-center pt-2 border-t border-slate-200">
+        <span class="text-xs font-black text-slate-700">Total:</span>
         <div class="text-right">
-          <b id="chkTotalBs" class="text-base font-black text-gray-900"></b>
-          <div id="chkTotalUSD" class="text-[10px] text-gray-500 font-mono hidden"></div>
+          <b id="chkTotalBs" class="text-base font-black text-slate-900 font-mono"></b>
+          <div id="chkTotalUSD" class="text-[11px] text-slate-500 font-mono hidden"></div>
         </div>
       </div>
     </div>
+
     <div class="space-y-2.5 mb-3">
       <div>
         <label class="lbl lbl-req">Cédula</label>
@@ -261,30 +569,38 @@
       <div><label class="lbl lbl-req">Teléfono WhatsApp</label><input type="tel" id="chkTelefono" class="inp" placeholder="Ej: 04141234567"></div>
       <div><label class="lbl lbl-req">Correo electrónico</label><input type="email" id="chkCorreo" class="inp" placeholder="tucorreo@email.com"></div>
     </div>
-    <div id="bloqueDatosPago" class="space-y-3 pt-3 border-t border-gray-100">
+
+    <div id="bloqueDatosPago" class="space-y-3 pt-3 border-t border-slate-100">
       <div>
         <label class="lbl">Método de pago</label>
         <div class="grid grid-cols-3 gap-1.5">
           <button type="button" onclick="cambiarMetodoPago('PM')" id="pmPM" class="pay-method on"><i class="fa-solid fa-mobile-screen text-blue-600"></i><span>Pago Móvil</span></button>
-          <button type="button" onclick="cambiarMetodoPago('TR')" id="pmTR" class="pay-method"><i class="fa-solid fa-building-columns text-gray-700"></i><span>Transfer.</span></button>
+          <button type="button" onclick="cambiarMetodoPago('TR')" id="pmTR" class="pay-method"><i class="fa-solid fa-building-columns text-slate-700"></i><span>Transfer.</span></button>
           <button type="button" onclick="cambiarMetodoPago('BZ')" id="pmBZ" class="pay-method"><i class="fa-brands fa-bitcoin text-amber-500"></i><span>Binance</span></button>
           <button type="button" onclick="cambiarMetodoPago('ZP')" id="pmZP" class="pay-method"><i class="fa-solid fa-z text-purple-600"></i><span>Zelle</span></button>
           <button type="button" onclick="cambiarMetodoPago('EF')" id="pmEF" class="pay-method"><i class="fa-solid fa-money-bill-wave text-emerald-600"></i><span>Efectivo</span></button>
           <button type="button" onclick="cambiarMetodoPago('US')" id="pmUS" class="pay-method"><i class="fa-solid fa-coins text-emerald-500"></i><span>USDT</span></button>
         </div>
       </div>
-      <div id="datosPagoVisual" class="subcard text-[11px] text-gray-700 font-medium leading-relaxed"></div>
+      <div id="datosPagoVisual" class="subcard text-xs text-slate-700 font-medium leading-relaxed"></div>
       <div id="bloqueWhatsAppSoporte" class="hidden">
-        <a id="btnWhatsAppSoporte" href="#" target="_blank" class="w-full bg-emerald-500 text-white font-black py-3 rounded-xl text-xs flex items-center justify-center gap-2">
+        <a id="btnWhatsAppSoporte" href="#" target="_blank" rel="noopener noreferrer" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-black py-3 rounded-xl text-xs flex items-center justify-center gap-2 transition">
           <i class="fa-brands fa-whatsapp text-base"></i> Escribir a soporte por WhatsApp
         </a>
-        <p class="text-[9px] text-gray-500 text-center mt-1.5">Coordina el pago directamente con soporte</p>
+        <p class="text-[10px] text-slate-500 text-center mt-1.5">Coordina el pago directamente con soporte</p>
       </div>
       <div id="bloqueRefComprobante" class="space-y-3">
-        <div><label class="lbl lbl-req">Referencia (4 dígitos)</label><input type="tel" id="chkReferencia" class="inp" placeholder="Ej: 1234" maxlength="4" inputmode="numeric" pattern="[0-9]*" oninput="this.value=this.value.replace(/\D/g,'').slice(0,4)"></div>
-        <div><label class="lbl">Comprobante (opcional)</label><input type="file" id="chkArchivo" accept="image/*" class="inp !py-2 text-xs"></div>
+        <div>
+          <label class="lbl lbl-req">Referencia (últimos 4 dígitos)</label>
+          <input type="tel" id="chkReferencia" class="inp font-mono" placeholder="Ej: 1234" maxlength="4" inputmode="numeric" pattern="[0-9]*" oninput="this.value=this.value.replace(/\D/g,'').slice(0,4)">
+        </div>
+        <div>
+          <label class="lbl">Comprobante (opcional)</label>
+          <input type="file" id="chkArchivo" accept="image/*" class="inp !py-2 text-xs">
+        </div>
       </div>
     </div>
+
     <div class="flex gap-2 mt-4">
       <button type="button" onclick="cerrarModal('modalCheckout')" class="btn-secondary flex-1">Cancelar</button>
       <button type="button" id="btnEjecutarCheckout" onclick="ejecutarCheckout()" class="btn-primary flex-1">Confirmar</button>
@@ -292,12 +608,13 @@
   </div>
 </div>
 
+<!-- Modal PIN Admin -->
 <div id="modalPinAdmin" class="m-bg hidden m-bg-front">
-  <div class="m-box !max-w-xs !rounded-3xl !mb-auto !mt-auto">
+  <div class="m-box !max-w-xs !rounded-3xl !my-auto">
     <div class="text-center">
       <div class="w-14 h-14 rounded-2xl bg-amber-100 flex items-center justify-center text-2xl mx-auto mb-3"><i class="fa-solid fa-shield-halved text-amber-600"></i></div>
-      <b class="text-base block text-gray-900 mb-1">Acceso Admin</b>
-      <p class="text-[11px] text-gray-500 mb-3">Ingresa tu PIN de 6 dígitos</p>
+      <b class="text-base block text-slate-900 mb-1">Acceso Admin</b>
+      <p class="text-xs text-slate-500 mb-3">Ingresa tu PIN de 6 dígitos</p>
       <div class="pin-display">
         <div class="pin-dot" id="dotAdm0"></div>
         <div class="pin-dot" id="dotAdm1"></div>
@@ -306,21 +623,22 @@
         <div class="pin-dot" id="dotAdm4"></div>
         <div class="pin-dot" id="dotAdm5"></div>
       </div>
-      <input type="password" id="inputPinRifa" maxlength="6" inputmode="numeric" pattern="[0-9]*" placeholder="••••••" class="inp text-center text-2xl tracking-widest font-mono !py-3" oninput="actualizarDots('inputPinRifa','dotAdm');this.value=this.value.replace(/\D/g,'').slice(0,6)" onkeydown="if(event.key==='Enter')verificarPinAdmin()">
-      <button type="button" onclick="verificarPinAdmin()" class="btn-primary w-full mt-3">Acceder</button>
-      <button type="button" onclick="cerrarModal('modalPinAdmin')" class="text-xs text-gray-400 mt-3 font-semibold">Cancelar</button>
+      <input type="password" id="inputPinRifa" maxlength="6" inputmode="numeric" pattern="[0-9]*" placeholder="••••••" class="inp text-center text-2xl tracking-widest font-mono !py-3" oninput="this.value=this.value.replace(/\D/g,'').slice(0,6);actualizarDots('inputPinRifa','dotAdm')" onkeydown="if(event.key==='Enter')verificarPinAdmin()">
+      <button type="button" id="btnAccederAdmin" onclick="verificarPinAdmin()" class="btn-primary w-full mt-3">Acceder</button>
+      <button type="button" onclick="cerrarModal('modalPinAdmin')" class="text-xs text-slate-400 hover:text-slate-600 mt-3 font-semibold">Cancelar</button>
     </div>
   </div>
 </div>
 
+<!-- Modal Confirmación -->
 <div id="modalConfirm" class="m-bg hidden m-bg-front">
-  <div class="m-box !max-w-sm !rounded-3xl !mb-auto !mt-auto">
+  <div class="m-box !max-w-sm !rounded-3xl !my-auto">
     <div class="text-center">
       <div id="confirmIcon" class="w-14 h-14 rounded-2xl bg-amber-100 flex items-center justify-center text-2xl mx-auto mb-3">
         <i id="confirmIconI" class="fa-solid fa-question text-amber-600"></i>
       </div>
-      <b id="confirmTitulo" class="text-base block text-gray-900 mb-1">¿Confirmar?</b>
-      <p id="confirmTexto" class="text-[12px] text-gray-600 mb-4 leading-relaxed"></p>
+      <b id="confirmTitulo" class="text-base block text-slate-900 mb-1">¿Confirmar?</b>
+      <p id="confirmTexto" class="text-xs text-slate-600 mb-4 leading-relaxed"></p>
       <div class="flex gap-2">
         <button type="button" onclick="cerrarConfirm(false)" class="btn-secondary flex-1">Cancelar</button>
         <button type="button" id="confirmBtnOk" onclick="cerrarConfirm(true)" class="btn-primary flex-1">Aceptar</button>
@@ -329,14 +647,15 @@
   </div>
 </div>
 
+<!-- Modal PIN Acción Protegida -->
 <div id="modalPinAccion" class="m-bg hidden m-bg-front">
-  <div class="m-box !max-w-xs !rounded-3xl !mb-auto !mt-auto">
+  <div class="m-box !max-w-xs !rounded-3xl !my-auto">
     <div class="text-center">
       <div class="w-14 h-14 rounded-2xl bg-rose-100 flex items-center justify-center text-2xl mx-auto mb-3">
         <i class="fa-solid fa-lock text-rose-600"></i>
       </div>
-      <b id="pinAccionTitulo" class="text-base block text-gray-900 mb-1">Acción protegida</b>
-      <p id="pinAccionTexto" class="text-[11px] text-gray-500 mb-3 leading-relaxed">Ingresa tu PIN para confirmar</p>
+      <b id="pinAccionTitulo" class="text-base block text-slate-900 mb-1">Acción protegida</b>
+      <p id="pinAccionTexto" class="text-xs text-slate-500 mb-3 leading-relaxed">Ingresa tu PIN para confirmar</p>
       <div class="pin-display">
         <div class="pin-dot" id="dotAcc0"></div>
         <div class="pin-dot" id="dotAcc1"></div>
@@ -345,7 +664,7 @@
         <div class="pin-dot" id="dotAcc4"></div>
         <div class="pin-dot" id="dotAcc5"></div>
       </div>
-      <input type="password" id="inputPinAccion" maxlength="6" inputmode="numeric" pattern="[0-9]*" placeholder="••••••" class="inp text-center text-2xl tracking-widest font-mono !py-3" oninput="actualizarDots('inputPinAccion','dotAcc');this.value=this.value.replace(/\D/g,'').slice(0,6)" onkeydown="if(event.key==='Enter')confirmarPinAccion()">
+      <input type="password" id="inputPinAccion" maxlength="6" inputmode="numeric" pattern="[0-9]*" placeholder="••••••" class="inp text-center text-2xl tracking-widest font-mono !py-3" oninput="this.value=this.value.replace(/\D/g,'').slice(0,6);actualizarDots('inputPinAccion','dotAcc')" onkeydown="if(event.key==='Enter')confirmarPinAccion()">
       <div class="flex gap-2 mt-3">
         <button type="button" onclick="cerrarModal('modalPinAccion')" class="btn-secondary flex-1">Cancelar</button>
         <button type="button" id="btnPinAccionOk" onclick="confirmarPinAccion()" class="btn-primary flex-1">Confirmar</button>
@@ -354,107 +673,160 @@
   </div>
 </div>
 
+<!-- Modal Panel Admin -->
 <div id="modalPanelAdmin" class="m-bg hidden">
-  <div class="m-box m-full">
-    <div class="flex justify-between items-center mb-3 pb-3 border-b border-gray-100">
-      <div class="flex items-center gap-2">
-        <div class="w-9 h-9 rounded-xl bg-gray-900 flex items-center justify-center text-amber-400"><i class="fa-solid fa-gears"></i></div>
-        <div><b class="text-sm font-black text-gray-900 block">Panel Admin</b><p class="text-[10px] text-gray-500 font-semibold">Gestión completa</p></div>
+  <div class="m-box m-admin">
+    <div class="flex justify-between items-center mb-3 pb-3 border-b border-slate-100 shrink-0">
+      <div class="flex items-center gap-2.5">
+        <div class="w-9 h-9 rounded-xl bg-slate-900 flex items-center justify-center text-amber-400"><i class="fa-solid fa-gears"></i></div>
+        <div>
+          <b class="text-sm sm:text-base font-black text-slate-900 block">Panel Admin</b>
+          <p class="text-[11px] text-slate-500 font-semibold">Gestión de rifa y pagos</p>
+        </div>
       </div>
-      <button type="button" onclick="cerrarModal('modalPanelAdmin')" class="w-9 h-9 rounded-full bg-gray-100 flex items-center justify-center text-gray-600"><i class="fa-solid fa-xmark"></i></button>
+      <button type="button" onclick="cerrarModal('modalPanelAdmin')" class="w-9 h-9 rounded-full bg-slate-100 hover:bg-slate-200 flex items-center justify-center text-slate-600"><i class="fa-solid fa-xmark"></i></button>
     </div>
-    <div class="grid grid-cols-5 gap-1 mb-3">
+
+    <div class="grid grid-cols-5 gap-1.5 mb-3 shrink-0">
       <button type="button" onclick="cambiarTabAdmin('val')" id="adminTabVal" class="tab-btn tab-on">⏳ Pagos</button>
       <button type="button" onclick="cambiarTabAdmin('vnc')" id="adminTabVnc" class="tab-btn tab-warn-off">⏰ Venc.</button>
       <button type="button" onclick="cambiarTabAdmin('his')" id="adminTabHis" class="tab-btn tab-off">📋 Hist.</button>
       <button type="button" onclick="cambiarTabAdmin('cfg')" id="adminTabCfg" class="tab-btn tab-off">⚙️ Config</button>
       <button type="button" onclick="cambiarTabAdmin('nue')" id="adminTabNue" class="tab-btn tab-danger-off">🔄 Reset</button>
     </div>
-    <div id="adminViewVal" class="space-y-2 max-h-[75vh] overflow-y-auto pb-6"></div>
-    <div id="adminViewVnc" class="space-y-2 max-h-[75vh] overflow-y-auto pb-6 hidden"></div>
-    <div id="adminViewHis" class="space-y-2 max-h-[75vh] overflow-y-auto pb-6 hidden"></div>
-    <div id="adminViewCfg" class="space-y-3 max-h-[75vh] overflow-y-auto hidden pb-6">
-      <div><label class="lbl">Título de la Rifa</label><input type="text" id="cfgTitulo" class="inp"></div>
-      <div class="grid grid-cols-2 gap-2">
-        <div><label class="lbl">Total Números</label><input type="number" id="cfgTotal" class="inp"></div>
-        <div><label class="lbl">Precio ($)</label><input type="number" step="0.01" id="cfgPrecio" class="inp"></div>
-      </div>
-      <div><label class="lbl">Premios</label><input type="text" id="cfgPremios" class="inp"></div>
-      <div><label class="lbl">📢 Noticias (tarjeta)</label><textarea id="cfgNoticias" rows="2" class="inp"></textarea></div>
-      <div><label class="lbl">📺 Ticker (separa con |)</label><textarea id="cfgTickerNoticias" rows="2" class="inp"></textarea></div>
-      <div class="bg-blue-50 border border-blue-200 rounded-xl p-3">
-        <div class="text-[11px] font-black text-blue-900 mb-2">💱 TASA BCV</div>
-        <div><label class="lbl">Tasa Manual (vacío = auto)</label><input type="number" step="0.01" id="cfgTasaManual" class="inp"></div>
-      </div>
-      <div class="bg-amber-50 border border-amber-200 rounded-xl p-3">
-        <div class="text-[11px] font-black text-amber-900 mb-2">🖼️ LOGOTIPO</div>
-        <div><label class="lbl">Logo activo</label>
-          <select id="cfgLogoVersion" class="inp"><option value="OSCURU">Oscuro</option><option value="CLARU">Claro</option></select>
+
+    <div class="flex-1 overflow-y-auto pr-0.5 pb-6">
+      <div id="adminViewVal" class="space-y-2.5"></div>
+      <div id="adminViewVnc" class="space-y-2.5 hidden"></div>
+      <div id="adminViewHis" class="space-y-2.5 hidden"></div>
+
+      <!-- Configuración unificada (sin personalización visual) -->
+      <div id="adminViewCfg" class="space-y-4 hidden">
+        <div id="cfgSaveFeedback" class="hidden rounded-xl p-3 text-xs font-semibold border"></div>
+
+        <div class="subcard space-y-3">
+          <div class="text-xs font-black text-slate-900 uppercase tracking-wide">🎟️ Datos de la Rifa</div>
+          <div>
+            <label class="lbl" for="cfgTitulo">Título de la Rifa</label>
+            <input type="text" id="cfgTitulo" class="inp" placeholder="Ej: Gran Rifa de Diciembre">
+          </div>
+          <div class="grid grid-cols-2 gap-2.5">
+            <div>
+              <label class="lbl" for="cfgTotal">Total Números</label>
+              <input type="number" min="1" step="1" id="cfgTotal" class="inp">
+            </div>
+            <div>
+              <label class="lbl" for="cfgPrecio">Precio ($)</label>
+              <input type="text" inputmode="decimal" id="cfgPrecio" class="inp" placeholder="Ej: 5">
+            </div>
+          </div>
+          <div>
+            <label class="lbl" for="cfgPremios">Premios</label>
+            <input type="text" id="cfgPremios" class="inp" placeholder="Describe los premios">
+          </div>
+          <div>
+            <label class="lbl" for="cfgNoticias">📢 Noticias (tarjeta principal)</label>
+            <textarea id="cfgNoticias" rows="2" class="inp"></textarea>
+          </div>
+          <div>
+            <label class="lbl" for="cfgTickerNoticias">📺 Cinta de avisos (separa con |)</label>
+            <textarea id="cfgTickerNoticias" rows="2" class="inp"></textarea>
+          </div>
         </div>
-        <div class="mt-2"><label class="lbl">URL Logo Oscuro</label><input type="text" id="cfgLogoUrlOscuro" class="inp !text-xs"></div>
-        <div class="mt-2"><label class="lbl">URL Logo Claro</label><input type="text" id="cfgLogoUrlClaro" class="inp !text-xs"></div>
+
+        <div class="bg-blue-50 border border-blue-200 rounded-xl p-3.5 space-y-2.5">
+          <div class="text-xs font-black text-blue-900 uppercase tracking-wide">💱 Tasa y Reglas del Sorteo</div>
+          <div>
+            <label class="lbl" for="cfgTasaManual">Tasa Manual Bs/$ (vacío = tasa BCV automática)</label>
+            <input type="text" inputmode="decimal" id="cfgTasaManual" class="inp" placeholder="Ej: 920.50 (o vacío para auto)">
+          </div>
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+            <div>
+              <label class="lbl" for="cfgFechaSorteo">Fecha Sorteo</label>
+              <input type="text" id="cfgFechaSorteo" class="inp" placeholder="dd/mm/aaaa">
+            </div>
+            <div>
+              <label class="lbl" for="cfgDiasPago">Días p/ pagar</label>
+              <input type="number" min="1" step="1" id="cfgDiasPago" class="inp">
+            </div>
+            <div>
+              <label class="lbl" for="cfgDiasBloqueo">Días bloqueo reservas</label>
+              <input type="number" min="0" step="1" id="cfgDiasBloqueo" class="inp">
+            </div>
+          </div>
+        </div>
+
+        <div class="subcard space-y-2.5">
+          <div class="text-xs font-black text-slate-900 uppercase tracking-wide">💳 Datos de Pago</div>
+          <div><label class="lbl" for="cfgPM">Pago Móvil</label><input type="text" id="cfgPM" class="inp !text-xs"></div>
+          <div><label class="lbl" for="cfgTR">Transferencia</label><input type="text" id="cfgTR" class="inp !text-xs"></div>
+          <div><label class="lbl" for="cfgBZ">Binance</label><input type="text" id="cfgBZ" class="inp !text-xs"></div>
+          <div><label class="lbl" for="cfgZP">Zelle</label><input type="text" id="cfgZP" class="inp !text-xs"></div>
+          <div><label class="lbl" for="cfgEF">Efectivo</label><input type="text" id="cfgEF" class="inp !text-xs"></div>
+          <div><label class="lbl" for="cfgUS">USDT</label><input type="text" id="cfgUS" class="inp !text-xs"></div>
+        </div>
+
+        <div class="subcard space-y-2.5">
+          <div class="text-xs font-black text-slate-900 uppercase tracking-wide">📲 Contacto y Seguridad</div>
+          <div><label class="lbl" for="cfgIG">Instagram (URL o usuario)</label><input type="text" id="cfgIG" class="inp" placeholder="https://instagram.com/tu_cuenta"></div>
+          <div class="grid grid-cols-3 gap-2">
+            <div><label class="lbl" for="cfgWA1">WA 1</label><input type="tel" id="cfgWA1" class="inp !text-xs" placeholder="58412..."></div>
+            <div><label class="lbl" for="cfgWA2">WA 2</label><input type="tel" id="cfgWA2" class="inp !text-xs" placeholder="Opcional"></div>
+            <div><label class="lbl" for="cfgWA3">WA 3</label><input type="tel" id="cfgWA3" class="inp !text-xs" placeholder="Opcional"></div>
+          </div>
+          <div>
+            <label class="lbl" for="cfgNuevoPin">Nuevo PIN (6 dígitos, dejar vacío para mantener el actual)</label>
+            <input type="password" id="cfgNuevoPin" maxlength="6" inputmode="numeric" class="inp font-mono" oninput="this.value=this.value.replace(/\D/g,'').slice(0,6)">
+          </div>
+        </div>
+
+        <div class="flex gap-2 sticky bottom-0 bg-white pt-2 pb-1 border-t border-slate-100">
+          <button type="button" onclick="recargarConfigDesdeServidor()" id="btnRecargarConfig" class="btn-secondary px-4" title="Recargar valores desde el servidor">
+            <i class="fa-solid fa-rotate"></i>
+          </button>
+          <button type="button" onclick="guardarConfigAdmin()" id="btnGuardarConfig" class="btn-primary flex-1">
+            <i class="fa-solid fa-floppy-disk"></i> Guardar Cambios
+          </button>
+        </div>
       </div>
-      <div class="grid grid-cols-2 gap-2">
-        <div><label class="lbl">Fecha Sorteo</label><input type="text" id="cfgFechaSorteo" class="inp" placeholder="dd/mm/aaaa"></div>
-        <div><label class="lbl">Días p/ pagar</label><input type="number" id="cfgDiasPago" class="inp"></div>
+
+      <div id="adminViewNue" class="space-y-3 hidden text-center pt-6 max-w-sm mx-auto">
+        <div class="w-14 h-14 rounded-2xl bg-rose-100 flex items-center justify-center text-2xl mx-auto"><i class="fa-solid fa-triangle-exclamation text-rose-500"></i></div>
+        <b class="text-sm text-slate-900 block">Reiniciar Rifa Completa</b>
+        <p class="text-xs text-slate-600 font-semibold">Reiniciar borrará todo el tablero y todos los pagos registrados.</p>
+        <input type="password" id="pinReiniciarRifa" placeholder="PIN (6 dígitos)" maxlength="6" inputmode="numeric" class="inp text-center tracking-widest font-mono !w-44 mx-auto" oninput="this.value=this.value.replace(/\D/g,'').slice(0,6)">
+        <button type="button" id="btnReiniciarRifa" onclick="ejecutarNuevaRifa()" class="btn-danger w-full">⚠️ Reiniciar Rifa</button>
       </div>
-      <div><label class="lbl">Días antes del sorteo p/ bloquear reservas</label><input type="number" id="cfgDiasBloqueo" class="inp"></div>
-      <div class="grid grid-cols-2 gap-2">
-        <div><label class="lbl">Tipografía</label><select id="cfgFuente" class="inp"><option value="system-ui, sans-serif">Moderna</option><option value="Georgia, serif">Elegante</option><option value="Courier New, monospace">Mono</option></select></div>
-        <div><label class="lbl">Color Principal</label><input type="color" id="cfgColorPrin" class="inp !p-1 !h-10"></div>
-      </div>
-      <div><label class="lbl">Color Acento</label><input type="color" id="cfgColorAce" class="inp !p-1 !h-10"></div>
-      <div class="bg-gray-50 border border-gray-200 rounded-xl p-3 space-y-2">
-        <div class="text-[11px] font-black text-gray-900">💳 DATOS DE PAGO</div>
-        <div><label class="lbl">Pago Móvil</label><input type="text" id="cfgPM" class="inp !text-xs"></div>
-        <div><label class="lbl">Transferencia</label><input type="text" id="cfgTR" class="inp !text-xs"></div>
-        <div><label class="lbl">Binance</label><input type="text" id="cfgBZ" class="inp !text-xs"></div>
-        <div><label class="lbl">Zelle</label><input type="text" id="cfgZP" class="inp !text-xs"></div>
-        <div><label class="lbl">Efectivo</label><input type="text" id="cfgEF" class="inp !text-xs"></div>
-        <div><label class="lbl">USDT</label><input type="text" id="cfgUS" class="inp !text-xs"></div>
-      </div>
-      <div><label class="lbl">Instagram</label><input type="text" id="cfgIG" class="inp"></div>
-      <div class="grid grid-cols-3 gap-1.5">
-        <div><label class="lbl">WA 1</label><input type="tel" id="cfgWA1" class="inp !text-xs"></div>
-        <div><label class="lbl">WA 2</label><input type="tel" id="cfgWA2" class="inp !text-xs"></div>
-        <div><label class="lbl">WA 3</label><input type="tel" id="cfgWA3" class="inp !text-xs"></div>
-      </div>
-      <div><label class="lbl">Nuevo PIN (6 dígitos, opcional)</label><input type="password" id="cfgNuevoPin" maxlength="6" inputmode="numeric" class="inp"></div>
-      <button type="button" onclick="guardarConfigAdmin()" id="btnGuardarConfig" class="btn-primary w-full">Guardar Cambios</button>
-    </div>
-    <div id="adminViewNue" class="space-y-3 max-h-[75vh] overflow-y-auto hidden text-center pt-4">
-      <div class="w-14 h-14 rounded-2xl bg-rose-100 flex items-center justify-center text-2xl mx-auto"><i class="fa-solid fa-triangle-exclamation text-rose-500"></i></div>
-      <p class="text-xs text-gray-600 font-semibold">Reiniciar borrará todo el tablero y los pagos.</p>
-      <input type="password" id="pinReiniciarRifa" placeholder="PIN (6 dígitos)" maxlength="6" inputmode="numeric" class="inp text-center tracking-widest font-mono !w-40 mx-auto">
-      <button type="button" onclick="ejecutarNuevaRifa()" class="btn-danger w-full">⚠️ Reiniciar Rifa</button>
     </div>
   </div>
 </div>
 
+<!-- Modal Imagen Comprobante -->
 <div id="modalImagen" class="m-bg hidden m-bg-front" onclick="cerrarModal('modalImagen')">
   <div class="m-box !max-w-3xl" onclick="event.stopPropagation()">
     <div class="flex justify-between items-center mb-3">
-      <b class="text-sm font-black">Comprobante</b>
-      <button type="button" onclick="cerrarModal('modalImagen')" class="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center"><i class="fa-solid fa-xmark"></i></button>
+      <b class="text-sm font-black">Comprobante de Pago</b>
+      <button type="button" onclick="cerrarModal('modalImagen')" class="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center"><i class="fa-solid fa-xmark"></i></button>
     </div>
     <img id="imgComprobante" src="" class="w-full rounded-xl" alt="Comprobante">
   </div>
 </div>
 
+<!-- Modal Enviar WhatsApp -->
 <div id="modalWA" class="m-bg hidden m-bg-front">
   <div class="m-box !max-w-md">
     <div class="flex justify-between items-center mb-3">
       <div class="flex items-center gap-2">
         <div class="w-9 h-9 rounded-full bg-emerald-500 flex items-center justify-center text-white"><i class="fa-brands fa-whatsapp"></i></div>
-        <div><b class="text-sm font-black text-gray-900 block">Enviar WhatsApp</b><p class="text-[10px] text-gray-500 font-semibold">Notificar al cliente</p></div>
+        <div><b class="text-sm font-black text-slate-900 block">Enviar WhatsApp</b><p class="text-[11px] text-slate-500 font-semibold">Notificar al cliente</p></div>
       </div>
-      <button type="button" onclick="cerrarModal('modalWA')" class="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center"><i class="fa-solid fa-xmark"></i></button>
+      <button type="button" onclick="cerrarModal('modalWA')" class="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center"><i class="fa-solid fa-xmark"></i></button>
     </div>
     <div class="space-y-3">
       <div>
         <label class="lbl">Teléfono WhatsApp</label>
         <input type="tel" id="waTelefono" class="inp" placeholder="Ej: 584121234567" inputmode="numeric" oninput="this.value=this.value.replace(/[^\d]/g,'')">
-        <p class="text-[9px] text-gray-500 mt-1">Sin + ni espacios. Ej: 584121234567</p>
+        <p class="text-[10px] text-slate-500 mt-1">Sin + ni espacios. Ej: 584121234567</p>
       </div>
       <div>
         <label class="lbl">Vista previa del mensaje</label>
@@ -462,7 +834,7 @@
       </div>
       <div class="flex gap-2">
         <button type="button" onclick="cerrarModal('modalWA')" class="btn-secondary flex-1">Omitir</button>
-        <button type="button" onclick="enviarWAConfirmado()" class="flex-1 text-white font-black rounded-xl py-3" style="background:linear-gradient(135deg,#10B981,#059669);">
+        <button type="button" onclick="enviarWAConfirmado()" class="flex-1 text-white font-black rounded-xl py-3 text-sm" style="background:linear-gradient(135deg,#10B981,#059669);">
           <i class="fa-brands fa-whatsapp mr-1"></i> Enviar
         </button>
       </div>
@@ -470,15 +842,17 @@
   </div>
 </div>
 
+<!-- Modal Editar Registro -->
 <div id="modalEditar" class="m-bg hidden m-bg-front">
   <div class="m-box !max-w-md">
     <div class="flex justify-between items-center mb-3">
-      <b class="text-sm font-black">✏️ Editar</b>
-      <button type="button" onclick="cerrarModal('modalEditar')" class="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center"><i class="fa-solid fa-xmark"></i></button>
+      <b class="text-sm font-black">✏️ Editar Registro</b>
+      <button type="button" onclick="cerrarModal('modalEditar')" class="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center"><i class="fa-solid fa-xmark"></i></button>
     </div>
     <input type="hidden" id="editFila">
     <div class="space-y-3">
-      <div><label class="lbl">Estatus</label>
+      <div>
+        <label class="lbl">Estatus</label>
         <select id="editEstatus" class="inp">
           <option value="DISPONIBLE">DISPONIBLE</option>
           <option value="RESERVADO">RESERVADO</option>
@@ -489,65 +863,131 @@
       <div><label class="lbl">Cédula</label><input type="text" id="editCedula" class="inp"></div>
       <div><label class="lbl">Nombre</label><input type="text" id="editNombre" class="inp"></div>
       <div><label class="lbl">Teléfono</label><input type="text" id="editTelefono" class="inp"></div>
-      <div><label class="lbl">PIN (6 dígitos)</label><input type="password" id="editPin" maxlength="6" inputmode="numeric" class="inp"></div>
-      <button type="button" onclick="guardarEdicion()" class="btn-primary w-full">Guardar</button>
+      <div><label class="lbl">PIN (6 dígitos)</label><input type="password" id="editPin" maxlength="6" inputmode="numeric" class="inp font-mono" oninput="this.value=this.value.replace(/\D/g,'').slice(0,6)"></div>
+      <button type="button" id="btnGuardarEdicion" onclick="guardarEdicion()" class="btn-primary w-full">Guardar</button>
     </div>
   </div>
 </div>
 
 <script>
-const API_URL = 'https://script.google.com/macros/s/AKfycbw7Qw_1BdX1--qWnIJjhDIDt_H_OJdPjuCpSTU6gIp3Z4IMMc7RK6ZvD7t-onA6XmAd/exec'; 
+const API_URL = 'https://script.google.com/macros/s/AKfycbw7Qw_1BdX1--qWnIJjhDIDt_H_OJdPjuCpSTU6gIp3Z4IMMc7RK6ZvD7t-onA6XmAd/exec';
+const CACHE_KEY = 'mega_rifas_state_v2';
+const API_TIMEOUT_MS = 25000;
+const METODOS_USD = ['BZ', 'ZP', 'EF', 'US'];
+
+// Fuente única de verdad para configuración del Panel Admin
+const CONFIG_SCHEMA = [
+  { key: 'tituloRifa',      payloadKey: 'titulo',          inputId: 'cfgTitulo',         label: 'Título de la Rifa',      type: 'text',   def: '' },
+  { key: 'totalNumeros',    payloadKey: 'total',           inputId: 'cfgTotal',          label: 'Total Números',          type: 'int',    def: 100 },
+  { key: 'precioTicketUSD', payloadKey: 'precio',          inputId: 'cfgPrecio',         label: 'Precio ($)',             type: 'number', def: 2 },
+  { key: 'premios',         payloadKey: 'premios',         inputId: 'cfgPremios',        label: 'Premios',                type: 'text',   def: '' },
+  { key: 'noticias',        payloadKey: 'noticias',        inputId: 'cfgNoticias',       label: 'Noticias',               type: 'text',   def: '' },
+  { key: 'tickerNoticias',  payloadKey: 'tickerNoticias',  inputId: 'cfgTickerNoticias', label: 'Cinta de avisos',        type: 'text',   def: '' },
+  { key: 'tasaManual',      payloadKey: 'tasaManual',      inputId: 'cfgTasaManual',     label: 'Tasa Manual',            type: 'optNum', def: 0 },
+  { key: 'fechaSorteo',     payloadKey: 'fechaSorteo',     inputId: 'cfgFechaSorteo',    label: 'Fecha Sorteo',           type: 'text',   def: '' },
+  { key: 'diasLimitePago',  payloadKey: 'diasLimitePago',  inputId: 'cfgDiasPago',       label: 'Días p/ pagar',          type: 'int',    def: 15 },
+  { key: 'diasBloqueo',     payloadKey: 'diasBloqueo',     inputId: 'cfgDiasBloqueo',    label: 'Días bloqueo reservas',  type: 'int',    def: 3 },
+  { key: 'pmDatos',         payloadKey: 'pm',              inputId: 'cfgPM',             label: 'Pago Móvil',             type: 'text',   def: '' },
+  { key: 'trDatos',         payloadKey: 'tr',              inputId: 'cfgTR',             label: 'Transferencia',          type: 'text',   def: '' },
+  { key: 'binanceDatos',    payloadKey: 'binanceDatos',    inputId: 'cfgBZ',             label: 'Binance',                type: 'text',   def: '' },
+  { key: 'zelleDatos',      payloadKey: 'zelleDatos',      inputId: 'cfgZP',             label: 'Zelle',                  type: 'text',   def: '' },
+  { key: 'efectivoDatos',   payloadKey: 'efectivoDatos',   inputId: 'cfgEF',             label: 'Efectivo',               type: 'text',   def: '' },
+  { key: 'usdtDatos',       payloadKey: 'usdtDatos',       inputId: 'cfgUS',             label: 'USDT',                   type: 'text',   def: '' },
+  { key: 'igUrl',           payloadKey: 'ig',              inputId: 'cfgIG',             label: 'Instagram',              type: 'text',   def: '' }
+];
 
 var $ = function(id) { return document.getElementById(id); };
-var datosMegaGlobal = null;
+var appState = null;
 var seleccionados = [];
 var modoCheckoutActual = 'RESERVADO';
 var metodoPagoActual = 'PM';
 var participanteConsultado = null;
 var historialFiltro = 'TODOS';
-var METODOS_USD = ['BZ','ZP','EF','US'];
 var _waData = null;
 var _cedulaVerificada = null;
 var _debounceTimer = null;
 var _confirmCallback = null;
 var _pinCallback = null;
+var _syncPromise = null;
+var _lastBoardSignature = '';
+var _cfgDirty = false;
+var _historialMap = {};
+var _pagosMap = {};
+var _comprobantesMap = {};
 
-async function apiCall(action, data = {}) {
-  try {
-    const body = new URLSearchParams();
-    body.append('payload', JSON.stringify({ action: action, data: data }));
-    const response = await fetch(API_URL, {
-      method: 'POST',
-      body: body,
-      cache: 'no-store'
-    });
-    if (!response.ok) throw new Error('HTTP ' + response.status);
-    const text = await response.text();
-    if (text.trim().startsWith('<')) {
-      throw new Error('Apps Script devolvió HTML (revisa que el deploy sea "Cualquier persona").');
-    }
-    return JSON.parse(text);
-  } catch (error) {
-    console.error('API Error:', error);
-    throw error;
-  }
+function escHtml(str) {
+  return String(str === undefined || str === null ? '' : str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
 }
 
 function fmt(n) {
-  if (isNaN(n) || n === undefined || n === null) return "0,00";
-  var p = Number(n).toFixed(2).split('.');
-  p[0] = p[0].replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+  var num = Number(n);
+  if (!isFinite(num)) return '0,00';
+  var p = num.toFixed(2).split('.');
+  p[0] = p[0].replace(/\B(?=(\d{3})+(?!\d))/g, '.');
   return p.join(',');
 }
-function safe(v, def) { if (v === undefined || v === null || v === '') return def; return v; }
-function abrirModal(id) { var el = $(id); if (!el) return; el.classList.remove('hidden'); document.body.style.overflow='hidden'; }
-function cerrarModal(id) { var el = $(id); if (!el) return; el.classList.add('hidden'); document.body.style.overflow=''; }
+
+function parseLocaleNumber(val) {
+  if (val === undefined || val === null) return NaN;
+  var cleaned = String(val).trim().replace(',', '.');
+  if (!cleaned) return NaN;
+  var n = Number(cleaned);
+  return isFinite(n) ? n : NaN;
+}
+
+function safe(v, def) {
+  return (v === undefined || v === null || v === '') ? def : v;
+}
+
+function safeNum(v, def) {
+  var n = Number(v);
+  return (v === undefined || v === null || v === '' || !isFinite(n)) ? def : n;
+}
+
+function normalizarTelefono(v) {
+  return String(v || '').replace(/\D/g, '');
+}
+
+function abrirModal(id) {
+  var el = $(id);
+  if (!el) return;
+  el.classList.remove('hidden');
+  document.body.style.overflow = 'hidden';
+}
+
+function cerrarModal(id) {
+  var el = $(id);
+  if (!el) return;
+  el.classList.add('hidden');
+  var abiertos = document.querySelectorAll('.m-bg:not(.hidden)');
+  if (!abiertos.length) document.body.style.overflow = '';
+}
+
+function setBtnLoading(btn, loading, loadingText) {
+  if (!btn) return;
+  if (loading) {
+    if (!btn.dataset.origHtml) btn.dataset.origHtml = btn.innerHTML;
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> ' + escHtml(loadingText || 'Procesando...');
+  } else {
+    btn.disabled = false;
+    if (btn.dataset.origHtml) {
+      btn.innerHTML = btn.dataset.origHtml;
+      delete btn.dataset.origHtml;
+    }
+  }
+}
 
 function actualizarDots(inputId, prefix) {
   var val = ($(inputId).value || '').length;
   for (var i = 0; i < 6; i++) {
     var dot = $(prefix + i);
-    if (dot) { if (i < val) dot.classList.add('on'); else dot.classList.remove('on'); }
+    if (dot) dot.classList.toggle('on', i < val);
   }
 }
 
@@ -558,21 +998,691 @@ function notificar(msg, tipo) {
   t.className = 'toast ' + tipo;
   var icono = 'fa-circle-info';
   if (tipo === 'success') icono = 'fa-circle-check';
-  if (tipo === 'error') icono = 'fa-circle-exclamation';
-  t.innerHTML = '<i class="fa-solid ' + icono + '"></i><span>' + msg + '</span>';
+  else if (tipo === 'error') icono = 'fa-circle-exclamation';
+  else if (tipo === 'warn') icono = 'fa-triangle-exclamation';
+  t.innerHTML = '<i class="fa-solid ' + icono + ' mt-0.5 shrink-0"></i><span>' + escHtml(msg) + '</span>';
   wrap.appendChild(t);
   setTimeout(function() {
-    t.style.transition = 'opacity .3s'; t.style.opacity = '0';
-    setTimeout(function() { if (t.parentNode) t.parentNode.removeChild(t); }, 300);
-  }, 6000);
-}
-function mostrarCargando(show) { 
-  if(show) $('loadingOverlay').classList.remove('hidden'); 
-  else $('loadingOverlay').classList.add('hidden'); 
+    t.style.transition = 'opacity .25s';
+    t.style.opacity = '0';
+    setTimeout(function() { if (t.parentNode) t.parentNode.removeChild(t); }, 260);
+  }, tipo === 'warn' || tipo === 'error' ? 7000 : 4500);
 }
 
+async function apiCall(action, data) {
+  var controller = new AbortController();
+  var timer = setTimeout(function() { controller.abort(); }, API_TIMEOUT_MS);
+  try {
+    var body = new URLSearchParams();
+    body.append('payload', JSON.stringify({ action: action, data: data || {} }));
+    var response = await fetch(API_URL, {
+      method: 'POST',
+      body: body,
+      cache: 'no-store',
+      signal: controller.signal
+    });
+    if (!response.ok) throw new Error('HTTP ' + response.status);
+    var text = await response.text();
+    if (text.trim().startsWith('<')) {
+      throw new Error('Apps Script devolvió HTML (verifica el despliegue público).');
+    }
+    return JSON.parse(text);
+  } catch (error) {
+    if (error && error.name === 'AbortError') {
+      throw new Error('Tiempo de espera agotado. Intenta de nuevo.');
+    }
+    throw error;
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+/* ==================== CACHÉ LOCAL Y ESTADO UNIFICADO ==================== */
+
+function leerCacheLocal() {
+  try {
+    var raw = localStorage.getItem(CACHE_KEY);
+    if (!raw) return null;
+    var parsed = JSON.parse(raw);
+    if (parsed && parsed.data && typeof parsed.data === 'object') return parsed.data;
+  } catch (e) {}
+  return null;
+}
+
+function guardarCacheLocal(data) {
+  if (!data || typeof data !== 'object') return;
+  try {
+    localStorage.setItem(CACHE_KEY, JSON.stringify({ ts: Date.now(), data: data }));
+  } catch (e) {}
+}
+
+function normalizarEstadoServidor(incoming, prev) {
+  var base = prev ? Object.assign({}, prev) : {};
+  var r = Object.assign({}, base, incoming || {});
+
+  // Preservar colecciones si la respuesta del backend fue parcial
+  if (!incoming || incoming.tablero === undefined) r.tablero = base.tablero || {};
+  if (!incoming || incoming.estadisticas === undefined) r.estadisticas = base.estadisticas || {};
+  if (!incoming || incoming.topCompradores === undefined) r.topCompradores = base.topCompradores || [];
+  if (!incoming || incoming.feedCompras === undefined) r.feedCompras = base.feedCompras || [];
+  if (!incoming || incoming.waList === undefined) r.waList = base.waList || [];
+
+  // Normalizar campos numéricos con cuidado (respetando el valor 0 cuando es válido)
+  r.totalNumeros = Math.max(1, Math.floor(safeNum(r.totalNumeros, 100)));
+  r.precioTicketUSD = safeNum(r.precioTicketUSD, 2);
+  r.tasaManual = safeNum(r.tasaManual, 0);
+  r.tasa = r.tasaManual > 0 ? r.tasaManual : safeNum(r.tasa, 0);
+  if (incoming && incoming.precioTicketBs !== undefined && isFinite(Number(incoming.precioTicketBs))) {
+    r.precioTicketBs = Number(incoming.precioTicketBs);
+  } else if (r.tasa > 0) {
+    r.precioTicketBs = Number((r.precioTicketUSD * r.tasa).toFixed(2));
+  } else {
+    r.precioTicketBs = safeNum(r.precioTicketBs, 0);
+  }
+  r.diasLimitePago = Math.max(1, Math.floor(safeNum(r.diasLimitePago, 15)));
+  r.diasBloqueo = Math.max(0, Math.floor(safeNum(r.diasBloqueo, 3)));
+  r.waList = Array.isArray(r.waList)
+    ? r.waList.map(function(w) { return String(w || '').trim(); }).filter(Boolean)
+    : [];
+
+  return r;
+}
+
+function renderizarSkeletonTablero() {
+  var grid = $('gridTablero');
+  if (!grid || grid.children.length > 0) return;
+  var html = '';
+  for (var i = 0; i < 50; i++) {
+    html += '<div class="num-btn skeleton" aria-hidden="true"></div>';
+  }
+  grid.innerHTML = html;
+}
+
+async function cargarDatos(opts) {
+  opts = opts || {};
+  if (_syncPromise && !opts.force) return _syncPromise;
+
+  var req = (async function() {
+    try {
+      var r = await apiCall('obtenerInicioMega', {});
+      if (r && r.success) {
+        aplicarDatos(r, { persistCache: true });
+        return appState;
+      }
+      if (!opts.silent) notificar('Error: ' + ((r && r.error) || 'desconocido'), 'error');
+      return null;
+    } catch (error) {
+      if (!opts.silent) notificar(error.message || 'Error de conexión con el servidor.', 'error');
+      return null;
+    } finally {
+      if (_syncPromise === req) _syncPromise = null;
+    }
+  })();
+
+  _syncPromise = req;
+  return req;
+}
+
+function aplicarDatos(r, opts) {
+  opts = opts || {};
+  appState = normalizarEstadoServidor(r, appState);
+  if (opts.persistCache !== false) guardarCacheLocal(appState);
+
+  // Encabezado fijo con título de rifa y precio
+  var subtitulo = safe(appState.tituloRifa, 'JUEGA Y GANA');
+  $('txtSubtituloRifa').textContent = subtitulo;
+  document.title = appState.tituloRifa ? ('Mega Rifas · ' + appState.tituloRifa) : 'Mega Rifas';
+
+  $('badgePrecioBs').textContent = appState.precioTicketBs > 0 ? ('Bs ' + fmt(appState.precioTicketBs)) : 'Bs --';
+  $('badgePrecioUSD').textContent = appState.precioTicketUSD > 0 ? ('$' + fmt(appState.precioTicketUSD) + ' · por boleto') : 'por boleto';
+
+  $('txtPremiosHeader').textContent = safe(appState.premios, 'Premios por anunciar');
+  var noticiasTxt = safe(appState.noticias, '');
+  var noticiasEl = $('txtNoticiasDisplay');
+  if (noticiasTxt) {
+    noticiasEl.textContent = noticiasTxt;
+    noticiasEl.classList.remove('hidden');
+  } else {
+    noticiasEl.textContent = '';
+    noticiasEl.classList.add('hidden');
+  }
+
+  // Cinta de avisos (ticker)
+  var ticker = safe(appState.tickerNoticias, '') || noticiasTxt || '¡Bienvenidos a Mega Rifas!';
+  var items = ticker.split('|').map(function(s) { return s.trim(); }).filter(Boolean);
+  if (!items.length) items = [ticker];
+  var htmlTicker = '';
+  for (var k = 0; k < 2; k++) {
+    for (var i = 0; i < items.length; i++) {
+      htmlTicker += '<span>• ' + escHtml(items[i]) + '</span>';
+    }
+  }
+  $('tickerContent').innerHTML = htmlTicker;
+
+  // Alerta días para sorteo
+  var alerta = $('alertaSorteo');
+  if (appState.diasSorteo !== null && appState.diasSorteo !== undefined && appState.diasSorteo !== '') {
+    alerta.classList.remove('hidden');
+    alerta.textContent = Number(appState.diasSorteo) <= 0 ? '🎉 HOY' : (appState.diasSorteo + 'd');
+  } else {
+    alerta.classList.add('hidden');
+  }
+
+  // Botón reservar según regla de bloqueo
+  $('btnReservarFlotante').classList.toggle('hidden', appState.permiteReservar === false);
+
+  // Progreso
+  var est = appState.estadisticas || {};
+  var totalEst = safeNum(est.total, appState.totalNumeros);
+  var ocupados = safeNum(est.ocupados, 0);
+  var pct = safeNum(est.porcentajeGeneral, totalEst > 0 ? Math.round((ocupados / totalEst) * 100) : 0);
+  $('txtPorcentajeGeneral').textContent = pct + '%';
+  $('barraProgreso').style.width = Math.min(100, Math.max(0, pct)) + '%';
+  $('txtProgresoDetalle').textContent = ocupados + ' de ' + totalEst + ' boletos';
+  var restantes = Math.max(0, totalEst - ocupados);
+  var urgente = $('txtProgresoUrgente');
+  if (restantes <= 0) urgente.textContent = '¡AGOTADO!';
+  else if (restantes <= 10) urgente.textContent = '🔥 ¡Quedan ' + restantes + '!';
+  else if (restantes <= 30) urgente.textContent = '⚡ Quedan ' + restantes;
+  else urgente.textContent = '✅ ' + restantes + ' disponibles';
+
+  // Limpiar números seleccionados que ya no existan o ya no estén disponibles/reservados por el usuario
+  depurarSeleccionados();
+
+  renderizarTop(appState.topCompradores);
+  renderizarSoporte(appState.waList, appState.igUrl);
+  renderizarTablero();
+  renderizarFeed(appState.feedCompras);
+  actualizarBarraFlotante();
+
+  // Si el panel Admin está abierto y el formulario Config no ha sido editado manualmente, mantenerlo sincronizado
+  var panelAdminAbierto = !$('modalPanelAdmin').classList.contains('hidden');
+  if (panelAdminAbierto && !_cfgDirty) {
+    cargarFormularioConfigAdmin();
+  }
+}
+
+function depurarSeleccionados() {
+  if (!appState || !seleccionados.length) return;
+  var total = appState.totalNumeros;
+  var dig = total >= 1000 ? 3 : 2;
+  var tablero = appState.tablero || {};
+  var reservadosConsultado = (participanteConsultado && participanteConsultado.tickets && participanteConsultado.tickets.reservados) || [];
+
+  seleccionados = seleccionados.filter(function(num) {
+    var idx = parseInt(num, 10);
+    if (!isFinite(idx) || idx < 0 || idx >= total) return false;
+    var expected = String(idx).padStart(dig, '0');
+    if (expected !== num) return false;
+    var est = (tablero[num] && tablero[num].estatus) || 'DISPONIBLE';
+    if (est === 'DISPONIBLE') return true;
+    if (est === 'RESERVADO' && reservadosConsultado.indexOf(num) > -1) return true;
+    return false;
+  });
+}
+
+/* ==================== RENDERIZADO OPTIMIZADO ==================== */
+
+function renderizarFeed(feed) {
+  var sec = $('feedSection');
+  if (!feed || !feed.length) { sec.classList.add('hidden'); return; }
+  sec.classList.remove('hidden');
+  var html = '';
+  for (var k = 0; k < 2; k++) {
+    for (var i = 0; i < feed.length; i++) {
+      var it = feed[i];
+      var emoji = it.estatus === 'PAGADO' ? '🟢' : '🟣';
+      html += '<span>' + emoji + ' <b>' + escHtml(it.nombre) + '</b> compró <span class="feed-num">#' + escHtml(it.numero) + '</span> <span class="feed-time">· ' + escHtml(haceTiempo(it.ts)) + '</span></span>';
+    }
+  }
+  $('feedContent').innerHTML = html;
+}
+
+function haceTiempo(ts) {
+  if (!ts) return 'hace poco';
+  var diff = Date.now() - Number(ts);
+  var min = Math.floor(diff / 60000);
+  if (min < 1) return 'ahora';
+  if (min < 60) return 'hace ' + min + ' min';
+  var hrs = Math.floor(min / 60);
+  if (hrs < 24) return 'hace ' + hrs + ' h';
+  return 'hace ' + Math.floor(hrs / 24) + ' d';
+}
+
+function renderizarTop(top) {
+  var c = $('listaTopCompradores');
+  if (!top || !top.length) {
+    c.className = 'text-center';
+    c.innerHTML = '<span class="text-slate-400 text-xs">Aún sin compradores.</span>';
+    return;
+  }
+  c.className = 'space-y-1.5';
+  var med = ['🥇', '🥈', '🥉'];
+  var html = '';
+  for (var i = 0; i < top.length; i++) {
+    var t = top[i];
+    var partes = String(t.nombre || '').trim().split(/\s+/);
+    var corto = partes[0] + (partes[1] ? ' ' + partes[1].charAt(0) + '.' : '');
+    html += '<div class="top-mini"><span class="text-sm">' + (med[i] || '🏅') + '</span><span class="text-xs font-black text-slate-800 truncate flex-1 text-left">' + escHtml(corto) + '</span><span class="text-xs font-black text-amber-600 font-mono">' + escHtml(t.cantidad) + ' 🎟️</span></div>';
+  }
+  c.innerHTML = html;
+}
+
+function renderizarSoporte(lista, igUrl) {
+  var c = $('contenedorBotonesSoporte');
+  var html = '';
+  if (Array.isArray(lista) && lista.length) {
+    var msg = encodeURIComponent('¡Hola! 👋 Vengo de Mega Rifas 🎟️✨');
+    for (var i = 0; i < lista.length; i++) {
+      var tel = normalizarTelefono(lista[i]);
+      if (!tel) continue;
+      var etiqueta = lista.length > 1 ? ('WhatsApp ' + (i + 1)) : 'WhatsApp';
+      html += '<a href="https://wa.me/' + tel + '?text=' + msg + '" target="_blank" rel="noopener noreferrer" class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2 px-3.5 rounded-xl text-xs inline-flex items-center gap-1.5 transition"><i class="fa-brands fa-whatsapp text-sm"></i> ' + etiqueta + '</a>';
+    }
+  }
+  if (igUrl && String(igUrl).trim()) {
+    var igRaw = String(igUrl).trim();
+    var igHref = /^https?:\/\//i.test(igRaw) ? igRaw : ('https://instagram.com/' + igRaw.replace(/^@/, ''));
+    html += '<a href="' + escHtml(igHref) + '" target="_blank" rel="noopener noreferrer" class="bg-slate-900 hover:bg-slate-800 text-white font-bold py-2 px-3.5 rounded-xl text-xs inline-flex items-center gap-1.5 transition"><i class="fa-brands fa-instagram text-sm text-pink-400"></i> Instagram</a>';
+  }
+  if (!html) {
+    html = '<span class="text-slate-500 text-xs">Sin canales de soporte configurados.</span>';
+  }
+  c.innerHTML = html;
+}
+
+function renderizarTablero(force) {
+  if (!appState) return;
+  var grid = $('gridTablero');
+  var total = appState.totalNumeros;
+  var digitos = total >= 1000 ? 3 : 2;
+  var tablero = appState.tablero || {};
+
+  // Evitar recrear todo el DOM si el tablero no cambió
+  var sig = total + ':' + JSON.stringify(tablero);
+  if (!force && sig === _lastBoardSignature && grid.children.length === total) {
+    sincronizarClasesSeleccionTablero();
+    return;
+  }
+  _lastBoardSignature = sig;
+
+  var selSet = new Set(seleccionados);
+  var parts = new Array(total);
+  for (var i = 0; i < total; i++) {
+    var numStr = String(i).padStart(digitos, '0');
+    var est = (tablero[numStr] && tablero[numStr].estatus) || 'DISPONIBLE';
+    var clase = (est === 'DISPONIBLE' && selSet.has(numStr)) ? 'num-SELECCIONADO' : ('num-' + est);
+    var disabled = est !== 'DISPONIBLE' ? ' disabled' : '';
+    parts[i] = '<button type="button" data-num="' + numStr + '" data-est="' + est + '" class="num-btn ' + clase + '"' + disabled + '>' + numStr + '</button>';
+  }
+  grid.innerHTML = parts.join('');
+}
+
+function sincronizarClasesSeleccionTablero() {
+  var grid = $('gridTablero');
+  if (!grid) return;
+  var selSet = new Set(seleccionados);
+  var buttons = grid.querySelectorAll('button[data-num]');
+  for (var i = 0; i < buttons.length; i++) {
+    var btn = buttons[i];
+    if (btn.dataset.est === 'DISPONIBLE') {
+      var isSel = selSet.has(btn.dataset.num);
+      btn.classList.toggle('num-SELECCIONADO', isSel);
+      btn.classList.toggle('num-DISPONIBLE', !isSel);
+    }
+  }
+}
+
+function actualizarBotonNumero(num) {
+  var btn = $('gridTablero').querySelector('button[data-num="' + num + '"]');
+  if (!btn || btn.dataset.est !== 'DISPONIBLE') return;
+  var isSel = seleccionados.indexOf(num) > -1;
+  btn.classList.toggle('num-SELECCIONADO', isSel);
+  btn.classList.toggle('num-DISPONIBLE', !isSel);
+}
+
+function tocarNumero(num, est) {
+  if (est === 'PAGADO') { notificar('Este número ya fue pagado', 'error'); return; }
+  if (est === 'ESPERA') { notificar('Este número está en revisión', 'error'); return; }
+  if (est === 'RESERVADO') { notificar('Este número ya está reservado', 'error'); return; }
+  var idx = seleccionados.indexOf(num);
+  if (idx > -1) seleccionados.splice(idx, 1);
+  else seleccionados.push(num);
+  actualizarBotonNumero(num);
+  actualizarBarraFlotante();
+  if (participanteConsultado) renderizarResultadoConsulta(participanteConsultado);
+}
+
+function limpiarSeleccion() {
+  seleccionados = [];
+  sincronizarClasesSeleccionTablero();
+  actualizarBarraFlotante();
+  if (participanteConsultado) renderizarResultadoConsulta(participanteConsultado);
+}
+
+function actualizarBarraFlotante() {
+  var barra = $('barraAccionFlotante');
+  var sticky = $('stickyTopBtn');
+  var btnLimpiar = $('btnLimpiarSel');
+  if (seleccionados.length > 0 && appState) {
+    var totalBs = seleccionados.length * appState.precioTicketBs;
+    barra.classList.remove('hidden');
+    sticky.classList.remove('hidden');
+    btnLimpiar.classList.remove('hidden');
+    $('txtCantSeleccionadosBadge').textContent = seleccionados.length;
+    $('txtTotalBsBottom').textContent = 'Bs ' + fmt(totalBs);
+    $('stickyTopCant').textContent = seleccionados.length;
+    $('stickyTopTotal').textContent = 'Bs ' + fmt(totalBs);
+  } else {
+    barra.classList.add('hidden');
+    sticky.classList.add('hidden');
+    btnLimpiar.classList.add('hidden');
+  }
+}
+
+function seleccionarAzar() {
+  if (!appState) { notificar('Cargando tablero...', 'info'); return; }
+  var disp = [];
+  var total = appState.totalNumeros;
+  var dig = total >= 1000 ? 3 : 2;
+  var tablero = appState.tablero || {};
+  var selSet = new Set(seleccionados);
+  for (var i = 0; i < total; i++) {
+    var s = String(i).padStart(dig, '0');
+    var est = (tablero[s] && tablero[s].estatus) || 'DISPONIBLE';
+    if (est === 'DISPONIBLE' && !selSet.has(s)) disp.push(s);
+  }
+  if (!disp.length) { notificar('No hay números disponibles', 'error'); return; }
+  tocarNumero(disp[Math.floor(Math.random() * disp.length)], 'DISPONIBLE');
+}
+
+/* ==================== CONSULTA DE PARTICIPANTE ==================== */
+
+async function consultarParticipante() {
+  var ced = $('inputCedulaConsulta').value.trim();
+  if (!ced) { notificar('Ingresa una cédula', 'error'); return; }
+  var btn = $('btnConsultarCedula');
+  setBtnLoading(btn, true, '');
+  try {
+    var res = await apiCall('consultarParticipanteMega', { cedula: ced });
+    if (!res || !res.success) {
+      notificar('Error: ' + ((res && res.error) || 'No se pudo consultar'), 'error');
+      return;
+    }
+    participanteConsultado = res;
+    renderizarResultadoConsulta(res);
+  } catch (e) {
+    notificar(e.message || 'Error de conexión', 'error');
+  } finally {
+    setBtnLoading(btn, false);
+  }
+}
+
+function renderizarResultadoConsulta(res) {
+  var box = $('resultadoConsultaParticipante');
+  box.classList.remove('hidden');
+  if (!res.registrado) {
+    box.innerHTML = '<div class="subcard text-center text-xs text-slate-500 py-3"><i class="fa-solid fa-user-slash mr-1"></i> No se encontraron boletos para esta cédula.</div>';
+    return;
+  }
+  var p = res.participante || {};
+  var t = res.tickets || { pagados: [], espera: [], reservados: [] };
+  var html = '<div class="subcard space-y-2.5">';
+  html += '<div class="flex items-center gap-2.5 pb-2 border-b border-slate-200">';
+  html += '<div class="w-8 h-8 rounded-lg bg-blue-100 flex items-center justify-center text-blue-600 text-xs shrink-0"><i class="fa-solid fa-user"></i></div>';
+  html += '<div class="min-w-0"><b class="text-xs font-black text-slate-900 block truncate">' + escHtml(p.nombre) + '</b><span class="text-[10px] font-mono text-slate-500">C.I. ' + escHtml(p.cedula) + '</span></div></div>';
+
+  if (Number(res.deudaUSD) > 0) {
+    html += '<div class="bg-amber-50 border border-amber-200 rounded-xl p-2.5">';
+    html += '<div class="text-[10px] font-bold text-amber-700">💳 DEUDA PENDIENTE</div>';
+    html += '<b class="text-base font-black text-amber-900 font-mono">Bs ' + fmt(res.deudaBs) + '</b>';
+    if (res.diasRestantes !== null && res.diasRestantes !== undefined) {
+      var color = Number(res.diasRestantes) <= 3 ? 'text-rose-600' : 'text-amber-700';
+      html += '<div class="text-[11px] font-bold ' + color + ' mt-1">⏰ ' + escHtml(res.diasRestantes) + ' días (límite: ' + escHtml(res.fechaLimite) + ')</div>';
+    }
+    html += '</div>';
+  }
+  if (t.pagados && t.pagados.length) {
+    html += '<div><div class="text-[10px] font-black text-slate-500 mb-1">✅ PAGADOS (' + t.pagados.length + ')</div><div class="flex flex-wrap gap-1">';
+    t.pagados.forEach(function(n) { html += '<span class="chip paid">' + escHtml(n) + '</span>'; });
+    html += '</div></div>';
+  }
+  if (t.espera && t.espera.length) {
+    html += '<div><div class="text-[10px] font-black text-slate-500 mb-1">🟣 EN REVISIÓN (' + t.espera.length + ')</div><div class="flex flex-wrap gap-1">';
+    t.espera.forEach(function(n) { html += '<span class="chip esp">' + escHtml(n) + '</span>'; });
+    html += '</div></div>';
+  }
+  if (t.reservados && t.reservados.length) {
+    html += '<div><div class="flex justify-between items-center mb-1"><div class="text-[10px] font-black text-slate-500">🔵 RESERVADOS (' + t.reservados.length + ')</div>';
+    html += '<button type="button" onclick="seleccionarTodosReservados()" class="text-[10px] font-black text-blue-600 underline">Sel. todos</button></div>';
+    html += '<div class="flex flex-wrap gap-1">';
+    t.reservados.forEach(function(n) {
+      var on = seleccionados.indexOf(n) > -1;
+      html += '<span class="chip reserved ' + (on ? 'on' : '') + '" onclick="toggleReservado(\'' + escHtml(n) + '\')">' + escHtml(n) + '</span>';
+    });
+    html += '</div></div>';
+    html += '<button type="button" onclick="pagarReservadosSeleccionados()" class="btn-primary w-full !py-2 !text-xs"><i class="fa-solid fa-credit-card"></i> Pagar seleccionados</button>';
+  }
+  html += '</div>';
+  box.innerHTML = html;
+}
+
+function toggleReservado(num) {
+  var idx = seleccionados.indexOf(num);
+  if (idx > -1) seleccionados.splice(idx, 1);
+  else seleccionados.push(num);
+  actualizarBarraFlotante();
+  if (participanteConsultado) renderizarResultadoConsulta(participanteConsultado);
+}
+
+function seleccionarTodosReservados() {
+  if (!participanteConsultado || !participanteConsultado.tickets) return;
+  var res = participanteConsultado.tickets.reservados || [];
+  var todos = res.every(function(n) { return seleccionados.indexOf(n) > -1; });
+  if (todos) seleccionados = seleccionados.filter(function(n) { return res.indexOf(n) === -1; });
+  else res.forEach(function(n) { if (seleccionados.indexOf(n) === -1) seleccionados.push(n); });
+  actualizarBarraFlotante();
+  renderizarResultadoConsulta(participanteConsultado);
+}
+
+function pagarReservadosSeleccionados() {
+  var res = (participanteConsultado && participanteConsultado.tickets && participanteConsultado.tickets.reservados) || [];
+  var sel = seleccionados.filter(function(n) { return res.indexOf(n) > -1; });
+  if (!sel.length) { notificar('Selecciona al menos un boleto reservado', 'error'); return; }
+  var p = participanteConsultado.participante || {};
+  $('chkCedula').value = p.cedula || '';
+  $('chkNombre').value = p.nombre || '';
+  $('chkTelefono').value = p.telefono || '';
+  $('chkCorreo').value = p.correo || '';
+  _cedulaVerificada = { nombre: p.nombre, telefono: p.telefono, correo: p.correo };
+  abrirModalCheckout('PAGAR');
+}
+
+/* ==================== CHECKOUT Y PAGOS ==================== */
+
+function abrirModalCheckout(modo) {
+  if (!appState) { notificar('Esperando datos de la rifa...', 'info'); return; }
+  if (!seleccionados.length) { notificar('Selecciona al menos un número', 'error'); return; }
+  if (modo === 'RESERVADO' && appState.permiteReservar === false) {
+    notificar('Solo pago directo. Faltan pocos días para el sorteo.', 'warn');
+    modo = 'PAGAR';
+  }
+  modoCheckoutActual = modo;
+  var totalUSD = seleccionados.length * appState.precioTicketUSD;
+  var totalBs = seleccionados.length * appState.precioTicketBs;
+
+  $('tituloModalCheckout').textContent = modo === 'RESERVADO' ? 'Reservar Boletos' : 'Reportar Pago';
+  $('subtituloCheckout').textContent = modo === 'RESERVADO' ? 'Reserva sin pagar ahora' : 'Elige cómo quieres pagar';
+  $('chkCantidad').textContent = seleccionados.length + ' boleto(s)';
+  $('chkNumerosTxt').textContent = '#' + seleccionados.join(' · #');
+  $('chkTotalBs').textContent = 'Bs ' + fmt(totalBs);
+  $('chkTotalUSD').textContent = '$' + fmt(totalUSD);
+
+  var blq = $('bloqueDatosPago');
+  if (modo === 'PAGAR') {
+    blq.classList.remove('hidden');
+    cambiarMetodoPago('PM');
+  } else {
+    blq.classList.add('hidden');
+    $('chkTotalUSD').classList.add('hidden');
+  }
+  $('avisoCedula').classList.add('hidden');
+  $('avisoCedula').innerHTML = '';
+  $('chkCedula').classList.remove('inp-ok');
+  abrirModal('modalCheckout');
+}
+
+async function verificarCedula(ced) {
+  try {
+    var res = await apiCall('verificarCedulaMega', { cedula: ced });
+    var aviso = $('avisoCedula');
+    var input = $('chkCedula');
+    if (res && res.existe) {
+      _cedulaVerificada = res;
+      if (!$('chkNombre').value.trim() && res.nombre) $('chkNombre').value = res.nombre;
+      if (!$('chkTelefono').value.trim() && res.telefono) $('chkTelefono').value = res.telefono;
+      if (!$('chkCorreo').value.trim() && res.correo) $('chkCorreo').value = res.correo;
+      aviso.classList.remove('hidden');
+      aviso.innerHTML = '<div class="bg-blue-50 border border-blue-200 rounded-lg p-2.5 text-xs text-blue-800 leading-relaxed"><b>👋 ¡Bienvenido de vuelta!</b><br>Cédula registrada a nombre de <b>' + escHtml(res.nombre) + '</b>.<br><span class="text-blue-600 text-[11px]">Si eres tú, continúa. Si no, revisa la cédula.</span></div>';
+      input.classList.add('inp-ok');
+    } else {
+      _cedulaVerificada = null;
+      aviso.classList.add('hidden');
+      aviso.innerHTML = '';
+      input.classList.remove('inp-ok');
+    }
+  } catch (e) {}
+}
+
+function cambiarMetodoPago(met) {
+  metodoPagoActual = met;
+  var metodos = ['PM', 'TR', 'BZ', 'ZP', 'EF', 'US'];
+  for (var i = 0; i < metodos.length; i++) {
+    $('pm' + metodos[i]).classList.toggle('on', metodos[i] === met);
+  }
+  var esUSD = METODOS_USD.indexOf(met) > -1;
+  var totalUSD = seleccionados.length * appState.precioTicketUSD;
+  var totalBs = seleccionados.length * appState.precioTicketBs;
+  if (esUSD) {
+    $('chkTotalBs').textContent = '$' + fmt(totalUSD);
+    $('chkTotalUSD').textContent = '≈ Bs ' + fmt(totalBs);
+  } else {
+    $('chkTotalBs').textContent = 'Bs ' + fmt(totalBs);
+    $('chkTotalUSD').textContent = '≈ $' + fmt(totalUSD);
+  }
+  $('chkTotalUSD').classList.remove('hidden');
+
+  var box = $('datosPagoVisual');
+  if (met === 'PM') box.innerHTML = '<b>💳 Pago Móvil</b><br>' + escHtml(safe(appState.pmDatos, 'No configurado'));
+  else if (met === 'TR') box.innerHTML = '<b>🏦 Transferencia</b><br>' + escHtml(safe(appState.trDatos, 'No configurado'));
+  else if (met === 'BZ') box.innerHTML = '<b>🪙 Binance Pay</b><br>' + escHtml(safe(appState.binanceDatos, 'Coordina con soporte.'));
+  else if (met === 'ZP') box.innerHTML = '<b>💜 Zelle</b><br>' + escHtml(safe(appState.zelleDatos, 'Coordina con soporte.'));
+  else if (met === 'EF') box.innerHTML = '<b>💵 Efectivo</b><br>' + escHtml(safe(appState.efectivoDatos, 'Coordina con soporte.'));
+  else if (met === 'US') box.innerHTML = '<b>🪙 USDT</b><br>' + escHtml(safe(appState.usdtDatos, 'Coordina con soporte.'));
+
+  var blqWA = $('bloqueWhatsAppSoporte');
+  var blqRef = $('bloqueRefComprobante');
+  if (esUSD) {
+    blqWA.classList.remove('hidden');
+    blqRef.classList.add('hidden');
+    var tel = normalizarTelefono(appState.waList && appState.waList[0]);
+    var metodoNombre = { BZ: 'Binance', ZP: 'Zelle', EF: 'Efectivo', US: 'USDT' }[met] || met;
+    var msg = encodeURIComponent('¡Hola! 👋 Quiero pagar con *' + metodoNombre + '*.\n\n🎟️ Números: #' + seleccionados.join(', #') + '\n💰 Monto: *$' + fmt(totalUSD) + '*\n\n¿Me indican cómo proceder? 🙏');
+    $('btnWhatsAppSoporte').href = tel ? ('https://wa.me/' + tel + '?text=' + msg) : '#';
+  } else {
+    blqWA.classList.add('hidden');
+    blqRef.classList.remove('hidden');
+  }
+}
+
+async function ejecutarCheckout() {
+  var ced = $('chkCedula').value.trim();
+  var nom = $('chkNombre').value.trim();
+  var tel = $('chkTelefono').value.trim();
+  var correo = $('chkCorreo').value.trim();
+  if (!ced || !nom || !tel || !correo) { notificar('Completa todos los datos obligatorios', 'error'); return; }
+  if (correo.indexOf('@') === -1) { notificar('Correo electrónico inválido', 'error'); return; }
+
+  var btn = $('btnEjecutarCheckout');
+  if (modoCheckoutActual === 'RESERVADO') {
+    setBtnLoading(btn, true, 'Reservando...');
+    try {
+      var res = await apiCall('reservarTicketsMega', {
+        cedula: ced, nombre: nom, telefono: tel, correo: correo, numeros: seleccionados.slice()
+      });
+      if (!res || !res.success) {
+        notificar((res && res.error) || 'No se pudo reservar', 'error');
+        return;
+      }
+      seleccionados = [];
+      actualizarBarraFlotante();
+      cerrarModal('modalCheckout');
+      notificar('¡Reserva enviada! Revisa tu correo 📧', 'success');
+      cargarDatos({ silent: true, force: true });
+    } catch (e) {
+      notificar(e.message || 'Error de conexión', 'error');
+    } finally {
+      setBtnLoading(btn, false);
+    }
+    return;
+  }
+
+  var esUSD = METODOS_USD.indexOf(metodoPagoActual) > -1;
+  var ref = esUSD ? ('USD' + String(Date.now()).slice(-4)) : $('chkReferencia').value.trim();
+  if (!esUSD && ref.length !== 4) {
+    notificar('La referencia debe ser de 4 dígitos', 'error');
+    return;
+  }
+
+  setBtnLoading(btn, true, 'Enviando pago...');
+  var f = esUSD ? null : $('chkArchivo');
+  if (f && f.files && f.files.length > 0) {
+    var reader = new FileReader();
+    reader.onload = function() { enviarPagoServidor(ced, nom, tel, correo, ref, reader.result, btn); };
+    reader.onerror = function() {
+      setBtnLoading(btn, false);
+      notificar('No se pudo leer la imagen del comprobante', 'error');
+    };
+    reader.readAsDataURL(f.files[0]);
+  } else {
+    enviarPagoServidor(ced, nom, tel, correo, ref, '', btn);
+  }
+}
+
+async function enviarPagoServidor(ced, nom, tel, correo, ref, b64, btn) {
+  var totalUSD = seleccionados.length * appState.precioTicketUSD;
+  var totalBs = seleccionados.length * appState.precioTicketBs;
+  var metodoTxt = { PM: 'Pago Móvil', TR: 'Transferencia', BZ: 'Binance', ZP: 'Zelle', EF: 'Efectivo', US: 'USDT' }[metodoPagoActual] || 'Otro';
+
+  try {
+    var res = await apiCall('reportarPagoMega', {
+      cedula: ced, nombre: nom, telefono: tel, correo: correo,
+      numeros: seleccionados.slice(),
+      montoUSD: totalUSD, montoBs: totalBs,
+      metodo: metodoTxt, referencia: ref, base64: b64
+    });
+    if (!res || !res.success) {
+      notificar((res && res.error) || 'No se pudo reportar el pago', 'error');
+      return;
+    }
+    seleccionados = [];
+    $('chkReferencia').value = '';
+    if ($('chkArchivo')) $('chkArchivo').value = '';
+    actualizarBarraFlotante();
+    cerrarModal('modalCheckout');
+    notificar('¡Pago reportado! Revisa tu correo 📧', 'success');
+    cargarDatos({ silent: true, force: true });
+  } catch (e) {
+    notificar(e.message || 'Error de conexión', 'error');
+  } finally {
+    setBtnLoading(btn, false);
+  }
+}
+
+/* ==================== MODALES CONFIRMAR Y PIN ==================== */
+
 function mostrarConfirm(titulo, texto, icono, callback, peligroso) {
-  $('confirmTitulo').innerText = titulo;
+  $('confirmTitulo').textContent = titulo;
   $('confirmTexto').innerHTML = texto;
   $('confirmIconI').className = 'fa-solid ' + (icono || 'fa-question') + ' ' + (peligroso ? 'text-rose-600' : 'text-amber-600');
   $('confirmIcon').className = 'w-14 h-14 rounded-2xl ' + (peligroso ? 'bg-rose-100' : 'bg-amber-100') + ' flex items-center justify-center text-2xl mx-auto mb-3';
@@ -589,22 +1699,22 @@ function cerrarConfirm(ok) {
 }
 
 function pedirPin(titulo, texto, callback) {
-  $('pinAccionTitulo').innerText = titulo;
-  $('pinAccionTexto').innerText = texto;
+  $('pinAccionTitulo').textContent = titulo;
+  $('pinAccionTexto').textContent = texto;
   $('inputPinAccion').value = '';
   actualizarDots('inputPinAccion', 'dotAcc');
   _pinCallback = callback;
   abrirModal('modalPinAccion');
-  setTimeout(function() { $('inputPinAccion').focus(); }, 300);
+  setTimeout(function() { $('inputPinAccion').focus(); }, 250);
 }
 
 async function confirmarPinAccion() {
   var p = $('inputPinAccion').value.trim();
-  if (!p || p.length < 6) { notificar('Ingresa el PIN de 6 dígitos', 'error'); return; }
-  mostrarCargando(true);
+  if (p.length < 6) { notificar('Ingresa el PIN de 6 dígitos', 'error'); return; }
+  var btn = $('btnPinAccionOk');
+  setBtnLoading(btn, true, 'Verificando...');
   try {
-    const res = await apiCall('verificarPinMegaAdmin', { pin: p });
-    mostrarCargando(false);
+    var res = await apiCall('verificarPinMegaAdmin', { pin: p });
     if (res && res.success) {
       window._adminPin = p;
       cerrarModal('modalPinAccion');
@@ -616,494 +1726,47 @@ async function confirmarPinAccion() {
       $('inputPinAccion').value = '';
       actualizarDots('inputPinAccion', 'dotAcc');
     }
-  } catch(e) {
-    mostrarCargando(false);
-    notificar('Error de conexión', 'error');
-  }
-}
-
-async function cargarDatos() {
-  mostrarCargando(true);
-  try {
-    const r = await apiCall('obtenerInicioMega');
-    if (r && r.success) {
-      aplicarDatos(r);
-    } else {
-      notificar('Error: ' + (r.error || 'desconocido'), 'error');
-    }
-  } catch (error) {
-    notificar('Error de conexión con el servidor.', 'error');
+  } catch (e) {
+    notificar(e.message || 'Error de conexión', 'error');
   } finally {
-    mostrarCargando(false);
+    setBtnLoading(btn, false);
   }
 }
 
-function aplicarDatos(r) {
-  datosMegaGlobal = r;
-  
-  $('badgePrecioBs').innerText = 'Bs ' + fmt(r.precioTicketBs);
-  $('txtPremiosHeader').innerText = safe(r.premios, 'Premios por anunciar');
-  $('txtNoticiasDisplay').innerText = safe(r.noticias, '');
-
-  var ticker = safe(r.tickerNoticias, '');
-  if (!ticker) ticker = safe(r.noticias, '¡Bienvenidos a Mega Rifas!');
-  var items = ticker.split('|').map(function(s) { return s.trim(); }).filter(function(s) { return s; });
-  if (!items.length) items = [ticker];
-  var htmlTicker = '';
-  for (var k = 0; k < 2; k++) for (var i = 0; i < items.length; i++) htmlTicker += '<span>• ' + items[i] + '</span>';
-  $('tickerContent').innerHTML = htmlTicker;
-
-  var logoUrl = (r.logoVersion === 'CLARU') ? safe(r.logoUrlClaro, safe(r.logoUrlOscuro, '')) : safe(r.logoUrlOscuro, safe(r.logoUrlClaro, ''));
-  if (logoUrl && logoUrl.length > 10) {
-    $('logoHeader').src = logoUrl;
-    $('logoHeader').classList.remove('hidden');
-    $('logoText').classList.add('hidden');
-  } else {
-    $('logoHeader').classList.add('hidden');
-    $('logoText').classList.remove('hidden');
-  }
-
-  document.documentElement.style.setProperty('--color-principal', safe(r.colorPrincipal, '#111827'));
-  document.documentElement.style.setProperty('--color-acento', safe(r.colorAcento, '#FFC107'));
-  document.documentElement.style.setProperty('--fuente-custom', safe(r.tipografia, 'system-ui, sans-serif'));
-
-  var alerta = $('alertaSorteo');
-  if (r.diasSorteo !== null && r.diasSorteo !== undefined) {
-    alerta.classList.remove('hidden');
-    if (r.diasSorteo <= 0) alerta.innerText = '🎉 HOY';
-    else alerta.innerText = r.diasSorteo + 'd';
-  } else alerta.classList.add('hidden');
-
-  var btnR = $('btnReservarFlotante');
-  if (r.permiteReservar !== false) btnR.classList.remove('hidden');
-  else btnR.classList.add('hidden');
-
-  var est = r.estadisticas || {};
-  $('txtPorcentajeGeneral').innerText = (est.porcentajeGeneral || 0) + '%';
-  $('barraProgreso').style.width = (est.porcentajeGeneral || 0) + '%';
-  $('txtProgresoDetalle').innerText = (est.ocupados || 0) + ' de ' + (est.total || 100) + ' boletos';
-  var restantes = (est.total || 100) - (est.ocupados || 0);
-  var urgente = $('txtProgresoUrgente');
-  if (restantes <= 0) urgente.innerText = '¡AGOTADO!';
-  else if (restantes <= 10) urgente.innerText = '🔥 ¡Quedan ' + restantes + '!';
-  else if (restantes <= 30) urgente.innerText = '⚡ Quedan ' + restantes;
-  else urgente.innerText = '✅ ' + restantes + ' disponibles';
-
-  renderizarTop(r.topCompradores);
-  renderizarSoporte(r.waList);
-  renderizarTablero();
-  renderizarFeed(r.feedCompras);
-}
-
-function renderizarFeed(feed) {
-  if (!feed || !feed.length) { $('feedSection').style.display = 'none'; return; }
-  $('feedSection').style.display = 'block';
-  var html = '';
-  for (var k = 0; k < 2; k++) {
-    for (var i = 0; i < feed.length; i++) {
-      var it = feed[i];
-      var emoji = it.estatus === 'PAGADO' ? '🟢' : '🟣';
-      var hace = haceTiempo(it.ts);
-      html += '<span>' + emoji + ' <b>' + it.nombre + '</b> compró <span class="feed-num">#' + it.numero + '</span> <span class="feed-time">· ' + hace + '</span></span>';
-    }
-  }
-  $('feedContent').innerHTML = html;
-}
-
-function haceTiempo(ts) {
-  if (!ts) return 'hace poco';
-  var diff = Date.now() - ts;
-  var min = Math.floor(diff / 60000);
-  if (min < 1) return 'ahora';
-  if (min < 60) return 'hace ' + min + ' min';
-  var hrs = Math.floor(min / 60);
-  if (hrs < 24) return 'hace ' + hrs + ' h';
-  return 'hace ' + Math.floor(hrs / 24) + ' d';
-}
-
-function renderizarTop(top) {
-  var c = $('listaTopCompradores');
-  if (!top || !top.length) {
-    c.className = 'text-center';
-    c.innerHTML = '<span class="text-gray-400 text-[10px]">Aún sin compradores.</span>';
-    return;
-  }
-  c.className = 'space-y-1';
-  var med = ['🥇','🥈','🥉'];
-  var html = '';
-  for (var i = 0; i < top.length; i++) {
-    var t = top[i];
-    var partes = (t.nombre || '').split(' ');
-    var corto = partes[0] + (partes[1] ? ' ' + partes[1].charAt(0) + '.' : '');
-    html += '<div class="top-mini"><span class="text-sm">' + med[i] + '</span><span class="text-[10px] font-black text-gray-800 truncate flex-1">' + corto + '</span><span class="text-[10px] font-black text-amber-600">' + t.cantidad + ' 🎟️</span></div>';
-  }
-  c.innerHTML = html;
-}
-
-function renderizarTablero() {
-  var grid = $('gridTablero');
-  var total = Number(datosMegaGlobal.totalNumeros) || 100;
-  var digitos = total >= 1000 ? 3 : 2;
-  var tablero = datosMegaGlobal.tablero || {};
-  var html = '';
-  for (var i = 0; i < total; i++) {
-    var numStr = String(i);
-    while (numStr.length < digitos) numStr = '0' + numStr;
-    var info = tablero[numStr] || { estatus: 'DISPONIBLE' };
-    var clase = 'num-' + info.estatus;
-    if (seleccionados.indexOf(numStr) > -1 && info.estatus === 'DISPONIBLE') clase = 'num-SELECCIONADO';
-    var disabled = (info.estatus === 'PAGADO' || info.estatus === 'ESPERA' || info.estatus === 'RESERVADO') ? 'disabled' : '';
-    html += '<button type="button" ' + disabled + ' onclick="tocarNumero(\'' + numStr + '\',\'' + info.estatus + '\')" class="num-btn ' + clase + '">' + numStr + '</button>';
-  }
-  grid.innerHTML = html;
-}
-
-function tocarNumero(num, est) {
-  if (est === 'PAGADO') { notificar('Ya fue pagado', 'error'); return; }
-  if (est === 'ESPERA') { notificar('En revisión', 'error'); return; }
-  if (est === 'RESERVADO') { notificar('Ese número ya está reservado', 'error'); return; }
-  var idx = seleccionados.indexOf(num);
-  if (idx > -1) seleccionados.splice(idx, 1);
-  else seleccionados.push(num);
-  renderizarTablero();
-  actualizarBarraFlotante();
-  if (participanteConsultado) renderizarResultadoConsulta(participanteConsultado);
-}
-
-function actualizarBarraFlotante() {
-  var barra = $('barraAccionFlotante');
-  var sticky = $('stickyTopBtn');
-  if (seleccionados.length > 0) {
-    var precioUSD = Number(datosMegaGlobal && datosMegaGlobal.precioTicketUSD) || 2;
-    var tasa = Number(datosMegaGlobal && datosMegaGlobal.tasa) || 982;
-    var totalBs = seleccionados.length * precioUSD * tasa;
-    barra.classList.remove('hidden');
-    sticky.classList.remove('hidden');
-    $('txtCantSeleccionadosBadge').innerText = seleccionados.length;
-    $('txtTotalBsBottom').innerText = 'Bs ' + fmt(totalBs);
-    $('stickyTopCant').innerText = seleccionados.length;
-    $('stickyTopTotal').innerText = 'Bs ' + fmt(totalBs);
-  } else {
-    barra.classList.add('hidden');
-    sticky.classList.add('hidden');
-  }
-}
-
-function seleccionarAzar() {
-  var disp = [];
-  var total = Number(datosMegaGlobal.totalNumeros) || 100;
-  var dig = total >= 1000 ? 3 : 2;
-  var tablero = datosMegaGlobal.tablero || {};
-  for (var i = 0; i < total; i++) {
-    var s = String(i);
-    while (s.length < dig) s = '0' + s;
-    var inf = tablero[s] || { estatus: 'DISPONIBLE' };
-    if (inf.estatus === 'DISPONIBLE' && seleccionados.indexOf(s) === -1) disp.push(s);
-  }
-  if (!disp.length) { notificar('No hay disponibles', 'error'); return; }
-  tocarNumero(disp[Math.floor(Math.random() * disp.length)], 'DISPONIBLE');
-}
-
-async function consultarParticipante() {
-  var ced = $('inputCedulaConsulta').value.trim();
-  if (!ced) { notificar('Ingresa una cédula', 'error'); return; }
-  mostrarCargando(true);
-  try {
-    const res = await apiCall('consultarParticipanteMega', { cedula: ced });
-    mostrarCargando(false);
-    if (!res || !res.success) { notificar('Error: ' + ((res && res.error) || ''), 'error'); return; }
-    participanteConsultado = res;
-    renderizarResultadoConsulta(res);
-  } catch(e) {
-    mostrarCargando(false);
-    notificar('Error de conexión', 'error');
-  }
-}
-
-function renderizarResultadoConsulta(res) {
-  var box = $('resultadoConsultaParticipante');
-  box.classList.remove('hidden');
-  if (!res.registrado) {
-    box.innerHTML = '<div class="subcard text-center text-xs text-gray-500 py-2"><i class="fa-solid fa-user-slash mr-1"></i> Sin registros.</div>';
-    return;
-  }
-  var p = res.participante, t = res.tickets;
-  var html = '<div class="subcard space-y-2">';
-  html += '<div class="flex items-center gap-2 pb-2 border-b border-gray-200">';
-  html += '<div class="w-8 h-8 rounded-lg bg-blue-100 flex items-center justify-center text-blue-600 text-xs"><i class="fa-solid fa-user"></i></div>';
-  html += '<div><b class="text-xs font-black text-gray-900 block">' + p.nombre + '</b><span class="text-[9px] font-mono text-gray-500">C.I. ' + p.cedula + '</span></div></div>';
-  if (res.deudaUSD > 0) {
-    html += '<div class="bg-amber-50 border border-amber-200 rounded-xl p-2.5">';
-    html += '<div class="text-[10px] font-bold text-amber-700">💳 DEUDA</div>';
-    html += '<b class="text-base font-black text-amber-900">Bs ' + fmt(res.deudaBs) + '</b>';
-    if (res.diasRestantes !== null && res.diasRestantes !== undefined) {
-      var color = res.diasRestantes <= 3 ? 'text-rose-600' : 'text-amber-700';
-      html += '<div class="text-[10px] font-bold ' + color + ' mt-1">⏰ ' + res.diasRestantes + ' días (límite: ' + res.fechaLimite + ')</div>';
-    }
-    html += '</div>';
-  }
-  if (t.pagados.length) {
-    html += '<div><div class="text-[10px] font-black text-gray-500 mb-1">✅ PAGADOS (' + t.pagados.length + ')</div><div class="flex flex-wrap gap-1">';
-    t.pagados.forEach(function(n) { html += '<span class="chip paid">' + n + '</span>'; });
-    html += '</div></div>';
-  }
-  if (t.espera.length) {
-    html += '<div><div class="text-[10px] font-black text-gray-500 mb-1">🟣 EN REVISIÓN (' + t.espera.length + ')</div><div class="flex flex-wrap gap-1">';
-    t.espera.forEach(function(n) { html += '<span class="chip esp">' + n + '</span>'; });
-    html += '</div></div>';
-  }
-  if (t.reservados.length) {
-    html += '<div><div class="flex justify-between items-center mb-1"><div class="text-[10px] font-black text-gray-500">🔵 RESERVADOS (' + t.reservados.length + ')</div>';
-    html += '<button type="button" onclick="seleccionarTodosReservados()" class="text-[9px] font-black text-blue-600 underline">Sel. todos</button></div>';
-    html += '<div class="flex flex-wrap gap-1">';
-    t.reservados.forEach(function(n) {
-      var on = seleccionados.indexOf(n) > -1;
-      html += '<span class="chip reserved ' + (on ? 'on' : '') + '" onclick="toggleReservado(\'' + n + '\')">' + n + '</span>';
-    });
-    html += '</div></div>';
-    html += '<button type="button" onclick="pagarReservadosSeleccionados()" class="btn-primary w-full !py-2 !text-xs"><i class="fa-solid fa-credit-card mr-1"></i> Pagar seleccionados</button>';
-  }
-  html += '</div>';
-  box.innerHTML = html;
-}
-
-function toggleReservado(num) {
-  var idx = seleccionados.indexOf(num);
-  if (idx > -1) seleccionados.splice(idx, 1);
-  else seleccionados.push(num);
-  renderizarTablero();
-  actualizarBarraFlotante();
-  if (participanteConsultado) renderizarResultadoConsulta(participanteConsultado);
-}
-
-function seleccionarTodosReservados() {
-  if (!participanteConsultado || !participanteConsultado.tickets) return;
-  var res = participanteConsultado.tickets.reservados;
-  var todos = res.every(function(n) { return seleccionados.indexOf(n) > -1; });
-  if (todos) seleccionados = seleccionados.filter(function(n) { return res.indexOf(n) === -1; });
-  else res.forEach(function(n) { if (seleccionados.indexOf(n) === -1) seleccionados.push(n); });
-  renderizarTablero();
-  actualizarBarraFlotante();
-  renderizarResultadoConsulta(participanteConsultado);
-}
-
-function pagarReservadosSeleccionados() {
-  var res = participanteConsultado.tickets.reservados;
-  var sel = seleccionados.filter(function(n) { return res.indexOf(n) > -1; });
-  if (!sel.length) { notificar('Selecciona al menos uno', 'error'); return; }
-  $('chkCedula').value = participanteConsultado.participante.cedula || '';
-  $('chkNombre').value = participanteConsultado.participante.nombre || '';
-  $('chkTelefono').value = participanteConsultado.participante.telefono || '';
-  $('chkCorreo').value = participanteConsultado.participante.correo || '';
-  _cedulaVerificada = { nombre: participanteConsultado.participante.nombre, telefono: participanteConsultado.participante.telefono, correo: participanteConsultado.participante.correo };
-  abrirModalCheckout('PAGAR');
-}
-
-function abrirModalCheckout(modo) {
-  if (!seleccionados.length) { notificar('Selecciona al menos un número', 'error'); return; }
-  if (modo === 'RESERVADO' && datosMegaGlobal.permiteReservar === false) {
-    notificar('Solo pago directo. Faltan pocos días.', 'error');
-    modo = 'PAGAR';
-  }
-  modoCheckoutActual = modo;
-  var precioUSD = Number(datosMegaGlobal.precioTicketUSD) || 2;
-  var tasa = Number(datosMegaGlobal.tasa) || 982;
-  var totalUSD = seleccionados.length * precioUSD;
-  var totalBs = totalUSD * tasa;
-  $('tituloModalCheckout').innerText = modo === 'RESERVADO' ? 'Reservar Boletos' : 'Reportar Pago';
-  $('subtituloCheckout').innerText = modo === 'RESERVADO' ? 'Reserva sin pagar ahora' : 'Elige cómo quieres pagar';
-  $('chkCantidad').innerText = seleccionados.length + ' boleto(s)';
-  $('chkNumerosTxt').innerText = '#' + seleccionados.join(' · #');
-  $('chkTotalBs').innerText = 'Bs ' + fmt(totalBs);
-  $('chkTotalUSD').innerText = '$' + fmt(totalUSD);
-  var blq = $('bloqueDatosPago');
-  if (modo === 'PAGAR') { blq.classList.remove('hidden'); cambiarMetodoPago('PM'); }
-  else blq.classList.add('hidden');
-  $('avisoCedula').classList.add('hidden');
-  $('avisoCedula').innerHTML = '';
-  $('chkCedula').classList.remove('inp-ok');
-  abrirModal('modalCheckout');
-}
-
-document.addEventListener('DOMContentLoaded', function() {
-  var input = $('chkCedula');
-  if (input) {
-    input.addEventListener('input', function() {
-      clearTimeout(_debounceTimer);
-      var ced = input.value.trim();
-      var aviso = $('avisoCedula');
-      if (ced.length < 5) {
-        aviso.classList.add('hidden');
-        aviso.innerHTML = '';
-        input.classList.remove('inp-ok');
-        _cedulaVerificada = null;
-        return;
-      }
-      _debounceTimer = setTimeout(function() { verificarCedula(ced); }, 700);
-    });
-  }
-});
-
-async function verificarCedula(ced) {
-  try {
-    const res = await apiCall('verificarCedulaMega', { cedula: ced });
-    var aviso = $('avisoCedula');
-    var input = $('chkCedula');
-    if (res && res.existe) {
-      _cedulaVerificada = res;
-      if (!$('chkNombre').value.trim() && res.nombre) $('chkNombre').value = res.nombre;
-      if (!$('chkTelefono').value.trim() && res.telefono) $('chkTelefono').value = res.telefono;
-      if (!$('chkCorreo').value.trim() && res.correo) $('chkCorreo').value = res.correo;
-      aviso.classList.remove('hidden');
-      aviso.innerHTML = '<div class="bg-blue-50 border border-blue-200 rounded-lg p-2.5 text-[10px] text-blue-800 leading-relaxed"><b>👋 ¡Bienvenido de vuelta!</b><br>Cédula registrada a nombre de <b>' + res.nombre + '</b>.<br><span class="text-blue-600">Si eres tú, continúa. Si no, revisa la cédula.</span></div>';
-      input.classList.add('inp-ok');
-    } else {
-      _cedulaVerificada = null;
-      aviso.classList.add('hidden');
-      aviso.innerHTML = '';
-      input.classList.remove('inp-ok');
-    }
-  } catch(e) {}
-}
-
-function cambiarMetodoPago(met) {
-  metodoPagoActual = met;
-  var metodos = ['PM','TR','BZ','ZP','EF','US'];
-  for (var i = 0; i < metodos.length; i++) {
-    var btn = $('pm' + metodos[i]);
-    if (metodos[i] === met) btn.classList.add('on');
-    else btn.classList.remove('on');
-  }
-  var esUSD = METODOS_USD.indexOf(met) > -1;
-  var precioUSD = Number(datosMegaGlobal.precioTicketUSD) || 2;
-  var tasa = Number(datosMegaGlobal.tasa) || 982;
-  var totalUSD = seleccionados.length * precioUSD;
-  var totalBs = totalUSD * tasa;
-  if (esUSD) {
-    $('chkTotalBs').innerText = '$' + fmt(totalUSD);
-    $('chkTotalUSD').innerText = '≈ Bs ' + fmt(totalBs);
-  } else {
-    $('chkTotalBs').innerText = 'Bs ' + fmt(totalBs);
-    $('chkTotalUSD').innerText = '≈ $' + fmt(totalUSD);
-  }
-  $('chkTotalUSD').classList.remove('hidden');
-  var box = $('datosPagoVisual');
-  if (met === 'PM') box.innerHTML = '<b>💳 Pago Móvil</b><br>' + (datosMegaGlobal.pmDatos || 'No configurado');
-  else if (met === 'TR') box.innerHTML = '<b>🏦 Transferencia</b><br>' + (datosMegaGlobal.trDatos || 'No configurado');
-  else if (met === 'BZ') box.innerHTML = '<b>🪙 Binance Pay</b><br>' + (datosMegaGlobal.binanceDatos || '');
-  else if (met === 'ZP') box.innerHTML = '<b>💜 Zelle</b><br>' + (datosMegaGlobal.zelleDatos || '');
-  else if (met === 'EF') box.innerHTML = '<b>💵 Efectivo</b><br>' + (datosMegaGlobal.efectivoDatos || '');
-  else if (met === 'US') box.innerHTML = '<b>🪙 USDT</b><br>' + (datosMegaGlobal.usdtDatos || '');
-  var blqWA = $('bloqueWhatsAppSoporte');
-  var blqRef = $('bloqueRefComprobante');
-  if (esUSD) {
-    blqWA.classList.remove('hidden');
-    blqRef.classList.add('hidden');
-    var tel = (datosMegaGlobal.waList && datosMegaGlobal.waList[0]) || '';
-    var metodoNombre = met === 'BZ' ? 'Binance' : met === 'ZP' ? 'Zelle' : met === 'EF' ? 'Efectivo' : 'USDT';
-    var msg = encodeURIComponent('¡Hola! 👋 Quiero pagar con *' + metodoNombre + '*.\n\n🎟️ Números: #' + seleccionados.join(', #') + '\n💰 Monto: *$' + fmt(totalUSD) + '*\n\n¿Me indican cómo proceder? 🙏');
-    $('btnWhatsAppSoporte').href = tel ? ('https://wa.me/' + tel + '?text=' + msg) : '#';
-  } else {
-    blqWA.classList.add('hidden');
-    blqRef.classList.remove('hidden');
-  }
-}
-
-async function ejecutarCheckout() {
-  var ced = $('chkCedula').value.trim();
-  var nom = $('chkNombre').value.trim();
-  var tel = $('chkTelefono').value.trim();
-  var correo = $('chkCorreo').value.trim();
-  if (!ced || !nom || !tel || !correo) { notificar('Completa todos los datos', 'error'); return; }
-  if (correo.indexOf('@') === -1) { notificar('Correo inválido', 'error'); return; }
-  var btn = $('btnEjecutarCheckout');
-  btn.innerText = 'Procesando...'; btn.disabled = true;
-  if (modoCheckoutActual === 'RESERVADO') {
-    try {
-      const res = await apiCall('reservarTicketsMega', { cedula: ced, nombre: nom, telefono: tel, correo: correo, numeros: seleccionados });
-      btn.innerText = 'Confirmar'; btn.disabled = false;
-      if (!res.success) { notificar(res.error, 'error'); return; }
-      cerrarModal('modalCheckout');
-      notificar('¡Reserva enviada! Revisa tu correo 📧', 'success');
-      setTimeout(() => cargarDatos(), 500);
-    } catch(e) {
-      btn.innerText = 'Confirmar'; btn.disabled = false;
-      notificar('Error de conexión', 'error');
-    }
-  } else {
-    var esUSD = METODOS_USD.indexOf(metodoPagoActual) > -1;
-    var ref = esUSD ? ('USD' + String(Date.now()).slice(-4)) : $('chkReferencia').value.trim();
-    if (!esUSD && ref.length !== 4) { btn.innerText = 'Confirmar'; btn.disabled = false; notificar('La referencia debe ser de 4 dígitos', 'error'); return; }
-    var f = esUSD ? null : $('chkArchivo');
-    var reader = new FileReader();
-    if (f && f.files.length > 0) {
-      reader.readAsDataURL(f.files[0]);
-      reader.onload = function() { enviarPagoServidor(ced, nom, tel, correo, ref, reader.result, btn); };
-    } else enviarPagoServidor(ced, nom, tel, correo, ref, '', btn);
-  }
-}
-
-async function enviarPagoServidor(ced, nom, tel, correo, ref, b64, btn) {
-  var precioUSD = Number(datosMegaGlobal.precioTicketUSD) || 2;
-  var tasa = Number(datosMegaGlobal.tasa) || 982;
-  var totalUSD = seleccionados.length * precioUSD;
-  var totalBs = totalUSD * tasa;
-  var metodoTxt = { 'PM':'Pago Móvil','TR':'Transferencia','BZ':'Binance','ZP':'Zelle','EF':'Efectivo','US':'USDT' }[metodoPagoActual] || 'Otro';
-  
-  try {
-    const res = await apiCall('reportarPagoMega', { cedula: ced, nombre: nom, telefono: tel, correo: correo, numeros: seleccionados, montoUSD: totalUSD, montoBs: totalBs, metodo: metodoTxt, referencia: ref, base64: b64 });
-    btn.innerText = 'Confirmar'; btn.disabled = false;
-    if (!res.success) { notificar(res.error, 'error'); return; }
-    cerrarModal('modalCheckout');
-    notificar('¡Pago reportado! Revisa tu correo 📧', 'success');
-    setTimeout(() => cargarDatos(), 500);
-  } catch(e) {
-    btn.innerText = 'Confirmar'; btn.disabled = false;
-    notificar('Error de conexión', 'error');
-  }
-}
-
-function renderizarSoporte(lista) {
-  var c = $('contenedorBotonesSoporte');
-  c.innerHTML = '';
-  if (!lista || !lista.length) { c.innerHTML = '<span class="text-gray-500 text-[11px]">Contacta vía Instagram.</span>'; return; }
-  var html = '';
-  for (var i = 0; i < lista.length; i++) {
-    var msg = encodeURIComponent('¡Hola! 👋 Vengo de Mega Rifas 🎟️✨');
-    html += '<a href="https://wa.me/' + lista[i] + '?text=' + msg + '" target="_blank" class="bg-emerald-500 text-white font-bold py-2 px-3.5 rounded-xl text-[11px] inline-flex items-center gap-1.5"><i class="fa-brands fa-whatsapp"></i> WhatsApp</a>';
-  }
-  c.innerHTML = html;
-}
+/* ==================== PANEL ADMIN ==================== */
 
 function abrirModalAdminSeguro() {
   $('inputPinRifa').value = '';
   actualizarDots('inputPinRifa', 'dotAdm');
   abrirModal('modalPinAdmin');
-  setTimeout(function() { $('inputPinRifa').focus(); }, 300);
+  setTimeout(function() { $('inputPinRifa').focus(); }, 250);
 }
 
 async function verificarPinAdmin() {
   var p = $('inputPinRifa').value.trim();
-  if (!p || p.length < 6) { notificar('Ingresa el PIN completo de 6 dígitos', 'error'); return; }
-  mostrarCargando(true);
+  if (p.length < 6) { notificar('Ingresa el PIN completo de 6 dígitos', 'error'); return; }
+  var btn = $('btnAccederAdmin');
+  setBtnLoading(btn, true, 'Verificando...');
   try {
-    const res = await apiCall('verificarPinMegaAdmin', { pin: p });
-    mostrarCargando(false);
+    var res = await apiCall('verificarPinMegaAdmin', { pin: p });
     if (res && res.success) {
       window._adminPin = p;
       cerrarModal('modalPinAdmin');
       abrirModal('modalPanelAdmin');
+      _cfgDirty = false;
+      ocultarFeedbackConfig();
       cambiarTabAdmin('val');
       cargarFormularioConfigAdmin();
-      notificar('Bienvenido admin 👋', 'success');
+      notificar('Bienvenido al panel Admin 👋', 'success');
     } else {
       notificar('PIN incorrecto', 'error');
       $('inputPinRifa').value = '';
       actualizarDots('inputPinRifa', 'dotAdm');
     }
-  } catch(e) {
-    mostrarCargando(false);
-    notificar('Error de conexión', 'error');
+  } catch (e) {
+    notificar(e.message || 'Error de conexión', 'error');
+  } finally {
+    setBtnLoading(btn, false);
   }
 }
 
@@ -1113,219 +1776,253 @@ function cambiarTabAdmin(tab) {
   $('adminViewHis').classList.toggle('hidden', tab !== 'his');
   $('adminViewCfg').classList.toggle('hidden', tab !== 'cfg');
   $('adminViewNue').classList.toggle('hidden', tab !== 'nue');
+
   $('adminTabVal').className = 'tab-btn ' + (tab === 'val' ? 'tab-on' : 'tab-off');
   $('adminTabVnc').className = 'tab-btn ' + (tab === 'vnc' ? 'tab-warn-on' : 'tab-warn-off');
   $('adminTabHis').className = 'tab-btn ' + (tab === 'his' ? 'tab-on' : 'tab-off');
   $('adminTabCfg').className = 'tab-btn ' + (tab === 'cfg' ? 'tab-on' : 'tab-off');
   $('adminTabNue').className = 'tab-btn ' + (tab === 'nue' ? 'tab-danger-on' : 'tab-danger-off');
+
   if (tab === 'val') cargarPagosPendientesAdmin();
   if (tab === 'vnc') cargarPorVencerAdmin();
   if (tab === 'his') cargarHistorialAdmin();
+  if (tab === 'cfg') {
+    if (!_cfgDirty) cargarFormularioConfigAdmin();
+  }
 }
 
 async function cargarPagosPendientesAdmin() {
-  $('adminViewVal').innerHTML = '<p class="text-center text-gray-500 py-3 text-xs">Cargando...</p>';
+  $('adminViewVal').innerHTML = '<div class="subcard text-center text-slate-500 py-4 text-xs"><i class="fa-solid fa-spinner fa-spin mr-1"></i> Cargando pagos y estadísticas...</div>';
   var pin = window._adminPin;
   try {
-    const stats = await apiCall('obtenerEstadisticasAdmin', { pin: pin });
-    var est = (datosMegaGlobal && datosMegaGlobal.estadisticas) || {};
+    var results = await Promise.all([
+      apiCall('obtenerEstadisticasAdmin', { pin: pin }),
+      apiCall('listarPagosPendientesMega', {})
+    ]);
+    var stats = results[0];
+    var lista = Array.isArray(results[1]) ? results[1] : [];
+    var est = (appState && appState.estadisticas) || {};
     var html = '';
+
     if (stats && stats.success) {
-      html += '<div class="bg-emerald-50 border-2 border-emerald-300 rounded-xl p-3 mb-2">';
-      html += '<div class="text-[10px] font-black text-emerald-700 mb-1">💰 INGRESOS TOTALES</div>';
-      html += '<div class="text-2xl font-black text-emerald-900">$' + fmt(stats.totalUSD) + '</div>';
-      html += '<div class="text-[11px] text-emerald-700 font-mono">≈ Bs ' + fmt(stats.totalBs) + '</div>';
-      html += '<div class="grid grid-cols-3 gap-2 mt-2 pt-2 border-t border-emerald-200 text-center">';
-      html += '<div><div class="text-[9px] font-bold text-emerald-600">HOY</div><b class="text-xs">$' + fmt(stats.totalHoyUSD) + '</b></div>';
-      html += '<div><div class="text-[9px] font-bold text-emerald-600">PAGOS</div><b class="text-xs">' + stats.pagosAprobados + '</b></div>';
-      html += '<div><div class="text-[9px] font-bold text-emerald-600">X VENCER</div><b class="text-xs text-amber-700">' + stats.porVencer + '</b></div>';
+      html += '<div class="bg-emerald-50 border border-emerald-200 rounded-xl p-3.5">';
+      html += '<div class="text-[10px] font-black text-emerald-700 uppercase mb-1">💰 Ingresos Totales</div>';
+      html += '<div class="text-2xl font-black text-emerald-900 font-mono">$' + fmt(stats.totalUSD) + '</div>';
+      html += '<div class="text-xs text-emerald-700 font-mono">≈ Bs ' + fmt(stats.totalBs) + '</div>';
+      html += '<div class="grid grid-cols-3 gap-2 mt-2.5 pt-2.5 border-t border-emerald-200 text-center">';
+      html += '<div><div class="text-[10px] font-bold text-emerald-600">HOY</div><b class="text-xs font-mono">$' + fmt(stats.totalHoyUSD) + '</b></div>';
+      html += '<div><div class="text-[10px] font-bold text-emerald-600">APROBADOS</div><b class="text-xs font-mono">' + escHtml(stats.pagosAprobados) + '</b></div>';
+      html += '<div><div class="text-[10px] font-bold text-emerald-600">X VENCER</div><b class="text-xs font-mono text-amber-700">' + escHtml(stats.porVencer) + '</b></div>';
       html += '</div>';
-      if (stats.vencidas > 0) html += '<div class="mt-2 bg-rose-100 text-rose-700 text-[10px] font-black py-1 px-2 rounded-lg">⚠️ ' + stats.vencidas + ' vencidas</div>';
+      if (Number(stats.vencidas) > 0) {
+        html += '<div class="mt-2 bg-rose-100 text-rose-700 text-xs font-black py-1.5 px-2.5 rounded-lg">⚠️ ' + escHtml(stats.vencidas) + ' reservas vencidas</div>';
+      }
       html += '</div>';
     }
-    html += '<div class="subcard border-2 border-amber-200 bg-amber-50 text-xs">';
-    html += '<b class="block mb-1">📊 Taquilla</b>';
-    html += '<div class="grid grid-cols-2 gap-1 text-[11px]">';
-    html += '<div>🟢 Disponibles: <b>' + (est.disponibles || 0) + '</b></div>';
-    html += '<div>🔵 Reservados: <b>' + (est.reservados || 0) + '</b></div>';
-    html += '<div>🟣 En revisión: <b>' + (est.espera || 0) + '</b></div>';
-    html += '<div>🔴 Vendidos: <b>' + (est.vendidos || 0) + '</b></div>';
+
+    html += '<div class="subcard border-amber-200 bg-amber-50/70 text-xs">';
+    html += '<b class="block mb-1.5 text-slate-900">📊 Estado de Taquilla</b>';
+    html += '<div class="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs">';
+    html += '<div>🟢 Libres: <b>' + safeNum(est.disponibles, 0) + '</b></div>';
+    html += '<div>🔵 Reservas: <b>' + safeNum(est.reservados, 0) + '</b></div>';
+    html += '<div>🟣 Revisión: <b>' + safeNum(est.espera, 0) + '</b></div>';
+    html += '<div>🔴 Vendidos: <b>' + safeNum(est.vendidos, 0) + '</b></div>';
     html += '</div></div>';
-    html += '<div class="grid grid-cols-3 gap-2 my-2">';
-    html += '<button type="button" onclick="resincronizar()" class="bg-blue-600 text-white font-bold py-2 rounded-lg text-[10px]">🔄 Re-sinc</button>';
-    html += '<button type="button" onclick="liberarMasivo()" class="bg-amber-600 text-white font-bold py-2 rounded-lg text-[10px]">🔓 Liberar reservas</button>';
-    html += '<button type="button" onclick="exportarCSV()" class="bg-emerald-600 text-white font-bold py-2 rounded-lg text-[10px]">📥 CSV</button>';
+
+    html += '<div class="grid grid-cols-3 gap-2">';
+    html += '<button type="button" onclick="resincronizar()" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 rounded-lg text-xs transition">🔄 Re-sinc</button>';
+    html += '<button type="button" onclick="liberarMasivo()" class="bg-amber-600 hover:bg-amber-700 text-white font-bold py-2 rounded-lg text-xs transition">🔓 Liberar</button>';
+    html += '<button type="button" onclick="exportarCSV()" class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2 rounded-lg text-xs transition">📥 CSV</button>';
     html += '</div>';
-    $('adminViewVal').innerHTML = html + '<div id="listaPagosCont"></div>';
-    cargarListaPagosEnContenedor();
-  } catch(e) {
-    $('adminViewVal').innerHTML = '<p class="text-center text-rose-600 py-3 text-xs">Error stats</p>';
+
+    html += '<div id="listaPagosCont" class="space-y-2.5">' + construirHtmlPagosPendientes(lista) + '</div>';
+    $('adminViewVal').innerHTML = html;
+  } catch (e) {
+    $('adminViewVal').innerHTML = '<p class="text-center text-rose-600 py-4 text-xs font-semibold">Error cargando pagos: ' + escHtml(e.message) + '</p>';
   }
 }
 
-async function cargarListaPagosEnContenedor() {
-  try {
-    const lista = await apiCall('listarPagosPendientesMega');
-    var cont = $('listaPagosCont');
-    if (!cont) return;
-    var html = '';
-    if (!lista.length) { html = '<p class="text-center text-gray-500 py-4 text-xs">No hay pagos pendientes 🎉</p>'; cont.innerHTML = html; return; }
-    for (var i = 0; i < lista.length; i++) {
-      var p = lista[i];
-      window['_pago_' + p.fila] = p;
-      html += '<div class="subcard mt-2">';
-      html += '<div class="flex justify-between items-start mb-1">';
-      html += '<div><b class="text-xs">' + p.nombre + '</b><br><span class="text-[10px] text-gray-500 font-mono">C.I. ' + p.cedula + '</span></div>';
-      html += '<div class="text-right"><b class="text-sm text-emerald-600">$' + fmt(p.montoUSD) + '</b><br><span class="text-[9px] text-gray-500">' + p.fecha + '</span></div></div>';
-      html += '<div class="text-[10px] text-blue-600 font-mono mb-1">🎟️ #' + p.numeros + '</div>';
-      html += '<div class="text-[10px] text-gray-600 mb-1">Ref: <b>' + p.referencia + '</b> · ' + p.metodo + '</div>';
-      if (p.telefono) html += '<div class="text-[9px] text-gray-500 mb-1"><i class="fa-solid fa-phone"></i> ' + p.telefono + '</div>';
-      if (p.correo) html += '<div class="text-[9px] text-gray-500 mb-1"><i class="fa-solid fa-envelope"></i> ' + p.correo + '</div>';
-      if (p.comprobante && p.comprobante.indexOf('data:image') === 0) {
-        window['_cb_' + p.fila] = p.comprobante;
-        html += '<button type="button" data-cb="' + p.fila + '" class="mb-2 w-full bg-blue-50 border border-blue-200 text-blue-700 py-1.5 rounded-lg text-[10px] font-bold">📎 Ver comprobante</button>';
-      }
-      html += '<div class="flex gap-1.5">';
-      html += '<button type="button" onclick="resolverPagoAdmin(' + p.fila + ',\'APROBADO\')" class="flex-1 bg-emerald-600 text-white font-bold py-2 rounded-lg text-xs">✓ Aprobar</button>';
-      html += '<button type="button" onclick="resolverPagoAdmin(' + p.fila + ',\'RECHAZADO\')" class="flex-1 bg-rose-600 text-white font-bold py-2 rounded-lg text-xs">✗ Rechazar</button>';
-      html += '</div></div>';
-    }
-    cont.innerHTML = html;
-  } catch(e) {
-    var cont = $('listaPagosCont');
-    if (cont) cont.innerHTML = '<p class="text-center text-rose-600 py-3 text-xs">Error al cargar pagos</p>';
+function construirHtmlPagosPendientes(lista) {
+  _pagosMap = {};
+  _comprobantesMap = {};
+  if (!lista.length) {
+    return '<div class="subcard text-center text-slate-500 py-5 text-xs">No hay pagos pendientes por validar 🎉</div>';
   }
+  var html = '';
+  for (var i = 0; i < lista.length; i++) {
+    var p = lista[i];
+    _pagosMap[p.fila] = p;
+    html += '<div class="subcard space-y-1.5">';
+    html += '<div class="flex justify-between items-start gap-2">';
+    html += '<div><b class="text-xs sm:text-sm text-slate-900">' + escHtml(p.nombre) + '</b><br><span class="text-[11px] text-slate-500 font-mono">C.I. ' + escHtml(p.cedula) + '</span></div>';
+    html += '<div class="text-right"><b class="text-sm text-emerald-600 font-mono">$' + fmt(p.montoUSD) + '</b><br><span class="text-[10px] text-slate-500">' + escHtml(p.fecha) + '</span></div></div>';
+    html += '<div class="text-xs text-blue-600 font-mono font-bold">🎟️ #' + escHtml(p.numeros) + '</div>';
+    html += '<div class="text-xs text-slate-700">Ref: <b>' + escHtml(p.referencia) + '</b> · ' + escHtml(p.metodo) + '</div>';
+    if (p.telefono) html += '<div class="text-[11px] text-slate-500"><i class="fa-solid fa-phone mr-1"></i>' + escHtml(p.telefono) + '</div>';
+    if (p.correo) html += '<div class="text-[11px] text-slate-500"><i class="fa-solid fa-envelope mr-1"></i>' + escHtml(p.correo) + '</div>';
+    if (p.comprobante && String(p.comprobante).indexOf('data:image') === 0) {
+      _comprobantesMap[p.fila] = p.comprobante;
+      html += '<button type="button" data-cb="' + escHtml(p.fila) + '" class="w-full bg-blue-50 hover:bg-blue-100 border border-blue-200 text-blue-700 py-1.5 rounded-lg text-xs font-bold transition">📎 Ver comprobante</button>';
+    }
+    html += '<div class="flex gap-2 pt-1">';
+    html += '<button type="button" onclick="resolverPagoAdmin(' + Number(p.fila) + ',\'APROBADO\', this)" class="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2 rounded-lg text-xs transition">✓ Aprobar</button>';
+    html += '<button type="button" onclick="resolverPagoAdmin(' + Number(p.fila) + ',\'RECHAZADO\', this)" class="flex-1 bg-rose-600 hover:bg-rose-700 text-white font-bold py-2 rounded-lg text-xs transition">✗ Rechazar</button>';
+    html += '</div></div>';
+  }
+  return html;
 }
 
 async function cargarPorVencerAdmin() {
-  $('adminViewVnc').innerHTML = '<p class="text-center text-gray-500 py-3 text-xs">Cargando...</p>';
+  $('adminViewVnc').innerHTML = '<div class="subcard text-center text-slate-500 py-4 text-xs"><i class="fa-solid fa-spinner fa-spin mr-1"></i> Cargando reservas...</div>';
   try {
-    const res = await apiCall('listarReservasPorVencer', { pin: window._adminPin });
-    if (!res || !res.success) { $('adminViewVnc').innerHTML = '<p class="text-center text-rose-600 py-3 text-xs">Error: ' + ((res && res.error) || '') + '</p>'; return; }
+    var res = await apiCall('listarReservasPorVencer', { pin: window._adminPin });
+    if (!res || !res.success) {
+      $('adminViewVnc').innerHTML = '<p class="text-center text-rose-600 py-4 text-xs">Error: ' + escHtml((res && res.error) || '') + '</p>';
+      return;
+    }
     var lista = res.lista || [];
-    if (!lista.length) { $('adminViewVnc').innerHTML = '<p class="text-center text-gray-500 py-6 text-xs">🎉 No hay reservas por vencer ni vencidas.</p>'; return; }
-    var html = '<p class="text-[10px] text-gray-500 mb-2 font-semibold">Reservas que vencen en ≤3 días o ya vencidas. Envía recordatorio manual por correo o WhatsApp.</p>';
+    if (!lista.length) {
+      $('adminViewVnc').innerHTML = '<div class="subcard text-center text-slate-500 py-6 text-xs">🎉 No hay reservas por vencer ni vencidas.</div>';
+      return;
+    }
+    var html = '<p class="text-xs text-slate-500 font-semibold">Reservas que vencen en ≤3 días o ya vencidas.</p>';
     for (var i = 0; i < lista.length; i++) {
       var it = lista[i];
       var urgente = it.vencida ? 'bg-rose-50 border-rose-300' : 'bg-amber-50 border-amber-300';
-      var badge = it.vencida ? '<span class="text-[9px] font-black text-rose-700 bg-rose-200 px-2 py-0.5 rounded-full">⚠️ VENCIDA hace ' + Math.abs(it.diasRestantes) + 'd</span>' : (it.diasRestantes === 0 ? '<span class="text-[9px] font-black text-rose-700 bg-rose-100 px-2 py-0.5 rounded-full">🔴 Vence HOY</span>' : '<span class="text-[9px] font-black text-amber-700 bg-amber-100 px-2 py-0.5 rounded-full">⏰ Vence en ' + it.diasRestantes + 'd</span>');
-      var telLimpio = (it.telefono || '').replace(/\D/g, '');
+      var badge = it.vencida
+        ? '<span class="text-[10px] font-black text-rose-700 bg-rose-200 px-2 py-0.5 rounded-full">⚠️ VENCIDA hace ' + Math.abs(it.diasRestantes) + 'd</span>'
+        : (it.diasRestantes === 0
+          ? '<span class="text-[10px] font-black text-rose-700 bg-rose-100 px-2 py-0.5 rounded-full">🔴 Vence HOY</span>'
+          : '<span class="text-[10px] font-black text-amber-700 bg-amber-100 px-2 py-0.5 rounded-full">⏰ Vence en ' + escHtml(it.diasRestantes) + 'd</span>');
+      var telLimpio = normalizarTelefono(it.telefono);
       var msgWA = '¡Hola *' + it.nombre + '*! 👋\n\nTe recordamos que tienes boletos reservados en *Mega Rifas* 🎟️\n\n🎟️ Números: *# ' + it.numeros + '*\n\n⏰ ' + (it.vencida ? 'Tu reserva está *vencida*. Urgente para no perder los números.' : 'Completa tu pago para no perder tus números.') + '\n\nCualquier duda estamos aquí 💬\n*Mega Rifas*';
-      html += '<div class="subcard border-2 ' + urgente + ' mt-2">';
-      html += '<div class="flex justify-between items-start mb-1">';
-      html += '<div><b class="text-xs">' + it.nombre + '</b><br><span class="text-[10px] text-gray-500 font-mono">C.I. ' + it.cedula + '</span></div>';
-      html += badge;
-      html += '</div>';
-      html += '<div class="text-[10px] text-blue-600 font-mono mb-1">🎟️ #' + it.numeros + '</div>';
-      if (it.telefono) html += '<div class="text-[9px] text-gray-500 mb-1"><i class="fa-solid fa-phone"></i> ' + it.telefono + '</div>';
-      if (it.correo) html += '<div class="text-[9px] text-gray-500 mb-2"><i class="fa-solid fa-envelope"></i> ' + it.correo + '</div>';
-      html += '<div class="flex gap-1.5">';
-      if (it.correo) html += '<a href="mailto:' + it.correo + '?subject=' + encodeURIComponent('Recordatorio - Mega Rifas') + '&body=' + encodeURIComponent('Hola ' + it.nombre + ',\n\nTe recordamos que tienes boletos reservados en Mega Rifas:\n\nNúmeros: #' + it.numeros + '\n\n' + (it.vencida ? 'Tu reserva ya venció. Urgente para no perder los números.' : 'Completa tu pago antes del límite.') + '\n\n— Mega Rifas') + '" class="flex-1 bg-blue-600 text-white font-bold py-1.5 rounded-lg text-[10px] text-center">📧 Correo</a>';
-      if (telLimpio) html += '<a href="https://wa.me/' + telLimpio + '?text=' + encodeURIComponent(msgWA) + '" target="_blank" class="flex-1 bg-emerald-600 text-white font-bold py-1.5 rounded-lg text-[10px] text-center">📱 WhatsApp</a>';
+
+      html += '<div class="subcard border ' + urgente + ' space-y-1.5">';
+      html += '<div class="flex justify-between items-start gap-2">';
+      html += '<div><b class="text-xs sm:text-sm">' + escHtml(it.nombre) + '</b><br><span class="text-[11px] text-slate-500 font-mono">C.I. ' + escHtml(it.cedula) + '</span></div>';
+      html += badge + '</div>';
+      html += '<div class="text-xs text-blue-600 font-mono font-bold">🎟️ #' + escHtml(it.numeros) + '</div>';
+      if (it.telefono) html += '<div class="text-[11px] text-slate-600"><i class="fa-solid fa-phone mr-1"></i>' + escHtml(it.telefono) + '</div>';
+      if (it.correo) html += '<div class="text-[11px] text-slate-600"><i class="fa-solid fa-envelope mr-1"></i>' + escHtml(it.correo) + '</div>';
+      html += '<div class="flex gap-2 pt-1">';
+      if (it.correo) {
+        html += '<a href="mailto:' + escHtml(it.correo) + '?subject=' + encodeURIComponent('Recordatorio - Mega Rifas') + '&body=' + encodeURIComponent('Hola ' + it.nombre + ',\n\nTe recordamos que tienes boletos reservados en Mega Rifas:\n\nNúmeros: #' + it.numeros + '\n\n' + (it.vencida ? 'Tu reserva ya venció. Urgente para no perder los números.' : 'Completa tu pago antes del límite.') + '\n\n— Mega Rifas') + '" class="flex-1 bg-blue-600 text-white font-bold py-2 rounded-lg text-xs text-center">📧 Correo</a>';
+      }
+      if (telLimpio) {
+        html += '<a href="https://wa.me/' + telLimpio + '?text=' + encodeURIComponent(msgWA) + '" target="_blank" rel="noopener noreferrer" class="flex-1 bg-emerald-600 text-white font-bold py-2 rounded-lg text-xs text-center">📱 WhatsApp</a>';
+      }
       html += '</div></div>';
     }
     $('adminViewVnc').innerHTML = html;
-  } catch(e) {
-    $('adminViewVnc').innerHTML = '<p class="text-center text-rose-600 py-3 text-xs">Error: ' + e.message + '</p>';
+  } catch (e) {
+    $('adminViewVnc').innerHTML = '<p class="text-center text-rose-600 py-4 text-xs">Error: ' + escHtml(e.message) + '</p>';
   }
 }
 
-document.addEventListener('click', function(e) {
-  var btn = e.target.closest ? e.target.closest('[data-cb]') : null;
-  if (btn) {
-    var fila = btn.getAttribute('data-cb');
-    var cb = window['_cb_' + fila] || '';
-    if (!cb) { notificar('Sin comprobante', 'error'); return; }
-    $('imgComprobante').src = cb;
-    abrirModal('modalImagen');
-  }
-}, true);
-
-function resolverPagoAdmin(fila, acc) {
-  var pagoData = window['_pago_' + fila];
+function resolverPagoAdmin(fila, acc, btn) {
+  var pagoData = _pagosMap[fila];
   if (acc === 'RECHAZADO') {
     pedirPin('Rechazar pago', 'Vas a rechazar este pago. Los números volverán a RESERVADO.', function(pin) {
-      ejecutarResolucionPago(fila, acc, pagoData, pin);
+      ejecutarResolucionPago(fila, acc, pagoData, pin, btn);
     });
   } else {
-    ejecutarResolucionPago(fila, acc, pagoData, window._adminPin);
+    ejecutarResolucionPago(fila, acc, pagoData, window._adminPin, btn);
   }
 }
 
-async function ejecutarResolucionPago(fila, acc, pagoData, pin) {
-  notificar('Procesando...', 'info');
+async function ejecutarResolucionPago(fila, acc, pagoData, pin, btn) {
+  setBtnLoading(btn, true, '...');
   try {
-    const res = await apiCall('procesarPagoMegaAdmin', { fila: fila, accion: acc });
-    if (!res || !res.success) { notificar('Error: ' + ((res && res.error) || ''), 'error'); return; }
+    var res = await apiCall('procesarPagoMegaAdmin', { fila: fila, accion: acc, pin: pin });
+    if (!res || !res.success) {
+      notificar('Error: ' + ((res && res.error) || 'No se pudo procesar'), 'error');
+      return;
+    }
     if (acc === 'APROBADO') {
-      notificar('✅ Aprobado. Email enviado 📧', 'success');
+      notificar('✅ Pago aprobado. Email enviado 📧', 'success');
       if (pagoData) abrirModalWAConDatos(pagoData);
     } else {
-      notificar('❌ Rechazado', 'success');
+      notificar('❌ Pago rechazado', 'success');
     }
-    cargarDatos();
-    setTimeout(cargarPagosPendientesAdmin, 1200);
-  } catch(e) {
+    await Promise.all([
+      cargarDatos({ silent: true, force: true }),
+      cargarPagosPendientesAdmin()
+    ]);
+  } catch (e) {
     notificar('Error: ' + e.message, 'error');
+  } finally {
+    setBtnLoading(btn, false);
   }
 }
 
 function abrirModalWAConDatos(p) {
   _waData = { nombre: p.nombre, numeros: p.numeros, ref: p.referencia, monto: fmt(p.montoUSD) };
-  $('waTelefono').value = p.telefono ? String(p.telefono).replace(/\D/g,'') : '';
+  $('waTelefono').value = normalizarTelefono(p.telefono);
   var msg = '¡Hola *' + p.nombre + '*! 🎉\n\n' +
     '✅ Tu pago por *$' + fmt(p.montoUSD) + '* (Ref: *' + p.referencia + '*) ha sido *APROBADO*.\n\n' +
     '🎟️ Números: *# ' + p.numeros + '*\n\n' +
     '¡Mucha suerte en el sorteo! 🍀\n' +
     '*Mega Rifas*';
-  $('waPreview').innerHTML = msg.replace(/\*(.*?)\*/g, '<b>$1</b>').replace(/\n/g, '<br>');
+  $('waPreview').innerHTML = escHtml(msg).replace(/\*(.*?)\*/g, '<b>$1</b>').replace(/\n/g, '<br>');
   abrirModal('modalWA');
 }
 
 function enviarWAConfirmado() {
-  var tel = $('waTelefono').value.trim().replace(/\D/g,'');
-  if (!tel) { notificar('Ingresa el teléfono', 'error'); return; }
-  if (!_waData) { notificar('Sin datos', 'error'); return; }
-  var msg = encodeURIComponent('¡Hola *' + _waData.nombre + '*! 🎉\n\n' +
+  var tel = normalizarTelefono($('waTelefono').value);
+  if (!tel) { notificar('Ingresa el teléfono WhatsApp', 'error'); return; }
+  if (!_waData) { notificar('Sin datos del pago', 'error'); return; }
+  var msg = encodeURIComponent(
+    '¡Hola *' + _waData.nombre + '*! 🎉\n\n' +
     '✅ Tu pago por *$' + _waData.monto + '* (Ref: *' + _waData.ref + '*) ha sido *APROBADO*.\n\n' +
     '🎟️ Números: *# ' + _waData.numeros + '*\n\n' +
     '¡Mucha suerte en el sorteo! 🍀\n' +
-    '*Mega Rifas*');
-  window.open('https://wa.me/' + tel + '?text=' + msg, '_blank');
+    '*Mega Rifas*'
+  );
+  var a = document.createElement('a');
+  a.href = 'https://wa.me/' + tel + '?text=' + msg;
+  a.target = '_blank';
+  a.rel = 'noopener noreferrer';
+  a.click();
   cerrarModal('modalWA');
   notificar('✅ WhatsApp abierto', 'success');
 }
 
 function resincronizar() {
-  pedirPin('Resincronizar tablero', 'Esta acción revisa TODOS los pagos y actualiza el tablero. Ingresa tu PIN para continuar.', async function(pin) {
-    notificar('Resincronizando...', 'info');
+  pedirPin('Resincronizar tablero', 'Esta acción revisa todos los pagos y actualiza el tablero.', async function(pin) {
+    notificar('Resincronizando tablero...', 'info');
     try {
-      const res = await apiCall('resincronizarTableroAdmin', { pin: pin });
-      if (!res.success) { notificar(res.error, 'error'); return; }
-      notificar('✅ ' + res.cambios + ' actualizados', 'success');
-      cargarDatos();
-      setTimeout(cargarPagosPendientesAdmin, 1200);
-    } catch(e) {
+      var res = await apiCall('resincronizarTableroAdmin', { pin: pin });
+      if (!res || !res.success) { notificar((res && res.error) || 'No se pudo resincronizar', 'error'); return; }
+      notificar('✅ ' + safeNum(res.cambios, 0) + ' registros actualizados', 'success');
+      await cargarDatos({ silent: true, force: true });
+      cargarPagosPendientesAdmin();
+    } catch (e) {
       notificar('Error: ' + e.message, 'error');
     }
   });
 }
 
 function liberarMasivo() {
-  pedirPin('Liberar reservas', 'Vas a liberar TODOS los números reservados que no han sido pagados. Esta acción es irreversible.', function(pin) {
-    mostrarConfirm('¿Liberar todas las reservas?', 'Todos los números en estado <b>RESERVADO</b> volverán a estar <b>DISPONIBLES</b>. Los que están en revisión o pagados NO se tocan.', 'fa-triangle-exclamation', async function(ok) {
-      if (!ok) return;
-      notificar('Liberando...', 'info');
-      try {
-        const res = await apiCall('liberarTodosReservadosAdmin', { pin: pin, incluirEspera: false });
-        if (!res.success) { notificar(res.error, 'error'); return; }
-        notificar('✅ ' + res.liberados + ' números liberados', 'success');
-        cargarDatos();
-        setTimeout(cargarPagosPendientesAdmin, 1200);
-      } catch(e) {
-        notificar('Error: ' + e.message, 'error');
-      }
-    }, true);
+  pedirPin('Liberar reservas', 'Vas a liberar todos los números reservados que no han sido pagados.', function(pin) {
+    mostrarConfirm(
+      '¿Liberar todas las reservas?',
+      'Todos los números en estado <b>RESERVADO</b> volverán a estar <b>DISPONIBLES</b>. Los que están en revisión o pagados NO se tocan.',
+      'fa-triangle-exclamation',
+      async function(ok) {
+        if (!ok) return;
+        notificar('Liberando reservas...', 'info');
+        try {
+          var res = await apiCall('liberarTodosReservadosAdmin', { pin: pin, incluirEspera: false });
+          if (!res || !res.success) { notificar((res && res.error) || 'Error al liberar', 'error'); return; }
+          notificar('✅ ' + safeNum(res.liberados, 0) + ' números liberados', 'success');
+          await cargarDatos({ silent: true, force: true });
+          cargarPagosPendientesAdmin();
+        } catch (e) {
+          notificar('Error: ' + e.message, 'error');
+        }
+      },
+      true
+    );
   });
 }
 
@@ -1333,193 +2030,468 @@ async function exportarCSV() {
   if (!window._adminPin) { notificar('Sesión expirada', 'error'); return; }
   notificar('Generando CSV...', 'info');
   try {
-    const res = await apiCall('exportarVentasCSV', { pin: window._adminPin });
-    if (!res.success) { notificar(res.error, 'error'); return; }
+    var res = await apiCall('exportarVentasCSV', { pin: window._adminPin });
+    if (!res || !res.success) { notificar((res && res.error) || 'Error al exportar', 'error'); return; }
     var blob = new Blob([res.csv], { type: 'text/csv;charset=utf-8;' });
+    var url = URL.createObjectURL(blob);
     var link = document.createElement('a');
-    link.href = URL.createObjectURL(blob);
-    link.download = 'mega-rifas-' + new Date().toISOString().slice(0,10) + '.csv';
+    link.href = url;
+    link.download = 'mega-rifas-' + new Date().toISOString().slice(0, 10) + '.csv';
     link.click();
+    setTimeout(function() { URL.revokeObjectURL(url); }, 1000);
     notificar('✅ CSV descargado', 'success');
-  } catch(e) {
+  } catch (e) {
     notificar('Error: ' + e.message, 'error');
   }
 }
 
+/* ==================== HISTORIAL Y EDICIÓN ==================== */
+
 async function cargarHistorialAdmin() {
   var cont = $('adminViewHis');
-  cont.innerHTML = '<p class="text-center text-gray-500 py-3 text-xs">Cargando...</p>';
+  cont.innerHTML = '<div class="subcard text-center text-slate-500 py-4 text-xs"><i class="fa-solid fa-spinner fa-spin mr-1"></i> Cargando historial...</div>';
   try {
-    const lista = await apiCall('obtenerHistorialAdmin', { filtro: historialFiltro });
-    var html = '<div class="flex gap-1 mb-2 overflow-x-auto pb-1">';
-    var filters = ['TODOS','PAGADO','ESPERA','RESERVADO'];
+    var lista = await apiCall('obtenerHistorialAdmin', { filtro: historialFiltro });
+    lista = Array.isArray(lista) ? lista : [];
+    _historialMap = {};
+
+    var html = '<div class="flex gap-1.5 mb-2 overflow-x-auto pb-1">';
+    var filters = ['TODOS', 'PAGADO', 'ESPERA', 'RESERVADO'];
     for (var f = 0; f < filters.length; f++) {
       var on = historialFiltro === filters[f];
-      html += '<button type="button" onclick="cambiarFiltroHistorial(\'' + filters[f] + '\')" class="px-3 py-1.5 rounded-lg text-[10px] font-black ' + (on ? 'bg-gray-900 text-white' : 'bg-gray-100 text-gray-600') + ' whitespace-nowrap">' + filters[f] + '</button>';
+      html += '<button type="button" onclick="cambiarFiltroHistorial(\'' + filters[f] + '\')" class="px-3 py-1.5 rounded-lg text-xs font-black ' + (on ? 'bg-slate-900 text-white' : 'bg-slate-100 text-slate-600') + ' whitespace-nowrap">' + filters[f] + '</button>';
     }
     html += '</div>';
-    if (!lista.length) { html += '<p class="text-center text-gray-500 py-4 text-xs">Sin registros.</p>'; cont.innerHTML = html; return; }
+
+    if (!lista.length) {
+      html += '<div class="subcard text-center text-slate-500 py-5 text-xs">Sin registros en este filtro.</div>';
+      cont.innerHTML = html;
+      return;
+    }
+
+    var colores = {
+      PAGADO: 'bg-slate-50 text-slate-800 border-slate-300',
+      ESPERA: 'bg-purple-50 text-purple-800 border-purple-200',
+      RESERVADO: 'bg-blue-50 text-blue-800 border-blue-200'
+    };
+
     for (var i = 0; i < lista.length; i++) {
       var r = lista[i];
-      var colores = { PAGADO:'bg-gray-100 text-gray-700 border-gray-300', ESPERA:'bg-purple-50 text-purple-700 border-purple-200', RESERVADO:'bg-blue-50 text-blue-700 border-blue-200' };
-      var cls = colores[r.estatus] || 'bg-gray-100 text-gray-700 border-gray-300';
-      html += '<div class="subcard border ' + cls + ' mb-2">';
-      html += '<div class="flex justify-between items-start mb-1">';
-      html += '<div><span class="text-lg font-black font-mono">#' + r.numero + '</span> <span class="text-[9px] font-black px-2 py-0.5 rounded-full ' + cls + '">' + r.estatus + '</span></div>';
-      html += '<button type="button" onclick="abrirEditar(' + r.fila + ',\'' + (r.estatus||'') + '\',\'' + (r.cedula||'').replace(/\'/g,'') + '\',\'' + (r.nombre||'').replace(/\'/g,'') + '\',\'' + (r.telefono||'') + '\')" class="text-[10px] font-black text-blue-600 underline">✏️ Editar</button>';
+      _historialMap[r.fila] = r;
+      var cls = colores[r.estatus] || 'bg-slate-50 text-slate-700 border-slate-200';
+      html += '<div class="subcard border ' + cls + ' space-y-1">';
+      html += '<div class="flex justify-between items-start">';
+      html += '<div><span class="text-lg font-black font-mono">#' + escHtml(r.numero) + '</span> <span class="text-[10px] font-black px-2 py-0.5 rounded-full border ' + cls + '">' + escHtml(r.estatus) + '</span></div>';
+      html += '<button type="button" onclick="abrirEditarPorFila(' + Number(r.fila) + ')" class="text-xs font-black text-blue-600 hover:underline">✏️ Editar</button>';
       html += '</div>';
       if (r.nombre || r.cedula) {
-        html += '<div class="text-[11px] text-gray-700 font-bold">' + r.nombre + '</div>';
-        html += '<div class="text-[10px] text-gray-500 font-mono mb-1">C.I. ' + r.cedula + ' · ' + r.telefono + '</div>';
+        html += '<div class="text-xs text-slate-800 font-bold">' + escHtml(r.nombre) + '</div>';
+        html += '<div class="text-[11px] text-slate-500 font-mono">C.I. ' + escHtml(r.cedula) + (r.telefono ? ' · ' + escHtml(r.telefono) : '') + '</div>';
       }
-      if (r.fechaReserva) html += '<div class="text-[9px] text-gray-500">Reservado: ' + r.fechaReserva + '</div>';
-      if (r.fechaPago) html += '<div class="text-[9px] text-emerald-600 font-bold">Pagado: ' + r.fechaPago + '</div>';
+      if (r.fechaReserva) html += '<div class="text-[10px] text-slate-500">Reservado: ' + escHtml(r.fechaReserva) + '</div>';
+      if (r.fechaPago) html += '<div class="text-[10px] text-emerald-700 font-bold">Pagado: ' + escHtml(r.fechaPago) + '</div>';
+
       var acciones = [];
       if (r.estatus === 'RESERVADO' && r.telefono) {
         var msg = encodeURIComponent('¡Hola *' + r.nombre + '*! 👋\n\nTe recordamos que tienes el boleto *# ' + r.numero + '* reservado en *Mega Rifas* 🎟️\n\n⏰ Completa tu pago antes del límite.\n\n*Mega Rifas*');
-        acciones.push('<a href="https://wa.me/' + r.telefono.replace(/\D/g,'') + '?text=' + msg + '" target="_blank" class="flex-1 bg-emerald-600 text-white font-bold py-1.5 rounded-lg text-[10px] text-center">📱 Recordar</a>');
+        acciones.push('<a href="https://wa.me/' + normalizarTelefono(r.telefono) + '?text=' + msg + '" target="_blank" rel="noopener noreferrer" class="flex-1 bg-emerald-600 text-white font-bold py-1.5 rounded-lg text-xs text-center">📱 Recordar</a>');
       }
-      acciones.push('<button type="button" onclick="liberarNumero(' + r.fila + ',\'' + r.numero + '\')" class="flex-1 bg-amber-600 text-white font-bold py-1.5 rounded-lg text-[10px]">🔓 Liberar</button>');
-      html += '<div class="flex gap-1.5 mt-2">' + acciones.join('') + '</div>';
+      acciones.push('<button type="button" onclick="liberarNumeroPorFila(' + Number(r.fila) + ')" class="flex-1 bg-amber-600 text-white font-bold py-1.5 rounded-lg text-xs">🔓 Liberar</button>');
+      html += '<div class="flex gap-2 pt-1.5">' + acciones.join('') + '</div>';
       html += '</div>';
     }
     cont.innerHTML = html;
-  } catch(e) {
-    cont.innerHTML = '<p class="text-center text-rose-600 py-3 text-xs">Error: ' + e.message + '</p>';
+  } catch (e) {
+    cont.innerHTML = '<p class="text-center text-rose-600 py-4 text-xs">Error: ' + escHtml(e.message) + '</p>';
   }
 }
 
-function cambiarFiltroHistorial(f) { historialFiltro = f; cargarHistorialAdmin(); }
+function cambiarFiltroHistorial(f) {
+  historialFiltro = f;
+  cargarHistorialAdmin();
+}
 
-function liberarNumero(fila, numero) {
+function liberarNumeroPorFila(fila) {
+  var r = _historialMap[fila];
+  if (!r) return;
+  var numero = r.numero;
   pedirPin('Liberar #' + numero, 'Vas a liberar el número #' + numero + '. Volverá a estar disponible para otros clientes.', function(pin) {
     mostrarConfirm('¿Liberar #' + numero + '?', 'Esta acción es irreversible.', 'fa-unlock', async function(ok) {
       if (!ok) return;
-      notificar('Liberando...', 'info');
+      notificar('Liberando #' + numero + '...', 'info');
       try {
-        const res = await apiCall('liberarNumeroAdmin', { numero: numero, pin: pin });
-        if (!res.success) { notificar(res.error, 'error'); return; }
+        var res = await apiCall('liberarNumeroAdmin', { numero: numero, pin: pin });
+        if (!res || !res.success) { notificar((res && res.error) || 'No se pudo liberar', 'error'); return; }
         notificar('✅ #' + numero + ' liberado', 'success');
-        cargarHistorialAdmin();
-        cargarDatos();
-      } catch(e) {
+        await Promise.all([cargarDatos({ silent: true, force: true }), cargarHistorialAdmin()]);
+      } catch (e) {
         notificar('Error: ' + e.message, 'error');
       }
     }, true);
   });
 }
 
-function abrirEditar(fila, est, ced, nom, tel) {
-  $('editFila').value = fila;
-  $('editEstatus').value = est;
-  $('editCedula').value = ced;
-  $('editNombre').value = nom;
-  $('editTelefono').value = tel;
-  $('editPin').value = '';
+function abrirEditarPorFila(fila) {
+  var r = _historialMap[fila];
+  if (!r) return;
+  $('editFila').value = r.fila;
+  $('editEstatus').value = r.estatus || 'DISPONIBLE';
+  $('editCedula').value = r.cedula || '';
+  $('editNombre').value = r.nombre || '';
+  $('editTelefono').value = r.telefono || '';
+  $('editPin').value = window._adminPin || '';
   abrirModal('modalEditar');
 }
 
 async function guardarEdicion() {
   var pin = $('editPin').value.trim();
-  if (!pin || pin.length < 6) { notificar('Ingresa el PIN de 6 dígitos', 'error'); return; }
+  if (pin.length < 6) { notificar('Ingresa el PIN de 6 dígitos', 'error'); return; }
   var datos = {
     estatus: $('editEstatus').value,
     cedula: $('editCedula').value.trim(),
     nombre: $('editNombre').value.trim(),
     telefono: $('editTelefono').value.trim()
   };
-  notificar('Guardando...', 'info');
+  var btn = $('btnGuardarEdicion');
+  setBtnLoading(btn, true, 'Guardando...');
   try {
-    const res = await apiCall('editarRegistroAdmin', { fila: parseInt($('editFila').value), datos: datos, pin: pin });
-    if (!res.success) { notificar(res.error, 'error'); return; }
-    notificar('✅ Guardado', 'success');
+    var res = await apiCall('editarRegistroAdmin', { fila: parseInt($('editFila').value, 10), datos: datos, pin: pin });
+    if (!res || !res.success) { notificar((res && res.error) || 'No se pudo guardar', 'error'); return; }
+    notificar('✅ Registro actualizado', 'success');
     cerrarModal('modalEditar');
-    cargarHistorialAdmin();
-    cargarDatos();
-  } catch(e) {
+    await Promise.all([cargarDatos({ silent: true, force: true }), cargarHistorialAdmin()]);
+  } catch (e) {
     notificar('Error: ' + e.message, 'error');
+  } finally {
+    setBtnLoading(btn, false);
   }
+}
+
+/* ==================== CONFIGURACIÓN UNIFICADA (SINGLE SOURCE OF TRUTH) ==================== */
+
+function ocultarFeedbackConfig() {
+  var box = $('cfgSaveFeedback');
+  if (!box) return;
+  box.classList.add('hidden');
+  box.innerHTML = '';
+}
+
+function mostrarFeedbackConfig(tipo, html) {
+  var box = $('cfgSaveFeedback');
+  if (!box) return;
+  var estilos = {
+    success: 'bg-emerald-50 border-emerald-300 text-emerald-900',
+    warn: 'bg-amber-50 border-amber-300 text-amber-900',
+    error: 'bg-rose-50 border-rose-300 text-rose-900'
+  };
+  box.className = 'rounded-xl p-3 text-xs font-semibold border ' + (estilos[tipo] || estilos.warn);
+  box.innerHTML = html;
+  box.classList.remove('hidden');
 }
 
 function cargarFormularioConfigAdmin() {
-  $('cfgTitulo').value = datosMegaGlobal.tituloRifa || '';
-  $('cfgTotal').value = datosMegaGlobal.totalNumeros || 100;
-  $('cfgPrecio').value = datosMegaGlobal.precioTicketUSD || 2;
-  $('cfgPremios').value = datosMegaGlobal.premios || '';
-  $('cfgNoticias').value = datosMegaGlobal.noticias || '';
-  $('cfgTickerNoticias').value = datosMegaGlobal.tickerNoticias || '';
-  $('cfgFechaSorteo').value = datosMegaGlobal.fechaSorteo || '';
-  $('cfgDiasPago').value = datosMegaGlobal.diasLimitePago || 15;
-  $('cfgDiasBloqueo').value = datosMegaGlobal.diasBloqueo || 3;
-  $('cfgTasaManual').value = datosMegaGlobal.tasaManual || '';
-  $('cfgLogoVersion').value = datosMegaGlobal.logoVersion || 'OSCURU';
-  $('cfgLogoUrlOscuro').value = datosMegaGlobal.logoUrlOscuro || '';
-  $('cfgLogoUrlClaro').value = datosMegaGlobal.logoUrlClaro || '';
-  $('cfgColorPrin').value = datosMegaGlobal.colorPrincipal || '#111827';
-  $('cfgColorAce').value = datosMegaGlobal.colorAcento || '#FFC107';
-  $('cfgFuente').value = datosMegaGlobal.tipografia || 'system-ui, sans-serif';
-  $('cfgPM').value = datosMegaGlobal.pmDatos || '';
-  $('cfgTR').value = datosMegaGlobal.trDatos || '';
-  $('cfgBZ').value = datosMegaGlobal.binanceDatos || '';
-  $('cfgZP').value = datosMegaGlobal.zelleDatos || '';
-  $('cfgEF').value = datosMegaGlobal.efectivoDatos || '';
-  $('cfgUS').value = datosMegaGlobal.usdtDatos || '';
-  $('cfgIG').value = datosMegaGlobal.igUrl || '';
-  var wa = datosMegaGlobal.waList || [];
+  if (!appState) return;
+  CONFIG_SCHEMA.forEach(function(field) {
+    var el = $(field.inputId);
+    if (!el) return;
+    el.classList.remove('inp-warn');
+    var val = appState[field.key];
+    if (field.type === 'optNum') {
+      el.value = (val !== undefined && val !== null && Number(val) > 0) ? String(val) : '';
+    } else if (field.type === 'int' || field.type === 'number') {
+      el.value = String(safeNum(val, field.def));
+    } else {
+      el.value = (val === undefined || val === null) ? field.def : String(val);
+    }
+  });
+
+  var wa = Array.isArray(appState.waList) ? appState.waList : [];
   $('cfgWA1').value = wa[0] || '';
   $('cfgWA2').value = wa[1] || '';
   $('cfgWA3').value = wa[2] || '';
+  $('cfgWA1').classList.remove('inp-warn');
+  $('cfgWA2').classList.remove('inp-warn');
+  $('cfgWA3').classList.remove('inp-warn');
+  $('cfgNuevoPin').value = '';
+  _cfgDirty = false;
 }
 
-async function guardarConfigAdmin() {
-  var d = {
-    titulo: $('cfgTitulo').value.trim(), total: $('cfgTotal').value, precio: $('cfgPrecio').value,
-    premios: $('cfgPremios').value.trim(), noticias: $('cfgNoticias').value.trim(),
-    tickerNoticias: $('cfgTickerNoticias').value.trim(),
-    fechaSorteo: $('cfgFechaSorteo').value.trim(), diasLimitePago: $('cfgDiasPago').value,
-    diasBloqueo: $('cfgDiasBloqueo').value, tasaManual: $('cfgTasaManual').value.trim(),
-    logoVersion: $('cfgLogoVersion').value, logoUrlOscuro: $('cfgLogoUrlOscuro').value.trim(),
-    logoUrlClaro: $('cfgLogoUrlClaro').value.trim(), colorPrincipal: $('cfgColorPrin').value,
-    colorAcento: $('cfgColorAce').value, tipografia: $('cfgFuente').value,
-    pm: $('cfgPM').value.trim(), tr: $('cfgTR').value.trim(), binanceDatos: $('cfgBZ').value.trim(),
-    zelleDatos: $('cfgZP').value.trim(), efectivoDatos: $('cfgEF').value.trim(), usdtDatos: $('cfgUS').value.trim(),
-    ig: $('cfgIG').value.trim(), wa1: $('cfgWA1').value.trim(), wa2: $('cfgWA2').value.trim(), wa3: $('cfgWA3').value.trim(),
-    nuevoPin: $('cfgNuevoPin').value.trim()
-  };
-  console.log('[GuardarConfig] Enviando:', d);
-  notificar('Guardando...', 'info');
+async function recargarConfigDesdeServidor() {
+  var btn = $('btnRecargarConfig');
+  setBtnLoading(btn, true, '');
+  ocultarFeedbackConfig();
   try {
-    const res = await apiCall('guardarConfiguracionAdminMega', d);
-    console.log('[GuardarConfig] Respuesta:', res);
-    if (!res.success) { notificar('Error: ' + (res.error || 'desconocido'), 'error'); return; }
-    notificar('✅ Guardado. Precio: $' + fmt(res.precioTicketUSD) + ' → Bs ' + fmt(res.precioTicketBs), 'success');
-    aplicarDatos(res);
-    cargarFormularioConfigAdmin();
-  } catch(e) {
-    console.error('[GuardarConfig] Excepción:', e);
-    notificar('Error: ' + e.message, 'error');
+    var fresh = await cargarDatos({ silent: false, force: true });
+    if (fresh) {
+      _cfgDirty = false;
+      cargarFormularioConfigAdmin();
+      notificar('Datos recargados desde el servidor', 'info');
+    }
+  } finally {
+    setBtnLoading(btn, false);
   }
 }
 
-function ejecutarNuevaRifa() {
-  var pin = $('pinReiniciarRifa').value.trim();
-  if (!pin || pin.length < 6) { notificar('Ingresa tu PIN de 6 dígitos', 'error'); return; }
-  mostrarConfirm('⚠️ Reiniciar TODA la rifa', 'Esto borrará <b>TODOS</b> los números del tablero y <b>TODOS</b> los pagos registrados. <b>Esta acción no se puede deshacer.</b>', 'fa-triangle-exclamation', async function(ok) {
-    if (!ok) return;
-    notificar('Reiniciando...', 'info');
-    try {
-      const res = await apiCall('iniciarNuevaRifaAdmin', { pin: pin });
-      if (!res.success) { notificar(res.error, 'error'); return; }
-      notificar('✅ Rifa reiniciada', 'success');
-      cerrarModal('modalPanelAdmin');
-      setTimeout(cargarDatos, 500);
-    } catch(e) {
-      notificar('Error: ' + e.message, 'error');
+function construirPayloadConfig() {
+  var payload = {};
+  var esperado = {};
+  var errores = [];
+
+  CONFIG_SCHEMA.forEach(function(field) {
+    var el = $(field.inputId);
+    var raw = el ? String(el.value).trim() : '';
+    if (field.type === 'int') {
+      var nInt = parseInt(raw, 10);
+      var minVal = field.key === 'diasBloqueo' ? 0 : 1;
+      if (!isFinite(nInt) || nInt < minVal) {
+        errores.push(field.label + ' debe ser un número entero válido (mínimo ' + minVal + ').');
+      } else {
+        payload[field.payloadKey] = nInt;
+        esperado[field.key] = nInt;
+      }
+    } else if (field.type === 'number') {
+      var nDec = parseLocaleNumber(raw);
+      if (!isFinite(nDec) || nDec <= 0) {
+        errores.push(field.label + ' debe ser mayor a 0.');
+      } else {
+        payload[field.payloadKey] = nDec;
+        esperado[field.key] = nDec;
+      }
+    } else if (field.type === 'optNum') {
+      if (!raw) {
+        payload[field.payloadKey] = '';
+        esperado[field.key] = 0;
+      } else {
+        var nOpt = parseLocaleNumber(raw);
+        if (!isFinite(nOpt) || nOpt < 0) {
+          errores.push(field.label + ' debe ser un número válido o quedar vacío.');
+        } else {
+          payload[field.payloadKey] = nOpt === 0 ? '' : nOpt;
+          esperado[field.key] = nOpt;
+        }
+      }
+    } else {
+      payload[field.payloadKey] = raw;
+      esperado[field.key] = raw;
     }
-  }, true);
+  });
+
+  var wa1 = normalizarTelefono($('cfgWA1').value);
+  var wa2 = normalizarTelefono($('cfgWA2').value);
+  var wa3 = normalizarTelefono($('cfgWA3').value);
+  payload.wa1 = wa1;
+  payload.wa2 = wa2;
+  payload.wa3 = wa3;
+  esperado.waList = [wa1, wa2, wa3].filter(Boolean);
+
+  var nuevoPin = $('cfgNuevoPin').value.trim();
+  if (nuevoPin && nuevoPin.length !== 6) {
+    errores.push('El nuevo PIN debe tener exactamente 6 dígitos (o quedar vacío).');
+  }
+  payload.nuevoPin = nuevoPin;
+  if (window._adminPin) payload.pin = window._adminPin;
+
+  return { payload: payload, esperado: esperado, errores: errores };
 }
 
-window.addEventListener('load', function() { cargarDatos(); });
+function verificarCamposPersistidos(esperado, real) {
+  var noGuardados = [];
+
+  CONFIG_SCHEMA.forEach(function(field) {
+    var el = $(field.inputId);
+    var expVal = esperado[field.key];
+    var actVal = real[field.key];
+    var coincide = true;
+
+    if (field.type === 'int') {
+      coincide = Number(expVal) === Number(actVal);
+    } else if (field.type === 'number' || field.type === 'optNum') {
+      coincide = Math.abs(Number(expVal || 0) - Number(actVal || 0)) < 0.01;
+    } else {
+      coincide = String(expVal || '').trim() === String(actVal || '').trim();
+    }
+
+    if (el) el.classList.toggle('inp-warn', !coincide);
+    if (!coincide) {
+      noGuardados.push({ label: field.label, esperado: expVal, actual: actVal });
+    }
+  });
+
+  var expWa = (esperado.waList || []).map(normalizarTelefono).filter(Boolean).join(',');
+  var actWa = (real.waList || []).map(normalizarTelefono).filter(Boolean).join(',');
+  var waOk = expWa === actWa;
+  ['cfgWA1', 'cfgWA2', 'cfgWA3'].forEach(function(id) {
+    $(id).classList.toggle('inp-warn', !waOk);
+  });
+  if (!waOk) {
+    noGuardados.push({ label: 'Teléfonos WhatsApp', esperado: expWa || '(vacío)', actual: actWa || '(vacío)' });
+  }
+
+  return noGuardados;
+}
+
+async function guardarConfigAdmin() {
+  ocultarFeedbackConfig();
+  var built = construirPayloadConfig();
+  if (built.errores.length) {
+    mostrarFeedbackConfig('error', '<b>Revisa estos datos antes de guardar:</b><br>• ' + built.errores.map(escHtml).join('<br>• '));
+    notificar(built.errores[0], 'error');
+    return;
+  }
+
+  var btn = $('btnGuardarConfig');
+  setBtnLoading(btn, true, 'Guardando y verificando...');
+
+  // Actualización optimista inmediata en pantalla
+  var snapshotPrevio = appState ? Object.assign({}, appState) : null;
+  var optimista = Object.assign({}, built.esperado);
+  if (optimista.tasaManual > 0) {
+    optimista.tasa = optimista.tasaManual;
+    optimista.precioTicketBs = Number((optimista.precioTicketUSD * optimista.tasaManual).toFixed(2));
+  } else if (appState && appState.tasa > 0) {
+    optimista.precioTicketBs = Number((optimista.precioTicketUSD * appState.tasa).toFixed(2));
+  }
+  aplicarDatos(optimista, { persistCache: false });
+
+  try {
+    var res = await apiCall('guardarConfiguracionAdminMega', built.payload);
+    if (!res || !res.success) {
+      if (snapshotPrevio) aplicarDatos(snapshotPrevio, { persistCache: false });
+      var errMsg = (res && res.error) || 'El servidor rechazó el guardado.';
+      mostrarFeedbackConfig('error', '<b>No se pudo guardar:</b> ' + escHtml(errMsg));
+      notificar('Error: ' + errMsg, 'error');
+      return;
+    }
+
+    if (built.payload.nuevoPin) {
+      window._adminPin = built.payload.nuevoPin;
+    }
+
+    // Fusionar respuesta del guardado y verificar lectura real desde Google Sheets
+    aplicarDatos(res, { persistCache: true });
+    var verificado = await apiCall('obtenerInicioMega', {});
+    var estadoFinal = (verificado && verificado.success) ? verificado : appState;
+    aplicarDatos(estadoFinal, { persistCache: true });
+
+    _cfgDirty = false;
+    cargarFormularioConfigAdmin();
+
+    var faltantes = verificarCamposPersistidos(built.esperado, appState);
+    if (faltantes.length) {
+      var nombres = faltantes.map(function(f) { return escHtml(f.label); }).join(', ');
+      mostrarFeedbackConfig(
+        'warn',
+        '<b>⚠️ Guardado parcial detectado:</b> El servidor no persistió estos campos: <b>' + nombres + '</b>. Se resaltaron en amarillo y se muestran los valores reales que quedaron guardados en tu hoja.'
+      );
+      notificar('Guardado parcial: revisa ' + faltantes.map(function(f) { return f.label; }).join(', '), 'warn');
+    } else {
+      mostrarFeedbackConfig(
+        'success',
+        '✅ Todos los cambios se guardaron y verificaron correctamente. Boleto actual: <b>$' + fmt(appState.precioTicketUSD) + '</b> → <b>Bs ' + fmt(appState.precioTicketBs) + '</b>.'
+      );
+      notificar('✅ Configuración guardada y verificada', 'success');
+    }
+  } catch (e) {
+    if (snapshotPrevio) aplicarDatos(snapshotPrevio, { persistCache: false });
+    mostrarFeedbackConfig('error', '<b>Error de conexión:</b> ' + escHtml(e.message) + '. Los cambios no fueron confirmados por el servidor.');
+    notificar('Error al guardar: ' + e.message, 'error');
+  } finally {
+    setBtnLoading(btn, false);
+  }
+}
+
+/* ==================== REINICIAR RIFA ==================== */
+
+function ejecutarNuevaRifa() {
+  var pin = $('pinReiniciarRifa').value.trim();
+  if (pin.length < 6) { notificar('Ingresa tu PIN de 6 dígitos', 'error'); return; }
+  mostrarConfirm(
+    '⚠️ Reiniciar TODA la rifa',
+    'Esto borrará <b>TODOS</b> los números del tablero y <b>TODOS</b> los pagos registrados. <b>Esta acción no se puede deshacer.</b>',
+    'fa-triangle-exclamation',
+    async function(ok) {
+      if (!ok) return;
+      var btn = $('btnReiniciarRifa');
+      setBtnLoading(btn, true, 'Reiniciando...');
+      try {
+        var res = await apiCall('iniciarNuevaRifaAdmin', { pin: pin });
+        if (!res || !res.success) { notificar((res && res.error) || 'Error al reiniciar', 'error'); return; }
+        seleccionados = [];
+        participanteConsultado = null;
+        $('resultadoConsultaParticipante').classList.add('hidden');
+        $('pinReiniciarRifa').value = '';
+        notificar('✅ Rifa reiniciada', 'success');
+        cerrarModal('modalPanelAdmin');
+        await cargarDatos({ silent: true, force: true });
+      } catch (e) {
+        notificar('Error: ' + e.message, 'error');
+      } finally {
+        setBtnLoading(btn, false);
+      }
+    },
+    true
+  );
+}
+
+/* ==================== EVENTOS E INICIALIZACIÓN RÁPIDA ==================== */
+
+document.addEventListener('DOMContentLoaded', function() {
+  // Delegación O(1) para clicks en el tablero
+  var grid = $('gridTablero');
+  if (grid) {
+    grid.addEventListener('click', function(e) {
+      var btn = e.target.closest('button[data-num]');
+      if (!btn) return;
+      tocarNumero(btn.dataset.num, btn.dataset.est);
+    });
+  }
+
+  // Delegación para ver comprobantes
+  document.addEventListener('click', function(e) {
+    var btn = e.target.closest ? e.target.closest('[data-cb]') : null;
+    if (!btn) return;
+    var fila = btn.getAttribute('data-cb');
+    var cb = _comprobantesMap[fila] || '';
+    if (!cb) { notificar('Sin comprobante adjunto', 'error'); return; }
+    $('imgComprobante').src = cb;
+    abrirModal('modalImagen');
+  }, true);
+
+  // Detección de cambios sin guardar en Config Admin
+  var cfgView = $('adminViewCfg');
+  if (cfgView) {
+    cfgView.addEventListener('input', function() { _cfgDirty = true; });
+    cfgView.addEventListener('change', function() { _cfgDirty = true; });
+  }
+
+  // Autocompletado de cédula en checkout
+  var chkCedula = $('chkCedula');
+  if (chkCedula) {
+    chkCedula.addEventListener('input', function() {
+      clearTimeout(_debounceTimer);
+      var ced = chkCedula.value.trim();
+      var aviso = $('avisoCedula');
+      if (ced.length < 5) {
+        aviso.classList.add('hidden');
+        aviso.innerHTML = '';
+        chkCedula.classList.remove('inp-ok');
+        _cedulaVerificada = null;
+        return;
+      }
+      _debounceTimer = setTimeout(function() { verificarCedula(ced); }, 600);
+    });
+  }
+
+  // 1) Pintar inmediatamente desde caché local (0ms de espera) o skeleton limpio
+  var cached = leerCacheLocal();
+  if (cached) {
+    aplicarDatos(cached, { persistCache: false });
+    cargarDatos({ silent: true });
+  } else {
+    renderizarSkeletonTablero();
+    cargarDatos({ silent: false });
+  }
+});
 </script>
 </body>
 </html>
