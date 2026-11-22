@@ -199,7 +199,7 @@ function haceTiempo(ts: number): string {
   return `hace ${Math.floor(hrs / 24)} d`;
 }
 
-function formatErrorMessage(err: unknown): string {
+function formatErrorMessage(err: unknown, scope: 'public' | 'admin' = 'public'): string {
   const raw = err instanceof Error ? err.message : String(err);
   try {
     const parsed = JSON.parse(raw) as { error?: string };
@@ -207,13 +207,23 @@ function formatErrorMessage(err: unknown): string {
       if (parsed.error.includes('Quota exceeded')) {
         return 'Cuota diaria de Firestore alcanzada. Se restablece mañana.';
       }
-      if (parsed.error.includes('permission-denied') || parsed.error.includes('Missing or insufficient permissions')) {
-        return 'Sin permisos suficientes. Verifica que iniciaste sesión con tu cuenta Admin.';
+      if (
+        parsed.error.includes('permission-denied') ||
+        parsed.error.includes('Missing or insufficient permissions')
+      ) {
+        return scope === 'admin'
+          ? 'Sin permisos suficientes. Verifica que iniciaste sesión con tu cuenta Admin.'
+          : 'No se pudo completar la operación en este momento. Verifica tus datos e intenta de nuevo.';
       }
       return parsed.error;
     }
   } catch {
     // Plain message
+  }
+  if (raw.includes('permission-denied') || raw.includes('Missing or insufficient permissions')) {
+    return scope === 'admin'
+      ? 'Sin permisos suficientes. Verifica que iniciaste sesión con tu cuenta Admin.'
+      : 'No se pudo completar la operación en este momento. Verifica tus datos e intenta de nuevo.';
   }
   return raw;
 }
@@ -1031,15 +1041,38 @@ async function ejecutarCheckout(): Promise<void> {
 
 /* ==================== ADMIN AUTH & PANEL ==================== */
 
-function abrirModalAdminSeguro(): void {
-  if (isCurrentUserAdmin && currentAdminUser) {
-    abrirPanelAdmin();
-    return;
-  }
+function mostrarErrorAuthAdmin(msg: string): void {
+  const errEl = $('adminAuthError');
+  if (!errEl) return;
+  errEl.textContent = msg;
+  errEl.classList.remove('hidden');
+}
+
+function exigirSesionAdminEnPanel(): boolean {
+  if (isCurrentUserAdmin && currentAdminUser) return true;
+  cerrarModal('modalPanelAdmin');
+  mostrarErrorAuthAdmin(
+    'Inicia sesión con tu cuenta de Google autorizada para acceder al Panel Admin.'
+  );
+  abrirModal('modalAuthAdmin');
+  return false;
+}
+
+async function abrirModalAdminSeguro(): Promise<void> {
   const errEl = $('adminAuthError');
   if (errEl) {
     errEl.classList.add('hidden');
     errEl.textContent = '';
+  }
+  if (currentAdminUser) {
+    isCurrentUserAdmin = await checkIsCurrentUserAdmin(currentAdminUser);
+    if (isCurrentUserAdmin) {
+      abrirPanelAdmin();
+      return;
+    }
+    mostrarErrorAuthAdmin(
+      `La cuenta ${currentAdminUser.email || ''} no tiene permisos de administrador (cuenta autorizada: ${ADMIN_BOOTSTRAP_EMAIL}). Inicia sesión con otra cuenta.`
+    );
   }
   abrirModal('modalAuthAdmin');
 }
@@ -1059,26 +1092,18 @@ async function iniciarSesionAdminGoogle(): Promise<void> {
       currentAdminUser = null;
       isCurrentUserAdmin = false;
       const msg = `La cuenta ${user.email || ''} no tiene permisos de administrador (cuenta autorizada: ${ADMIN_BOOTSTRAP_EMAIL}).`;
-      if (errEl) {
-        errEl.textContent = msg;
-        errEl.classList.remove('hidden');
-      }
-      notificar('Cuenta sin permisos de administrador', 'error');
+      mostrarErrorAuthAdmin(msg);
       return;
     }
     cerrarModal('modalAuthAdmin');
     if (!configExistsInDb) {
-      await ensureConfigSeeded(currentConfig);
+      await ensureConfigSeeded(currentConfig).catch(() => undefined);
     }
     abrirPanelAdmin();
     notificar(`Bienvenido Admin (${user.email}) 👋`, 'success');
   } catch (e) {
-    const msg = formatErrorMessage(e);
-    if (errEl) {
-      errEl.textContent = msg;
-      errEl.classList.remove('hidden');
-    }
-    notificar(msg, 'error');
+    const msg = formatErrorMessage(e, 'admin');
+    mostrarErrorAuthAdmin(msg);
   } finally {
     setBtnLoading(btn, false);
   }
@@ -1094,9 +1119,16 @@ async function cerrarSesionAdmin(): Promise<void> {
 }
 
 function abrirPanelAdmin(): void {
+  if (!isCurrentUserAdmin || !currentAdminUser) {
+    abrirModal('modalAuthAdmin');
+    return;
+  }
   const emailBadge = $('adminEmailBadge');
-  if (emailBadge && currentAdminUser?.email) {
+  if (emailBadge && currentAdminUser.email) {
     emailBadge.textContent = currentAdminUser.email;
+  }
+  if (!configExistsInDb) {
+    void ensureConfigSeeded(currentConfig).catch(() => undefined);
   }
   cfgDirty = false;
   ocultarFeedbackConfig();
@@ -1131,6 +1163,9 @@ function cambiarTabAdmin(tab: 'val' | 'vnc' | 'his' | 'cfg' | 'nue'): void {
 }
 
 async function refrescarDatosAdmin(): Promise<AdminCache> {
+  if (!isCurrentUserAdmin || !currentAdminUser) {
+    throw new Error('Sin permisos suficientes. Verifica que iniciaste sesión con tu cuenta Admin.');
+  }
   const data = await fetchAdminAllData();
   adminDataCache = data;
   return data;
@@ -1188,6 +1223,7 @@ function computeVencimientos(data: AdminCache) {
 }
 
 async function cargarPagosPendientesAdmin(): Promise<void> {
+  if (!exigirSesionAdminEnPanel()) return;
   const cont = $('adminViewVal');
   if (!cont) return;
   cont.innerHTML =
@@ -1276,11 +1312,12 @@ async function cargarPagosPendientesAdmin(): Promise<void> {
     html += '</div>';
     cont.innerHTML = html;
   } catch (e) {
-    cont.innerHTML = `<p class="text-center text-rose-600 py-4 text-xs font-semibold">${escHtml(formatErrorMessage(e))}</p>`;
+    cont.innerHTML = `<div class="rounded-xl bg-rose-50 border border-rose-200 p-3 text-center text-rose-700 text-xs font-semibold">${escHtml(formatErrorMessage(e, 'admin'))}</div>`;
   }
 }
 
 async function resolverPago(reportId: string, accion: 'APROBADO' | 'RECHAZADO', btn: HTMLButtonElement): Promise<void> {
+  if (!exigirSesionAdminEnPanel()) return;
   const report = adminDataCache?.payments.find((p) => p.id === reportId);
   if (!report) return;
 
@@ -1296,7 +1333,7 @@ async function resolverPago(reportId: string, accion: 'APROBADO' | 'RECHAZADO', 
       }
       await cargarPagosPendientesAdmin();
     } catch (e) {
-      notificar(formatErrorMessage(e), 'error');
+      notificar(formatErrorMessage(e, 'admin'), 'error');
     } finally {
       setBtnLoading(btn, false);
     }
@@ -1352,6 +1389,7 @@ function enviarWAConfirmado(): void {
 }
 
 async function cargarPorVencerAdmin(): Promise<void> {
+  if (!exigirSesionAdminEnPanel()) return;
   const cont = $('adminViewVnc');
   if (!cont) return;
   cont.innerHTML =
@@ -1394,11 +1432,12 @@ async function cargarPorVencerAdmin(): Promise<void> {
     }
     cont.innerHTML = html;
   } catch (e) {
-    cont.innerHTML = `<p class="text-center text-rose-600 py-4 text-xs">${escHtml(formatErrorMessage(e))}</p>`;
+    cont.innerHTML = `<div class="rounded-xl bg-rose-50 border border-rose-200 p-3 text-center text-rose-700 text-xs font-semibold">${escHtml(formatErrorMessage(e, 'admin'))}</div>`;
   }
 }
 
 async function cargarHistorialAdmin(): Promise<void> {
+  if (!exigirSesionAdminEnPanel()) return;
   const cont = $('adminViewHis');
   if (!cont) return;
   cont.innerHTML =
@@ -1465,7 +1504,7 @@ async function cargarHistorialAdmin(): Promise<void> {
     }
     cont.innerHTML = html;
   } catch (e) {
-    cont.innerHTML = `<p class="text-center text-rose-600 py-4 text-xs">${escHtml(formatErrorMessage(e))}</p>`;
+    cont.innerHTML = `<div class="rounded-xl bg-rose-50 border border-rose-200 p-3 text-center text-rose-700 text-xs font-semibold">${escHtml(formatErrorMessage(e, 'admin'))}</div>`;
   }
 }
 
@@ -1492,6 +1531,7 @@ function abrirEditarTicket(numero: string): void {
 }
 
 async function guardarEdicionTicket(): Promise<void> {
+  if (!exigirSesionAdminEnPanel()) return;
   const numero = ($<HTMLInputElement>('editNumero')?.value || '').trim();
   const estatus = ($<HTMLSelectElement>('editEstatus')?.value || 'DISPONIBLE') as TicketStatus;
   const cedula = ($<HTMLInputElement>('editCedula')?.value || '').trim();
@@ -1508,13 +1548,14 @@ async function guardarEdicionTicket(): Promise<void> {
     cerrarModal('modalEditar');
     await cargarHistorialAdmin();
   } catch (e) {
-    notificar(formatErrorMessage(e), 'error');
+    notificar(formatErrorMessage(e, 'admin'), 'error');
   } finally {
     setBtnLoading(btn, false);
   }
 }
 
 function confirmarLiberarTicket(numero: string): void {
+  if (!exigirSesionAdminEnPanel()) return;
   mostrarConfirm(
     `¿Liberar #${numero}?`,
     `El boleto <b>#${escHtml(numero)}</b> volverá a estar <b>DISPONIBLE</b> para otros participantes.`,
@@ -1526,7 +1567,7 @@ function confirmarLiberarTicket(numero: string): void {
         notificar(`✅ #${numero} liberado`, 'success');
         await cargarHistorialAdmin();
       } catch (e) {
-        notificar(formatErrorMessage(e), 'error');
+        notificar(formatErrorMessage(e, 'admin'), 'error');
       }
     },
     true
@@ -1534,6 +1575,7 @@ function confirmarLiberarTicket(numero: string): void {
 }
 
 function ejecutarResincronizar(): void {
+  if (!exigirSesionAdminEnPanel()) return;
   mostrarConfirm(
     '¿Resincronizar tablero?',
     'Revisa todos los reportes de pago aprobados y pendientes para garantizar que el tablero esté 100% alineado.',
@@ -1546,13 +1588,14 @@ function ejecutarResincronizar(): void {
         notificar(`✅ Resincronización lista (${cambios} ajuste(s))`, 'success');
         await cargarPagosPendientesAdmin();
       } catch (e) {
-        notificar(formatErrorMessage(e), 'error');
+        notificar(formatErrorMessage(e, 'admin'), 'error');
       }
     }
   );
 }
 
 function ejecutarLiberarMasivo(): void {
+  if (!exigirSesionAdminEnPanel()) return;
   mostrarConfirm(
     '¿Liberar todas las reservas?',
     'Todos los números en estado <b>RESERVADO</b> volverán a estar <b>DISPONIBLES</b>. Los boletos en revisión o pagados NO se tocan.',
@@ -1565,7 +1608,7 @@ function ejecutarLiberarMasivo(): void {
         notificar(`✅ ${liberados} número(s) liberado(s)`, 'success');
         await cargarPagosPendientesAdmin();
       } catch (e) {
-        notificar(formatErrorMessage(e), 'error');
+        notificar(formatErrorMessage(e, 'admin'), 'error');
       }
     },
     true
@@ -1573,6 +1616,7 @@ function ejecutarLiberarMasivo(): void {
 }
 
 async function exportarCSVAdmin(): Promise<void> {
+  if (!exigirSesionAdminEnPanel()) return;
   try {
     const data = adminDataCache || (await refrescarDatosAdmin());
     const rows: string[][] = [
@@ -1608,7 +1652,7 @@ async function exportarCSVAdmin(): Promise<void> {
     setTimeout(() => URL.revokeObjectURL(url), 1000);
     notificar('✅ CSV descargado', 'success');
   } catch (e) {
-    notificar(formatErrorMessage(e), 'error');
+    notificar(formatErrorMessage(e, 'admin'), 'error');
   }
 }
 
@@ -1669,6 +1713,7 @@ function cargarFormularioConfigAdmin(): void {
 }
 
 async function guardarConfigAdmin(): Promise<void> {
+  if (!exigirSesionAdminEnPanel()) return;
   ocultarFeedbackConfig();
   const getVal = (id: string) => ($<HTMLInputElement | HTMLTextAreaElement>(id)?.value || '').trim();
 
@@ -1746,7 +1791,7 @@ async function guardarConfigAdmin(): Promise<void> {
     );
     notificar('✅ Configuración guardada en Firebase', 'success');
   } catch (e) {
-    const msg = formatErrorMessage(e);
+    const msg = formatErrorMessage(e, 'admin');
     mostrarFeedbackConfig('error', `<b>No se pudo guardar:</b> ${escHtml(msg)}`);
     notificar(msg, 'error');
   } finally {
@@ -1757,6 +1802,7 @@ async function guardarConfigAdmin(): Promise<void> {
 /* ==================== RESET RIFA ==================== */
 
 function ejecutarNuevaRifa(): void {
+  if (!exigirSesionAdminEnPanel()) return;
   const confirmText = ($<HTMLInputElement>('inputConfirmReset')?.value || '').trim().toUpperCase();
   if (confirmText !== 'REINICIAR') {
     notificar('Escribe REINICIAR para confirmar', 'error');
@@ -1780,7 +1826,7 @@ function ejecutarNuevaRifa(): void {
         notificar('✅ Rifa reiniciada por completo', 'success');
         cerrarModal('modalPanelAdmin');
       } catch (e) {
-        notificar(formatErrorMessage(e), 'error');
+        notificar(formatErrorMessage(e, 'admin'), 'error');
       } finally {
         setBtnLoading(btn, false);
       }
@@ -1883,7 +1929,7 @@ function wireEvents(): void {
     $(`pm${code}`)?.addEventListener('click', () => cambiarMetodoPago(code));
   });
 
-  $('btnAbrirAdmin')?.addEventListener('click', abrirModalAdminSeguro);
+  $('btnAbrirAdmin')?.addEventListener('click', () => void abrirModalAdminSeguro());
   $('btnLoginGoogleAdmin')?.addEventListener('click', () => void iniciarSesionAdminGoogle());
   $('btnLogoutAdmin')?.addEventListener('click', () => void cerrarSesionAdmin());
   $('btnGuardarConfig')?.addEventListener('click', () => void guardarConfigAdmin());
@@ -1952,7 +1998,7 @@ function initApp(): void {
     }
   });
 
-  // 3) Live Firestore realtime listeners
+  // 3) Public-only Firestore realtime listeners (silent fallback on transient/auth issues)
   subscribeRaffleConfig(
     (config, exists) => {
       configExistsInDb = exists;
@@ -1961,7 +2007,8 @@ function initApp(): void {
       renderAll();
     },
     (err) => {
-      notificar(formatErrorMessage(err), 'error');
+      console.warn('Public raffleConfig sync fallback:', err.message);
+      renderAll();
     }
   );
 
@@ -1972,23 +2019,26 @@ function initApp(): void {
       renderAll();
     },
     (err) => {
-      notificar(formatErrorMessage(err), 'error');
+      console.warn('Public tickets sync fallback:', err.message);
+      renderAll();
     }
   );
 
-  // 4) Observe Firebase Auth state for Admin
-  observeAuth(async (user) => {
+  // 4) Observe Firebase Auth passively (never run Admin DB queries on public load)
+  observeAuth((user) => {
     currentAdminUser = user;
-    isCurrentUserAdmin = await checkIsCurrentUserAdmin(user);
-    if (isCurrentUserAdmin && user) {
+    if (!user) {
+      isCurrentUserAdmin = false;
+      adminDataCache = null;
+      return;
+    }
+    const isBootstrap =
+      user.emailVerified &&
+      (user.email || '').toLowerCase() === ADMIN_BOOTSTRAP_EMAIL.toLowerCase();
+    isCurrentUserAdmin = isBootstrap;
+    if (isBootstrap) {
       const badge = $('adminEmailBadge');
       if (badge && user.email) badge.textContent = user.email;
-      if (!configExistsInDb) {
-        await ensureConfigSeeded(currentConfig).catch(() => undefined);
-      }
-      if (!$('modalPanelAdmin')?.classList.contains('hidden')) {
-        if (activeAdminTab === 'val') void cargarPagosPendientesAdmin();
-      }
     }
   });
 }

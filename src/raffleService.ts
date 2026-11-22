@@ -5,7 +5,9 @@ import {
   getDocFromServer,
   getDocs,
   onSnapshot,
+  query,
   setDoc,
+  where,
   writeBatch,
   serverTimestamp,
   Timestamp,
@@ -300,13 +302,28 @@ export function subscribeRaffleConfig(
   );
 }
 
+const PUBLIC_TICKET_STATUSES: TicketStatus[] = ['DISPONIBLE', 'RESERVADO', 'ESPERA', 'PAGADO'];
+const PAYMENT_REPORT_STATUSES: PaymentStatus[] = ['PENDIENTE', 'APROBADO', 'RECHAZADO'];
+
+function publicTicketsQuery() {
+  return query(collection(db, 'tickets'), where('estatus', 'in', PUBLIC_TICKET_STATUSES));
+}
+
+function adminPaymentReportsQuery() {
+  return query(collection(db, 'paymentReports'), where('estatus', 'in', PAYMENT_REPORT_STATUSES));
+}
+
+function adminTicketContactsQuery() {
+  return query(collection(db, 'ticketContacts'), where('numero', '>=', '0'));
+}
+
 export function subscribeTickets(
   onData: (tickets: Record<string, TicketDoc>) => void,
   onError?: (err: Error) => void
 ): Unsubscribe {
   const path = 'tickets';
   return onSnapshot(
-    collection(db, 'tickets'),
+    publicTicketsQuery(),
     (snap) => {
       const map: Record<string, TicketDoc> = {};
       snap.forEach((docSnap) => {
@@ -561,13 +578,13 @@ export async function fetchAdminAllData(): Promise<{
   tickets: Record<string, TicketDoc>;
 }> {
   const [paySnap, contactSnap, ticketSnap] = await Promise.all([
-    getDocs(collection(db, 'paymentReports')).catch((e) =>
+    getDocs(adminPaymentReportsQuery()).catch((e) =>
       handleFirestoreError(e, OperationType.LIST, 'paymentReports')
     ),
-    getDocs(collection(db, 'ticketContacts')).catch((e) =>
+    getDocs(adminTicketContactsQuery()).catch((e) =>
       handleFirestoreError(e, OperationType.LIST, 'ticketContacts')
     ),
-    getDocs(collection(db, 'tickets')).catch((e) =>
+    getDocs(publicTicketsQuery()).catch((e) =>
       handleFirestoreError(e, OperationType.LIST, 'tickets')
     ),
   ]);
@@ -840,13 +857,13 @@ export async function editTicketInFirestore(params: {
 
 export async function resetRaffleInFirestore(): Promise<void> {
   const [tSnap, cSnap, pSnap] = await Promise.all([
-    getDocs(collection(db, 'tickets')).catch((e) =>
+    getDocs(publicTicketsQuery()).catch((e) =>
       handleFirestoreError(e, OperationType.LIST, 'tickets')
     ),
-    getDocs(collection(db, 'ticketContacts')).catch((e) =>
+    getDocs(adminTicketContactsQuery()).catch((e) =>
       handleFirestoreError(e, OperationType.LIST, 'ticketContacts')
     ),
-    getDocs(collection(db, 'paymentReports')).catch((e) =>
+    getDocs(adminPaymentReportsQuery()).catch((e) =>
       handleFirestoreError(e, OperationType.LIST, 'paymentReports')
     ),
   ]);

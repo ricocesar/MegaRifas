@@ -228,7 +228,7 @@ service cloud.firestore {
 
     match /ticketContacts/{ticketId} {
       allow get: if isValidTicketId(ticketId) && isAdmin();
-      allow list: if isBootstrappedAdmin() && resource.data.numero is string;
+      allow list: if isBootstrappedAdmin() && resource.data.numero >= '0';
       allow create: if isValidTicketId(ticketId)
         && isValidTicketContact(incoming())
         && incoming().numero == ticketId
