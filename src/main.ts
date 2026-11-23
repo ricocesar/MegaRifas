@@ -560,6 +560,21 @@ function renderizarFeed(
   content.innerHTML = html;
 }
 
+function sanitizeInstagramUrl(raw: string): string | null {
+  const trimmed = raw.trim();
+  if (!trimmed) return null;
+  const candidate = /^https?:\/\//i.test(trimmed)
+    ? trimmed
+    : `https://instagram.com/${encodeURIComponent(trimmed.replace(/^@/, ''))}`;
+  try {
+    const parsed = new URL(candidate);
+    if (parsed.protocol !== 'https:' && parsed.protocol !== 'http:') return null;
+    return parsed.href;
+  } catch {
+    return null;
+  }
+}
+
 function renderizarSoporte(waList: string[], igUrl: string): void {
   const c = $('contenedorBotonesSoporte');
   if (!c) return;
@@ -570,10 +585,9 @@ function renderizarSoporte(waList: string[], igUrl: string): void {
     const label = validWa.length > 1 ? `WhatsApp ${i + 1}` : 'WhatsApp';
     html += `<a href="https://wa.me/${tel}?text=${msg}" target="_blank" rel="noopener noreferrer" aria-label="${label}" title="${label}" class="w-11 h-11 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-lg inline-flex items-center justify-center shadow-sm transition shrink-0"><i class="fa-brands fa-whatsapp" aria-hidden="true"></i></a>`;
   });
-  if (igUrl.trim()) {
-    const raw = igUrl.trim();
-    const href = /^https?:\/\//i.test(raw) ? raw : `https://instagram.com/${raw.replace(/^@/, '')}`;
-    html += `<a href="${escHtml(href)}" target="_blank" rel="noopener noreferrer" aria-label="Instagram" title="Instagram" class="w-11 h-11 rounded-xl bg-slate-900 hover:bg-slate-800 text-pink-400 text-lg inline-flex items-center justify-center shadow-sm transition shrink-0"><i class="fa-brands fa-instagram" aria-hidden="true"></i></a>`;
+  const safeIgHref = sanitizeInstagramUrl(igUrl);
+  if (safeIgHref) {
+    html += `<a href="${escHtml(safeIgHref)}" target="_blank" rel="noopener noreferrer" aria-label="Instagram" title="Instagram" class="w-11 h-11 rounded-xl bg-slate-900 hover:bg-slate-800 text-pink-400 text-lg inline-flex items-center justify-center shadow-sm transition shrink-0"><i class="fa-brands fa-instagram" aria-hidden="true"></i></a>`;
   }
   c.innerHTML = html || '<span class="text-slate-500 text-xs">Sin canales de soporte configurados.</span>';
 }
