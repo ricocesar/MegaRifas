@@ -25,11 +25,6 @@
         "igUrl": { "type": "string", "maxLength": 200, "description": "Instagram profile URL or handle" },
         "waList": { "type": "array", "description": "Up to 3 WhatsApp support numbers" },
         "adminEmails": { "type": "array", "description": "Normalized lowercase Google emails authorized to administer the raffle (max 20, always includes primary admin)" },
-        "emailjsEnabled": { "type": "boolean", "description": "Whether EmailJS notifications are enabled" },
-        "emailjsServiceId": { "type": "string", "maxLength": 100, "description": "EmailJS Service ID" },
-        "emailjsPublicKey": { "type": "string", "maxLength": 100, "description": "EmailJS Public Key" },
-        "emailjsTemplateCompra": { "type": "string", "maxLength": 100, "description": "EmailJS Template ID for purchase confirmation and admin alert" },
-        "emailjsTemplateAprobacion": { "type": "string", "maxLength": 100, "description": "EmailJS Template ID for payment approval confirmation" },
         "updatedAt": { "type": "string", "format": "date-time", "description": "Server timestamp of last update" }
       },
       "required": [
@@ -53,11 +48,6 @@
         "igUrl",
         "waList",
         "adminEmails",
-        "emailjsEnabled",
-        "emailjsServiceId",
-        "emailjsPublicKey",
-        "emailjsTemplateCompra",
-        "emailjsTemplateAprobacion",
         "updatedAt"
       ]
     },
@@ -86,10 +76,9 @@
         "cedulaHash": { "type": "string", "minLength": 64, "maxLength": 64, "pattern": "^[a-f0-9]{64}$", "description": "SHA-256 hash matching public Ticket" },
         "nombre": { "type": "string", "minLength": 2, "maxLength": 100, "description": "Participant full name" },
         "telefono": { "type": "string", "minLength": 7, "maxLength": 25, "description": "Participant WhatsApp phone" },
-        "correo": { "type": "string", "minLength": 5, "maxLength": 120, "description": "Participant email" },
         "updatedAt": { "type": "string", "format": "date-time", "description": "Server timestamp of last update" }
       },
-      "required": ["numero", "cedula", "cedulaHash", "nombre", "telefono", "correo", "updatedAt"]
+      "required": ["numero", "cedula", "cedulaHash", "nombre", "telefono", "updatedAt"]
     },
     "PaymentReport": {
       "title": "PaymentReport",
@@ -100,13 +89,14 @@
         "cedulaHash": { "type": "string", "minLength": 64, "maxLength": 64, "pattern": "^[a-f0-9]{64}$", "description": "SHA-256 hash of cedula" },
         "nombre": { "type": "string", "minLength": 2, "maxLength": 100, "description": "Buyer full name" },
         "telefono": { "type": "string", "minLength": 7, "maxLength": 25, "description": "Buyer WhatsApp phone" },
-        "correo": { "type": "string", "minLength": 5, "maxLength": 120, "description": "Buyer email" },
         "numeros": { "type": "array", "description": "List of ticket numbers covered by this payment (1 to 50)" },
         "montoUSD": { "type": "number", "description": "Reported USD total" },
-        "montoBs": { "type": "number", "description": "Reported Bs total" },
+        "montoBs": { "type": "number", "description": "Frozen Bs total at payment time" },
+        "amountBs": { "type": "number", "description": "Frozen Bs total at payment time (canonical)" },
+        "exchangeRate": { "type": "number", "description": "Exchange rate Bs/USD applied at payment time" },
         "metodo": { "type": "string", "enum": ["Pago Móvil", "Transferencia", "Binance", "Zelle", "Efectivo", "USDT"], "description": "Payment method" },
         "referencia": { "type": "string", "minLength": 1, "maxLength": 30, "description": "Payment reference code" },
-        "comprobante": { "type": "string", "maxLength": 350000, "description": "Optional compressed image data URL" },
+        "comprobante": { "type": "string", "maxLength": 350000, "description": "Empty string for new payments (legacy compatibility)" },
         "estatus": { "type": "string", "enum": ["PENDIENTE", "APROBADO", "RECHAZADO"], "description": "Review status" },
         "createdAt": { "type": "string", "format": "date-time", "description": "Server creation timestamp" },
         "resolvedAt": { "type": "string", "format": "date-time", "description": "Server resolution timestamp (or null)" }
@@ -116,10 +106,11 @@
         "cedulaHash",
         "nombre",
         "telefono",
-        "correo",
         "numeros",
         "montoUSD",
         "montoBs",
+        "amountBs",
+        "exchangeRate",
         "metodo",
         "referencia",
         "comprobante",

@@ -61,17 +61,13 @@ service cloud.firestore {
         'tituloRifa', 'totalNumeros', 'precioTicketUSD', 'tasa', 'tasaManual',
         'premios', 'noticias', 'tickerNoticias', 'fechaSorteo', 'diasLimitePago',
         'diasBloqueo', 'pmDatos', 'trDatos', 'binanceDatos', 'zelleDatos',
-        'efectivoDatos', 'usdtDatos', 'igUrl', 'waList', 'adminEmails',
-        'emailjsEnabled', 'emailjsServiceId', 'emailjsPublicKey',
-        'emailjsTemplateCompra', 'emailjsTemplateAprobacion', 'updatedAt'
+        'efectivoDatos', 'usdtDatos', 'igUrl', 'waList', 'adminEmails', 'updatedAt'
       ])
       && data.keys().hasOnly([
         'tituloRifa', 'totalNumeros', 'precioTicketUSD', 'tasa', 'tasaManual',
         'premios', 'noticias', 'tickerNoticias', 'fechaSorteo', 'diasLimitePago',
         'diasBloqueo', 'pmDatos', 'trDatos', 'binanceDatos', 'zelleDatos',
-        'efectivoDatos', 'usdtDatos', 'igUrl', 'waList', 'adminEmails',
-        'emailjsEnabled', 'emailjsServiceId', 'emailjsPublicKey',
-        'emailjsTemplateCompra', 'emailjsTemplateAprobacion', 'updatedAt'
+        'efectivoDatos', 'usdtDatos', 'igUrl', 'waList', 'adminEmails', 'updatedAt'
       ])
       && data.tituloRifa is string && data.tituloRifa.size() <= 120
       && data.totalNumeros is int && data.totalNumeros >= 1 && data.totalNumeros <= 1000
@@ -98,11 +94,6 @@ service cloud.firestore {
       && data.adminEmails is list && data.adminEmails.size() >= 1 && data.adminEmails.size() <= 20
       && data.adminEmails[0] is string && data.adminEmails[0].size() >= 5 && data.adminEmails[0].size() <= 120
       && 'ricocesar86@gmail.com' in data.adminEmails
-      && data.emailjsEnabled is bool
-      && data.emailjsServiceId is string && data.emailjsServiceId.size() <= 100
-      && data.emailjsPublicKey is string && data.emailjsPublicKey.size() <= 100
-      && data.emailjsTemplateCompra is string && data.emailjsTemplateCompra.size() <= 100
-      && data.emailjsTemplateAprobacion is string && data.emailjsTemplateAprobacion.size() <= 100
       && data.updatedAt is timestamp;
     }
 
@@ -124,7 +115,7 @@ service cloud.firestore {
 
     function isValidTicketContact(data) {
       return data.keys().hasAll([
-        'numero', 'cedula', 'cedulaHash', 'nombre', 'telefono', 'correo', 'updatedAt'
+        'numero', 'cedula', 'cedulaHash', 'nombre', 'telefono', 'updatedAt'
       ])
       && data.keys().hasOnly([
         'numero', 'cedula', 'cedulaHash', 'nombre', 'telefono', 'correo', 'updatedAt'
@@ -134,30 +125,32 @@ service cloud.firestore {
       && data.cedulaHash is string && data.cedulaHash.size() == 64 && data.cedulaHash.matches('^[a-f0-9]{64}$')
       && data.nombre is string && data.nombre.size() >= 2 && data.nombre.size() <= 100
       && data.telefono is string && data.telefono.size() >= 7 && data.telefono.size() <= 25
-      && data.correo is string && data.correo.size() >= 5 && data.correo.size() <= 120
+      && (!('correo' in data) || (data.correo is string && data.correo.size() <= 120))
       && data.updatedAt is timestamp;
     }
 
     function isValidPaymentReport(data) {
       return data.keys().hasAll([
-        'cedula', 'cedulaHash', 'nombre', 'telefono', 'correo', 'numeros',
+        'cedula', 'cedulaHash', 'nombre', 'telefono', 'numeros',
         'montoUSD', 'montoBs', 'metodo', 'referencia', 'comprobante',
         'estatus', 'createdAt', 'resolvedAt'
       ])
       && data.keys().hasOnly([
         'cedula', 'cedulaHash', 'nombre', 'telefono', 'correo', 'numeros',
-        'montoUSD', 'montoBs', 'metodo', 'referencia', 'comprobante',
-        'estatus', 'createdAt', 'resolvedAt'
+        'montoUSD', 'montoBs', 'amountBs', 'exchangeRate', 'metodo', 'referencia',
+        'comprobante', 'estatus', 'createdAt', 'resolvedAt'
       ])
       && data.cedula is string && data.cedula.size() >= 4 && data.cedula.size() <= 20
       && data.cedulaHash is string && data.cedulaHash.size() == 64 && data.cedulaHash.matches('^[a-f0-9]{64}$')
       && data.nombre is string && data.nombre.size() >= 2 && data.nombre.size() <= 100
       && data.telefono is string && data.telefono.size() >= 7 && data.telefono.size() <= 25
-      && data.correo is string && data.correo.size() >= 5 && data.correo.size() <= 120
+      && (!('correo' in data) || (data.correo is string && data.correo.size() <= 120))
       && data.numeros is list && data.numeros.size() >= 1 && data.numeros.size() <= 50
       && data.numeros[0] is string && data.numeros[0].size() >= 2 && data.numeros[0].size() <= 4
       && data.montoUSD is number && data.montoUSD > 0 && data.montoUSD <= 1000000
       && data.montoBs is number && data.montoBs >= 0 && data.montoBs <= 100000000000
+      && (!('amountBs' in data) || (data.amountBs is number && data.amountBs >= 0 && data.amountBs <= 100000000000))
+      && (!('exchangeRate' in data) || (data.exchangeRate is number && data.exchangeRate >= 0 && data.exchangeRate <= 10000000))
       && data.metodo is string && data.metodo in ['Pago Móvil', 'Transferencia', 'Binance', 'Zelle', 'Efectivo', 'USDT']
       && data.referencia is string && data.referencia.size() >= 1 && data.referencia.size() <= 30
       && data.comprobante is string && data.comprobante.size() <= 350000
@@ -269,6 +262,7 @@ service cloud.firestore {
       allow list: if isAdmin() && resource.data.numero >= '0';
       allow create: if isValidTicketId(ticketId)
         && isValidTicketContact(incoming())
+        && !('correo' in incoming())
         && incoming().numero == ticketId
         && incoming().updatedAt == request.time
         && (
@@ -281,6 +275,7 @@ service cloud.firestore {
         );
       allow update: if isValidTicketId(ticketId)
         && isValidTicketContact(incoming())
+        && !('correo' in incoming())
         && incoming().numero == existing().numero
         && incoming().updatedAt == request.time
         && (
@@ -305,6 +300,10 @@ service cloud.firestore {
       allow list: if isAdmin() && resource.data.estatus in ['PENDIENTE', 'APROBADO', 'RECHAZADO'];
       allow create: if isValidId(reportId)
         && isValidPaymentReport(incoming())
+        && !('correo' in incoming())
+        && 'amountBs' in incoming()
+        && 'exchangeRate' in incoming()
+        && incoming().amountBs == incoming().montoBs
         && incoming().comprobante == ''
         && incoming().estatus == 'PENDIENTE'
         && incoming().createdAt == request.time

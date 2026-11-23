@@ -390,7 +390,7 @@
     </div>
     <div class="text-right shrink-0">
       <div id="badgePrecioBs" class="text-sm sm:text-base font-black text-slate-900 font-mono">Bs --</div>
-      <div id="badgePrecioUSD" class="text-[10px] text-slate-500 font-semibold">por boleto</div>
+      <div class="text-[10px] text-slate-500 font-semibold">por boleto</div>
     </div>
   </div>
 </header>
@@ -563,7 +563,6 @@
         <span class="text-xs font-black text-slate-700">Total:</span>
         <div class="text-right">
           <b id="chkTotalBs" class="text-base font-black text-slate-900 font-mono"></b>
-          <div id="chkTotalUSD" class="text-[11px] text-slate-500 font-mono hidden"></div>
         </div>
       </div>
     </div>
@@ -575,7 +574,6 @@
       </div>
       <div><label class="lbl lbl-req" for="chkNombre">Nombre y apellido</label><input type="text" id="chkNombre" class="inp" placeholder="Tu nombre completo"></div>
       <div><label class="lbl lbl-req" for="chkTelefono">Teléfono WhatsApp</label><input type="tel" id="chkTelefono" class="inp" placeholder="Ej: 04141234567"></div>
-      <div><label class="lbl lbl-req" for="chkCorreo">Correo electrónico</label><input type="email" id="chkCorreo" class="inp" placeholder="tucorreo@email.com"></div>
     </div>
 
     <div id="bloqueDatosPago" class="space-y-3 pt-3 border-t border-slate-100">
@@ -770,38 +768,6 @@
           <div id="listaAdminEmails" class="space-y-1.5"></div>
         </div>
 
-        <div class="bg-emerald-50/70 border border-emerald-200 rounded-xl p-3.5 space-y-2.5">
-          <div class="flex items-center justify-between gap-2">
-            <div>
-              <div class="text-xs font-black text-emerald-950 uppercase tracking-wide">📧 Notificaciones por Correo (EmailJS)</div>
-              <p class="text-[11px] text-emerald-800/80 font-semibold mt-0.5">Envía confirmaciones al comprador y alertas a los administradores sin servidor.</p>
-            </div>
-            <label class="inline-flex items-center gap-2 cursor-pointer shrink-0 bg-white border border-emerald-200 rounded-lg px-2.5 py-1.5">
-              <input type="checkbox" id="cfgEmailjsEnabled" class="w-4 h-4 accent-emerald-600">
-              <span class="text-xs font-black text-emerald-900">Activo</span>
-            </label>
-          </div>
-          <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-            <div>
-              <label class="lbl" for="cfgEmailjsServiceId">Service ID</label>
-              <input type="text" id="cfgEmailjsServiceId" maxlength="100" class="inp !text-xs font-mono" placeholder="service_xxxxxxx">
-            </div>
-            <div>
-              <label class="lbl" for="cfgEmailjsPublicKey">Public Key</label>
-              <input type="text" id="cfgEmailjsPublicKey" maxlength="100" class="inp !text-xs font-mono" placeholder="xxxxxxxxxxxxxxxxx">
-            </div>
-            <div>
-              <label class="lbl" for="cfgEmailjsTemplateCompra">Template ID Compra / Aviso</label>
-              <input type="text" id="cfgEmailjsTemplateCompra" maxlength="100" class="inp !text-xs font-mono" placeholder="template_compra">
-            </div>
-            <div>
-              <label class="lbl" for="cfgEmailjsTemplateAprobacion">Template ID Aprobación</label>
-              <input type="text" id="cfgEmailjsTemplateAprobacion" maxlength="100" class="inp !text-xs font-mono" placeholder="template_aprobacion">
-            </div>
-          </div>
-          <p class="text-[10px] text-emerald-800/80 font-medium leading-relaxed">Si EmailJS no está activo o falta algún ID, los pagos y aprobaciones se guardarán normalmente en Firebase sin bloquearse.</p>
-        </div>
-
         <div class="flex gap-2 sticky bottom-0 bg-white pt-2 pb-1 border-t border-slate-100">
           <button type="button" id="btnRecargarConfig" class="btn-secondary px-4" title="Recargar valores desde Firebase">
             <i class="fa-solid fa-rotate"></i>
@@ -874,7 +840,6 @@
       <div><label class="lbl" for="editCedula">Cédula</label><input type="text" id="editCedula" class="inp"></div>
       <div><label class="lbl" for="editNombre">Nombre</label><input type="text" id="editNombre" class="inp"></div>
       <div><label class="lbl" for="editTelefono">Teléfono</label><input type="text" id="editTelefono" class="inp"></div>
-      <div><label class="lbl" for="editCorreo">Correo</label><input type="email" id="editCorreo" class="inp"></div>
       <button type="button" id="btnGuardarEdicion" class="btn-primary w-full">Guardar</button>
     </div>
   </div>

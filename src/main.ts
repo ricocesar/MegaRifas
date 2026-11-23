@@ -13,6 +13,7 @@ import {
   ensureConfigSeeded,
   fetchAdminAllData,
   fetchLiveBcvRate,
+  getPaymentFrozenBs,
   isSixDigitRef,
   isValidAdminEmailFormat,
   normalizeAdminEmail,
@@ -37,7 +38,6 @@ import {
   type TicketStatus,
 } from './raffleService';
 import { exportHistorialToPdf, exportPaymentsToPdf } from './pdfExport';
-import { sendApprovalEmail, sendPurchaseEmails } from './emailService';
 
 const CACHE_KEY = 'mega_rifas_fb_cache_v1';
 const MY_PROFILE_KEY = 'mega_rifas_my_profile_v1';
@@ -56,7 +56,6 @@ interface LookupResult {
   pagados: string[];
   espera: string[];
   reservados: string[];
-  deudaUSD: number;
   deudaBs: number;
   diasRestantes: number | null;
   fechaLimite: string;
@@ -72,7 +71,7 @@ interface WaPayload {
   nombre: string;
   numeros: string;
   ref: string;
-  monto: string;
+  montoBs: string;
 }
 
 type PaymentMethodCode = 'PM' | 'TR' | 'BZ' | 'ZP' | 'EF' | 'US';
@@ -344,17 +343,22 @@ function guardarCacheLocal(): void {
   }
 }
 
-function leerMiPerfilLocal(): { cedula: string; nombre: string; telefono: string; correo: string } | null {
+function leerMiPerfilLocal(): { cedula: string; nombre: string; telefono: string } | null {
   try {
     const raw = localStorage.getItem(MY_PROFILE_KEY);
     if (!raw) return null;
-    return JSON.parse(raw) as { cedula: string; nombre: string; telefono: string; correo: string };
+    const parsed = JSON.parse(raw) as Partial<{ cedula: string; nombre: string; telefono: string }>;
+    return {
+      cedula: String(parsed.cedula || ''),
+      nombre: String(parsed.nombre || ''),
+      telefono: String(parsed.telefono || ''),
+    };
   } catch {
     return null;
   }
 }
 
-function guardarMiPerfilLocal(p: { cedula: string; nombre: string; telefono: string; correo: string }): void {
+function guardarMiPerfilLocal(p: { cedula: string; nombre: string; telefono: string }): void {
   try {
     localStorage.setItem(MY_PROFILE_KEY, JSON.stringify(p));
   } catch {
@@ -391,9 +395,7 @@ function renderAll(): void {
   document.title = cfg.tituloRifa ? `Mega Rifas · ${cfg.tituloRifa}` : 'Mega Rifas';
 
   const bsEl = $('badgePrecioBs');
-  const usdEl = $('badgePrecioUSD');
   if (bsEl) bsEl.textContent = priceBs > 0 ? `Bs ${fmt(priceBs)}` : 'Bs --';
-  if (usdEl) usdEl.textContent = `$${fmt(cfg.precioTicketUSD)} · por boleto`;
 
   const premiosEl = $('txtPremiosHeader');
   if (premiosEl) premiosEl.textContent = cfg.premios || 'Premios por anunciar';
@@ -739,7 +741,6 @@ function recomputarConsultaParticipante(cedula: string, cedulaHash: string): voi
     fechaLimite = formatDateShort(limiteMs);
   }
 
-  const deudaUSD = reservados.length * currentConfig.precioTicketUSD;
   const deudaBs = reservados.length * getTicketPriceBs();
 
   participanteConsultado = {
@@ -749,7 +750,6 @@ function recomputarConsultaParticipante(cedula: string, cedulaHash: string): voi
     pagados,
     espera,
     reservados,
-    deudaUSD,
     deudaBs,
     diasRestantes,
     fechaLimite,
@@ -774,10 +774,10 @@ function renderizarResultadoConsulta(res: LookupResult): void {
   html += '<div class="w-8 h-8 rounded-lg bg-blue-100 flex items-center justify-center text-blue-600 text-xs shrink-0"><i class="fa-solid fa-user"></i></div>';
   html += `<div class="min-w-0"><b class="text-xs font-black text-slate-900 block truncate">${escHtml(res.displayName)}</b><span class="text-[10px] font-mono text-slate-500">C.I. ${escHtml(res.cedula)}</span></div></div>`;
 
-  if (res.deudaUSD > 0) {
+  if (res.reservados.length > 0) {
     html += '<div class="bg-amber-50 border border-amber-200 rounded-xl p-2.5">';
     html += '<div class="text-[10px] font-bold text-amber-700">💳 DEUDA PENDIENTE</div>';
-    html += `<b class="text-base font-black text-amber-900 font-mono">Bs ${fmt(res.deudaBs)}</b> <span class="text-xs font-mono text-amber-700">($${fmt(res.deudaUSD)})</span>`;
+    html += `<b class="text-base font-black text-amber-900 font-mono">Bs ${fmt(res.deudaBs)}</b>`;
     if (res.diasRestantes !== null) {
       const color = res.diasRestantes <= 3 ? 'text-rose-600' : 'text-amber-700';
       const label =
@@ -850,10 +850,8 @@ function pagarReservadosSeleccionados(): void {
   if (savedProfile && normalizeDigits(savedProfile.cedula) === participanteConsultado.cedula) {
     const nEl = $<HTMLInputElement>('chkNombre');
     const tEl = $<HTMLInputElement>('chkTelefono');
-    const cEl = $<HTMLInputElement>('chkCorreo');
     if (nEl && !nEl.value) nEl.value = savedProfile.nombre;
     if (tEl && !tEl.value) tEl.value = savedProfile.telefono;
-    if (cEl && !cEl.value) cEl.value = savedProfile.correo;
   }
   abrirModalCheckout('PAGAR');
 }
@@ -877,14 +875,11 @@ function abrirModalCheckout(modo: 'RESERVADO' | 'PAGAR'): void {
     const cedEl = $<HTMLInputElement>('chkCedula');
     const nomEl = $<HTMLInputElement>('chkNombre');
     const telEl = $<HTMLInputElement>('chkTelefono');
-    const corEl = $<HTMLInputElement>('chkCorreo');
     if (cedEl && !cedEl.value) cedEl.value = savedProfile.cedula;
     if (nomEl && !nomEl.value) nomEl.value = savedProfile.nombre;
     if (telEl && !telEl.value) telEl.value = savedProfile.telefono;
-    if (corEl && !corEl.value) corEl.value = savedProfile.correo;
   }
 
-  const totalUSD = seleccionados.length * currentConfig.precioTicketUSD;
   const totalBs = seleccionados.length * getTicketPriceBs();
 
   const tit = $('tituloModalCheckout');
@@ -892,13 +887,11 @@ function abrirModalCheckout(modo: 'RESERVADO' | 'PAGAR'): void {
   const cant = $('chkCantidad');
   const nums = $('chkNumerosTxt');
   const tBs = $('chkTotalBs');
-  const tUsd = $('chkTotalUSD');
   if (tit) tit.textContent = modo === 'RESERVADO' ? 'Reservar Boletos' : 'Reportar Pago';
   if (sub) sub.textContent = modo === 'RESERVADO' ? 'Reserva sin pagar ahora' : 'Elige cómo quieres pagar';
   if (cant) cant.textContent = `${seleccionados.length} boleto(s)`;
   if (nums) nums.textContent = `#${seleccionados.join(' · #')}`;
   if (tBs) tBs.textContent = `Bs ${fmt(totalBs)}`;
-  if (tUsd) tUsd.textContent = `$${fmt(totalUSD)}`;
 
   const blq = $('bloqueDatosPago');
   if (modo === 'PAGAR') {
@@ -906,7 +899,6 @@ function abrirModalCheckout(modo: 'RESERVADO' | 'PAGAR'): void {
     cambiarMetodoPago('PM');
   } else {
     blq?.classList.add('hidden');
-    tUsd?.classList.add('hidden');
   }
   abrirModal('modalCheckout');
 }
@@ -917,18 +909,9 @@ function cambiarMetodoPago(met: PaymentMethodCode): void {
   metodos.forEach((m) => $(`pm${m}`)?.classList.toggle('on', m === met));
 
   const esUSD = METODOS_USD.has(met);
-  const totalUSD = seleccionados.length * currentConfig.precioTicketUSD;
   const totalBs = seleccionados.length * getTicketPriceBs();
   const tBs = $('chkTotalBs');
-  const tUsd = $('chkTotalUSD');
-  if (esUSD) {
-    if (tBs) tBs.textContent = `$${fmt(totalUSD)}`;
-    if (tUsd) tUsd.textContent = `≈ Bs ${fmt(totalBs)}`;
-  } else {
-    if (tBs) tBs.textContent = `Bs ${fmt(totalBs)}`;
-    if (tUsd) tUsd.textContent = `≈ $${fmt(totalUSD)}`;
-  }
-  tUsd?.classList.remove('hidden');
+  if (tBs) tBs.textContent = `Bs ${fmt(totalBs)}`;
 
   const box = $('datosPagoVisual');
   if (box) {
@@ -951,7 +934,7 @@ function cambiarMetodoPago(met: PaymentMethodCode): void {
     blqRef?.classList.add('hidden');
     const tel = normalizeDigits(currentConfig.waList[0] || '');
     const msg = encodeURIComponent(
-      `¡Hola! 👋 Quiero pagar con *${METHOD_LABELS[met]}*.\n\n🎟️ Números: #${seleccionados.join(', #')}\n💰 Monto: *$${fmt(totalUSD)}*\n\n¿Me indican cómo proceder? 🙏`
+      `¡Hola! 👋 Quiero pagar con *${METHOD_LABELS[met]}*.\n\n🎟️ Números: #${seleccionados.join(', #')}\n💰 Monto: *Bs ${fmt(totalBs)}*\n\n¿Me indican cómo proceder? 🙏`
     );
     const link = $<HTMLAnchorElement>('btnWhatsAppSoporte');
     if (link) link.href = tel ? `https://wa.me/${tel}?text=${msg}` : '#';
@@ -965,14 +948,13 @@ async function ejecutarCheckout(): Promise<void> {
   const cedula = normalizeDigits($<HTMLInputElement>('chkCedula')?.value || '');
   const nombre = ($<HTMLInputElement>('chkNombre')?.value || '').trim();
   const telefono = ($<HTMLInputElement>('chkTelefono')?.value || '').trim();
-  const correo = ($<HTMLInputElement>('chkCorreo')?.value || '').trim();
 
-  if (cedula.length < 4 || nombre.length < 2 || telefono.length < 7 || !correo.includes('@')) {
+  if (cedula.length < 4 || nombre.length < 2 || telefono.length < 7) {
     notificar('Completa todos los datos obligatorios correctamente', 'error');
     return;
   }
 
-  guardarMiPerfilLocal({ cedula, nombre, telefono, correo });
+  guardarMiPerfilLocal({ cedula, nombre, telefono });
   const btn = $<HTMLButtonElement>('btnEjecutarCheckout');
 
   if (modoCheckoutActual === 'RESERVADO') {
@@ -982,7 +964,6 @@ async function ejecutarCheckout(): Promise<void> {
         cedula,
         nombre,
         telefono,
-        correo,
         numeros: seleccionados.slice(),
       });
       seleccionados = [];
@@ -1008,34 +989,22 @@ async function ejecutarCheckout(): Promise<void> {
   setBtnLoading(btn, true, 'Enviando pago...');
   try {
     const purchasedNums = seleccionados.slice();
-    const totalUSD = purchasedNums.length * currentConfig.precioTicketUSD;
-    const totalBs = purchasedNums.length * getTicketPriceBs();
+    const appliedRate = getEffectiveRate();
+    const totalUSD = Number((purchasedNums.length * currentConfig.precioTicketUSD).toFixed(2));
+    const totalBs = Number((purchasedNums.length * getTicketPriceBs()).toFixed(2));
     const metodoLabel = METHOD_LABELS[metodoPagoActual];
 
     await submitPaymentReportInFirestore({
       cedula,
       nombre,
       telefono,
-      correo,
       numeros: purchasedNums,
       montoUSD: totalUSD,
-      montoBs: totalBs,
+      amountBs: totalBs,
+      exchangeRate: appliedRate,
       metodo: metodoLabel,
       referencia,
       currentTickets,
-    });
-
-    // Non-blocking EmailJS notifications (buyer confirmation + admin alerts)
-    void sendPurchaseEmails(currentConfig, {
-      nombre,
-      cedula,
-      telefono,
-      correo,
-      numeros: purchasedNums,
-      montoUSD: totalUSD,
-      montoBs: totalBs,
-      metodo: metodoLabel,
-      referencia,
     });
 
     seleccionados = [];
@@ -1197,7 +1166,6 @@ function computeVencimientos(data: AdminCache) {
       cedula: string;
       nombre: string;
       telefono: string;
-      correo: string;
       numeros: string[];
       earliestMs: number;
     }
@@ -1217,7 +1185,6 @@ function computeVencimientos(data: AdminCache) {
         cedula: c?.cedula || '—',
         nombre: c?.nombre || t.displayName || 'Participante',
         telefono: c?.telefono || '',
-        correo: c?.correo || '',
         numeros: [t.numero],
         earliestMs: ts,
       });
@@ -1254,13 +1221,14 @@ async function cargarPagosPendientesAdmin(): Promise<void> {
     hoyInicio.setHours(0, 0, 0, 0);
     const hoyMs = hoyInicio.getTime();
 
+    const rate = getEffectiveRate();
     const aprobados = data.payments.filter((p) => p.estatus === 'APROBADO');
     const pendientes = data.payments.filter((p) => p.estatus === 'PENDIENTE');
     const totalUSD = aprobados.reduce((acc, p) => acc + p.montoUSD, 0);
-    const totalBs = totalUSD * getEffectiveRate();
-    const totalHoyUSD = aprobados
-      .filter((p) => (p.resolvedAtMs || p.createdAtMs) >= hoyMs)
-      .reduce((acc, p) => acc + p.montoUSD, 0);
+    const totalBs = aprobados.reduce((acc, p) => acc + getPaymentFrozenBs(p, rate), 0);
+    const aprobadosHoy = aprobados.filter((p) => (p.resolvedAtMs || p.createdAtMs) >= hoyMs);
+    const totalHoyBs = aprobadosHoy.reduce((acc, p) => acc + getPaymentFrozenBs(p, rate), 0);
+    const totalHoyUSD = aprobadosHoy.reduce((acc, p) => acc + p.montoUSD, 0);
 
     const vencimientos = computeVencimientos(data);
     const vencidas = vencimientos.filter((v) => v.vencida).length;
@@ -1279,10 +1247,10 @@ async function cargarPagosPendientesAdmin(): Promise<void> {
 
     let html = '<div class="bg-emerald-50 border border-emerald-200 rounded-xl p-3.5">';
     html += '<div class="text-[10px] font-black text-emerald-700 uppercase mb-1">💰 Ingresos Aprobados</div>';
-    html += `<div class="text-2xl font-black text-emerald-900 font-mono">$${fmt(totalUSD)}</div>`;
-    html += `<div class="text-xs text-emerald-700 font-mono">≈ Bs ${fmt(totalBs)}</div>`;
+    html += `<div class="text-2xl font-black text-emerald-900 font-mono">Bs ${fmt(totalBs)}</div>`;
+    html += `<div class="text-xs font-bold text-emerald-700 font-mono">$${fmt(totalUSD)}</div>`;
     html += '<div class="grid grid-cols-3 gap-2 mt-2.5 pt-2.5 border-t border-emerald-200 text-center">';
-    html += `<div><div class="text-[10px] font-bold text-emerald-600">HOY</div><b class="text-xs font-mono">$${fmt(totalHoyUSD)}</b></div>`;
+    html += `<div><div class="text-[10px] font-bold text-emerald-600">HOY</div><b class="text-xs font-mono block">Bs ${fmt(totalHoyBs)}</b><span class="text-[10px] text-emerald-700 font-mono">$${fmt(totalHoyUSD)}</span></div>`;
     html += `<div><div class="text-[10px] font-bold text-emerald-600">APROBADOS</div><b class="text-xs font-mono">${aprobados.length}</b></div>`;
     html += `<div><div class="text-[10px] font-bold text-emerald-600">X VENCER</div><b class="text-xs font-mono text-amber-700">${porVencer}</b></div>`;
     html += '</div>';
@@ -1312,14 +1280,15 @@ async function cargarPagosPendientesAdmin(): Promise<void> {
       html += '<div class="subcard text-center text-slate-500 py-5 text-xs">No hay pagos pendientes por validar 🎉</div>';
     } else {
       for (const p of pendientes) {
+        const frozenBs = getPaymentFrozenBs(p, rate);
+        const rateBadge = p.exchangeRate > 0 ? ` · Tasa ${fmt(p.exchangeRate)}` : '';
         html += '<div class="subcard space-y-1.5">';
         html += '<div class="flex justify-between items-start gap-2">';
         html += `<div><b class="text-xs sm:text-sm text-slate-900">${escHtml(p.nombre)}</b><br><span class="text-[11px] text-slate-500 font-mono">C.I. ${escHtml(p.cedula)}</span></div>`;
-        html += `<div class="text-right"><b class="text-sm text-emerald-600 font-mono">$${fmt(p.montoUSD)}</b><br><span class="text-[10px] text-slate-500">${escHtml(formatDateTime(p.createdAtMs))}</span></div></div>`;
+        html += `<div class="text-right"><b class="text-sm sm:text-base font-black text-emerald-700 font-mono block leading-tight">Bs ${fmt(frozenBs)}</b><span class="text-[11px] font-bold text-slate-600 font-mono block">$${fmt(p.montoUSD)}${escHtml(rateBadge)}</span><span class="text-[10px] text-slate-500">${escHtml(formatDateTime(p.createdAtMs))}</span></div></div>`;
         html += `<div class="text-xs text-blue-600 font-mono font-bold">🎟️ #${escHtml(p.numeros.join(', #'))}</div>`;
         html += `<div class="text-xs text-slate-700">Ref: <b>${escHtml(p.referencia)}</b> · ${escHtml(p.metodo)}</div>`;
         if (p.telefono) html += `<div class="text-[11px] text-slate-500"><i class="fa-solid fa-phone mr-1"></i>${escHtml(p.telefono)}</div>`;
-        if (p.correo) html += `<div class="text-[11px] text-slate-500"><i class="fa-solid fa-envelope mr-1"></i>${escHtml(p.correo)}</div>`;
         html += '<div class="flex gap-2 pt-1">';
         html += `<button type="button" data-resolve-id="${escHtml(p.id)}" data-resolve-acc="APROBADO" class="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2 rounded-lg text-xs transition">✓ Aprobar</button>`;
         html += `<button type="button" data-resolve-id="${escHtml(p.id)}" data-resolve-acc="RECHAZADO" class="flex-1 bg-rose-600 hover:bg-rose-700 text-white font-bold py-2 rounded-lg text-xs transition">✗ Rechazar</button>`;
@@ -1343,7 +1312,6 @@ async function resolverPago(reportId: string, accion: 'APROBADO' | 'RECHAZADO', 
     try {
       await resolvePaymentInFirestore(report, accion);
       if (accion === 'APROBADO') {
-        void sendApprovalEmail(currentConfig, report);
         notificar('✅ Pago aprobado y boletos marcados como PAGADO', 'success');
         abrirModalWAConDatos(report);
       } else {
@@ -1372,15 +1340,16 @@ async function resolverPago(reportId: string, accion: 'APROBADO' | 'RECHAZADO', 
 
 function abrirModalWAConDatos(p: PaymentReportDoc): void {
   const nums = p.numeros.join(', #');
+  const frozenBs = getPaymentFrozenBs(p, getEffectiveRate());
   waData = {
     nombre: p.nombre,
     numeros: nums,
     ref: p.referencia,
-    monto: fmt(p.montoUSD),
+    montoBs: fmt(frozenBs),
   };
   const telEl = $<HTMLInputElement>('waTelefono');
   if (telEl) telEl.value = normalizeDigits(p.telefono);
-  const msg = `¡Hola *${p.nombre}*! 🎉\n\n✅ Tu pago por *$${fmt(p.montoUSD)}* (Ref: *${p.referencia}*) ha sido *APROBADO*.\n\n🎟️ Números: *#${nums}*\n\n¡Mucha suerte en el sorteo! 🍀\n*Mega Rifas*`;
+  const msg = `¡Hola *${p.nombre}*! 🎉\n\n✅ Tu pago por *Bs ${fmt(frozenBs)}* (Ref: *${p.referencia}*) ha sido *APROBADO*.\n\n🎟️ Números: *#${nums}*\n\n¡Mucha suerte en el sorteo! 🍀\n*Mega Rifas*`;
   const prev = $('waPreview');
   if (prev) prev.innerHTML = escHtml(msg).replace(/\*(.*?)\*/g, '<b>$1</b>').replace(/\n/g, '<br>');
   abrirModal('modalWA');
@@ -1395,7 +1364,7 @@ function enviarWAConfirmado(): void {
   if (!waData) return;
   const normalized = tel.length === 11 && tel.startsWith('0') ? `58${tel.slice(1)}` : tel;
   const msg = encodeURIComponent(
-    `¡Hola *${waData.nombre}*! 🎉\n\n✅ Tu pago por *$${waData.monto}* (Ref: *${waData.ref}*) ha sido *APROBADO*.\n\n🎟️ Números: *#${waData.numeros}*\n\n¡Mucha suerte en el sorteo! 🍀\n*Mega Rifas*`
+    `¡Hola *${waData.nombre}*! 🎉\n\n✅ Tu pago por *Bs ${waData.montoBs}* (Ref: *${waData.ref}*) ha sido *APROBADO*.\n\n🎟️ Números: *#${waData.numeros}*\n\n¡Mucha suerte en el sorteo! 🍀\n*Mega Rifas*`
   );
   const a = document.createElement('a');
   a.href = `https://wa.me/${normalized}?text=${msg}`;
@@ -1438,11 +1407,7 @@ async function cargarPorVencerAdmin(): Promise<void> {
       html += `<div><b class="text-xs sm:text-sm">${escHtml(it.nombre)}</b><br><span class="text-[11px] text-slate-500 font-mono">C.I. ${escHtml(it.cedula)}</span></div>${badge}</div>`;
       html += `<div class="text-xs text-blue-600 font-mono font-bold">🎟️ #${escHtml(numsTxt)}</div>`;
       if (it.telefono) html += `<div class="text-[11px] text-slate-600"><i class="fa-solid fa-phone mr-1"></i>${escHtml(it.telefono)}</div>`;
-      if (it.correo) html += `<div class="text-[11px] text-slate-600"><i class="fa-solid fa-envelope mr-1"></i>${escHtml(it.correo)}</div>`;
       html += '<div class="flex gap-2 pt-1">';
-      if (it.correo) {
-        html += `<a href="mailto:${escHtml(it.correo)}?subject=${encodeURIComponent('Recordatorio - Mega Rifas')}&body=${encodeURIComponent(`Hola ${it.nombre},\n\nTe recordamos tus boletos reservados en Mega Rifas: #${numsTxt}\n\n— Mega Rifas`)}" class="flex-1 bg-blue-600 text-white font-bold py-2 rounded-lg text-xs text-center">📧 Correo</a>`;
-      }
       if (telWA) {
         html += `<a href="https://wa.me/${telWA}?text=${encodeURIComponent(msgWA)}" target="_blank" rel="noopener noreferrer" class="flex-1 bg-emerald-600 text-white font-bold py-2 rounded-lg text-xs text-center">📱 WhatsApp</a>`;
       }
@@ -1538,7 +1503,6 @@ function abrirEditarTicket(numero: string): void {
   const cedEl = $<HTMLInputElement>('editCedula');
   const nomEl = $<HTMLInputElement>('editNombre');
   const telEl = $<HTMLInputElement>('editTelefono');
-  const corEl = $<HTMLInputElement>('editCorreo');
   const titEl = $('editTituloNum');
 
   if (titEl) titEl.textContent = `#${numero}`;
@@ -1547,7 +1511,6 @@ function abrirEditarTicket(numero: string): void {
   if (cedEl) cedEl.value = c?.cedula || '';
   if (nomEl) nomEl.value = c?.nombre || t.displayName || '';
   if (telEl) telEl.value = c?.telefono || '';
-  if (corEl) corEl.value = c?.correo || '';
   abrirModal('modalEditar');
 }
 
@@ -1558,13 +1521,12 @@ async function guardarEdicionTicket(): Promise<void> {
   const cedula = ($<HTMLInputElement>('editCedula')?.value || '').trim();
   const nombre = ($<HTMLInputElement>('editNombre')?.value || '').trim();
   const telefono = ($<HTMLInputElement>('editTelefono')?.value || '').trim();
-  const correo = ($<HTMLInputElement>('editCorreo')?.value || '').trim();
   if (!numero) return;
 
   const btn = $<HTMLButtonElement>('btnGuardarEdicion');
   setBtnLoading(btn, true, 'Guardando...');
   try {
-    await editTicketInFirestore({ numero, estatus, cedula, nombre, telefono, correo });
+    await editTicketInFirestore({ numero, estatus, cedula, nombre, telefono });
     notificar(`✅ Boleto #${numero} actualizado`, 'success');
     cerrarModal('modalEditar');
     await cargarHistorialAdmin();
@@ -1640,25 +1602,36 @@ async function exportarCSVAdmin(): Promise<void> {
   if (!exigirSesionAdminEnPanel()) return;
   try {
     const data = adminDataCache || (await refrescarDatosAdmin());
+    const rate = getEffectiveRate();
     const rows: string[][] = [
-      ['Numero', 'Estatus', 'Cedula', 'Nombre', 'Telefono', 'Correo', 'Fecha Reserva', 'Fecha Pago'],
+      [
+        'Fecha',
+        'Participante',
+        'Cedula',
+        'Telefono',
+        'Boletos',
+        'Metodo',
+        'Referencia',
+        'Monto Bs',
+        'Monto $',
+        'Tasa Bs/$',
+        'Estatus',
+      ],
     ];
-    const total = currentConfig.totalNumeros;
-    const dig = total >= 1000 ? 3 : 2;
-    for (let i = 0; i < total; i++) {
-      const num = String(i).padStart(dig, '0');
-      const t = data.tickets[num];
-      if (!t || t.estatus === 'DISPONIBLE') continue;
-      const c = data.contacts[num];
+    for (const p of data.payments) {
+      const frozenBs = getPaymentFrozenBs(p, rate);
       rows.push([
-        num,
-        t.estatus,
-        c?.cedula || '',
-        c?.nombre || t.displayName || '',
-        c?.telefono || '',
-        c?.correo || '',
-        formatDateTime(t.reservedAtMs),
-        formatDateTime(t.paidAtMs),
+        formatDateTime(p.createdAtMs),
+        p.nombre,
+        p.cedula,
+        p.telefono || '',
+        p.numeros.map((n) => `#${n}`).join(', '),
+        p.metodo,
+        p.referencia,
+        fmt(frozenBs),
+        fmt(p.montoUSD),
+        p.exchangeRate > 0 ? fmt(p.exchangeRate) : '',
+        p.estatus,
       ]);
     }
     const csv = rows
@@ -1668,10 +1641,10 @@ async function exportarCSVAdmin(): Promise<void> {
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
-    link.download = `mega-rifas-${new Date().toISOString().slice(0, 10)}.csv`;
+    link.download = `mega-rifas-pagos-${new Date().toISOString().slice(0, 10)}.csv`;
     link.click();
     setTimeout(() => URL.revokeObjectURL(url), 1000);
-    notificar('✅ CSV descargado', 'success');
+    notificar('✅ CSV de Pagos descargado', 'success');
   } catch (e) {
     notificar(formatErrorMessage(e, 'admin'), 'error');
   }
@@ -1869,13 +1842,6 @@ function cargarFormularioConfigAdmin(): void {
   setVal('cfgWA2', c.waList[1] || '');
   setVal('cfgWA3', c.waList[2] || '');
 
-  const ejsToggle = $<HTMLInputElement>('cfgEmailjsEnabled');
-  if (ejsToggle) ejsToggle.checked = Boolean(c.emailjsEnabled);
-  setVal('cfgEmailjsServiceId', c.emailjsServiceId);
-  setVal('cfgEmailjsPublicKey', c.emailjsPublicKey);
-  setVal('cfgEmailjsTemplateCompra', c.emailjsTemplateCompra);
-  setVal('cfgEmailjsTemplateAprobacion', c.emailjsTemplateAprobacion);
-
   const bcvHint = $('cfgBcvHint');
   if (bcvHint) {
     const rate = liveBcvRate || c.tasa;
@@ -1946,11 +1912,6 @@ async function guardarConfigAdmin(): Promise<void> {
     igUrl: getVal('cfgIG'),
     waList,
     adminEmails: normalizeAdminEmails(currentConfig.adminEmails),
-    emailjsEnabled: Boolean($<HTMLInputElement>('cfgEmailjsEnabled')?.checked),
-    emailjsServiceId: getVal('cfgEmailjsServiceId'),
-    emailjsPublicKey: getVal('cfgEmailjsPublicKey'),
-    emailjsTemplateCompra: getVal('cfgEmailjsTemplateCompra'),
-    emailjsTemplateAprobacion: getVal('cfgEmailjsTemplateAprobacion'),
   };
 
   const btn = $<HTMLButtonElement>('btnGuardarConfig');

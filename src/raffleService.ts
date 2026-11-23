@@ -46,11 +46,6 @@ export interface RaffleConfigData {
   igUrl: string;
   waList: string[];
   adminEmails: string[];
-  emailjsEnabled: boolean;
-  emailjsServiceId: string;
-  emailjsPublicKey: string;
-  emailjsTemplateCompra: string;
-  emailjsTemplateAprobacion: string;
   updatedAtMs?: number;
 }
 
@@ -70,7 +65,6 @@ export interface TicketContactDoc {
   cedulaHash: string;
   nombre: string;
   telefono: string;
-  correo: string;
   updatedAtMs: number;
 }
 
@@ -80,10 +74,11 @@ export interface PaymentReportDoc {
   cedulaHash: string;
   nombre: string;
   telefono: string;
-  correo: string;
   numeros: string[];
   montoUSD: number;
   montoBs: number;
+  amountBs: number;
+  exchangeRate: number;
   metodo: PaymentMethodLabel;
   referencia: string;
   comprobante: string;
@@ -114,11 +109,6 @@ export const DEFAULT_RAFFLE_CONFIG: RaffleConfigData = {
   igUrl: 'https://instagram.com/megarifas',
   waList: ['584129023035'],
   adminEmails: [ADMIN_BOOTSTRAP_EMAIL.toLowerCase()],
-  emailjsEnabled: false,
-  emailjsServiceId: '',
-  emailjsPublicKey: '',
-  emailjsTemplateCompra: '',
-  emailjsTemplateAprobacion: '',
 };
 
 const VALID_METHODS = new Set<PaymentMethodLabel>([
@@ -215,6 +205,15 @@ export function isSixDigitRef(ref: string): boolean {
   return /^[0-9]{6}$/.test(ref);
 }
 
+export function getPaymentFrozenBs(p: PaymentReportDoc, fallbackRate = 0): number {
+  if (isFinite(p.amountBs) && p.amountBs > 0) return p.amountBs;
+  if (isFinite(p.montoBs) && p.montoBs > 0) return p.montoBs;
+  if (isFinite(p.montoUSD) && p.montoUSD > 0 && isFinite(fallbackRate) && fallbackRate > 0) {
+    return Number((p.montoUSD * fallbackRate).toFixed(2));
+  }
+  return 0;
+}
+
 function parseConfigSnapshot(raw: Record<string, unknown> | undefined): RaffleConfigData {
   if (!raw) return { ...DEFAULT_RAFFLE_CONFIG };
   const total = Math.min(1000, Math.max(1, Math.floor(Number(raw.totalNumeros) || DEFAULT_RAFFLE_CONFIG.totalNumeros)));
@@ -246,11 +245,6 @@ function parseConfigSnapshot(raw: Record<string, unknown> | undefined): RaffleCo
     igUrl: raw.igUrl !== undefined ? clampStr(raw.igUrl, 200) : DEFAULT_RAFFLE_CONFIG.igUrl,
     waList: waRaw.map((w) => normalizeDigits(w)).filter(Boolean).slice(0, 3),
     adminEmails: normalizeAdminEmails(raw.adminEmails),
-    emailjsEnabled: Boolean(raw.emailjsEnabled),
-    emailjsServiceId: clampStr(raw.emailjsServiceId, 100),
-    emailjsPublicKey: clampStr(raw.emailjsPublicKey, 100),
-    emailjsTemplateCompra: clampStr(raw.emailjsTemplateCompra, 100),
-    emailjsTemplateAprobacion: clampStr(raw.emailjsTemplateAprobacion, 100),
     updatedAtMs: toMillis(raw.updatedAt) || undefined,
   };
 }
@@ -277,11 +271,6 @@ function buildConfigPayload(cfg: RaffleConfigData) {
     igUrl: clampStr(cfg.igUrl, 200),
     waList: (cfg.waList || []).map((w) => normalizeDigits(w).slice(0, 25)).filter(Boolean).slice(0, 3),
     adminEmails: normalizeAdminEmails(cfg.adminEmails),
-    emailjsEnabled: Boolean(cfg.emailjsEnabled),
-    emailjsServiceId: clampStr(cfg.emailjsServiceId, 100),
-    emailjsPublicKey: clampStr(cfg.emailjsPublicKey, 100),
-    emailjsTemplateCompra: clampStr(cfg.emailjsTemplateCompra, 100),
-    emailjsTemplateAprobacion: clampStr(cfg.emailjsTemplateAprobacion, 100),
     updatedAt: serverTimestamp(),
   };
 }
@@ -371,17 +360,14 @@ export async function reserveTicketsInFirestore(params: {
   cedula: string;
   nombre: string;
   telefono: string;
-  correo: string;
   numeros: string[];
 }): Promise<void> {
   const cedula = normalizeDigits(params.cedula).slice(0, 20);
   const nombre = clampStr(params.nombre, 100);
   const telefono = clampStr(params.telefono, 25);
-  const correo = clampStr(params.correo, 120);
   if (cedula.length < 4) throw new Error('Ingresa una cédula válida (mínimo 4 dígitos).');
   if (nombre.length < 2) throw new Error('Ingresa tu nombre completo.');
   if (telefono.length < 7) throw new Error('Ingresa un teléfono WhatsApp válido.');
-  if (correo.length < 5 || !correo.includes('@')) throw new Error('Ingresa un correo electrónico válido.');
   if (!params.numeros.length || params.numeros.length > 50) {
     throw new Error('Selecciona entre 1 y 50 números.');
   }
@@ -422,7 +408,6 @@ export async function reserveTicketsInFirestore(params: {
       cedulaHash,
       nombre,
       telefono,
-      correo,
       updatedAt: serverTimestamp(),
     });
   }
@@ -438,10 +423,10 @@ export async function submitPaymentReportInFirestore(params: {
   cedula: string;
   nombre: string;
   telefono: string;
-  correo: string;
   numeros: string[];
   montoUSD: number;
-  montoBs: number;
+  amountBs: number;
+  exchangeRate: number;
   metodo: PaymentMethodLabel;
   referencia: string;
   currentTickets: Record<string, TicketDoc>;
@@ -449,14 +434,12 @@ export async function submitPaymentReportInFirestore(params: {
   const cedula = normalizeDigits(params.cedula).slice(0, 20);
   const nombre = clampStr(params.nombre, 100);
   const telefono = clampStr(params.telefono, 25);
-  const correo = clampStr(params.correo, 120);
   const referencia = clampStr(params.referencia, 30);
   const requiresBankRef = params.metodo === 'Pago Móvil' || params.metodo === 'Transferencia';
 
   if (cedula.length < 4) throw new Error('Ingresa una cédula válida.');
   if (nombre.length < 2) throw new Error('Ingresa tu nombre completo.');
   if (telefono.length < 7) throw new Error('Ingresa un teléfono WhatsApp válido.');
-  if (correo.length < 5 || !correo.includes('@')) throw new Error('Ingresa un correo válido.');
   if (!params.numeros.length || params.numeros.length > 50) {
     throw new Error('Selecciona entre 1 y 50 números.');
   }
@@ -542,20 +525,26 @@ export async function submitPaymentReportInFirestore(params: {
       cedulaHash,
       nombre,
       telefono,
-      correo,
       updatedAt: serverTimestamp(),
     });
   }
+
+  const frozenBs = isFinite(params.amountBs) && params.amountBs >= 0 ? Number(params.amountBs.toFixed(2)) : 0;
+  const appliedRate =
+    isFinite(params.exchangeRate) && params.exchangeRate >= 0
+      ? Number(params.exchangeRate.toFixed(2))
+      : 0;
 
   batch.set(doc(db, 'paymentReports', reportId), {
     cedula,
     cedulaHash,
     nombre,
     telefono,
-    correo,
     numeros: params.numeros.slice(),
     montoUSD: Number(params.montoUSD.toFixed(2)),
-    montoBs: Number(params.montoBs.toFixed(2)),
+    montoBs: frozenBs,
+    amountBs: frozenBs,
+    exchangeRate: appliedRate,
     metodo: params.metodo,
     referencia,
     comprobante: '',
@@ -647,16 +636,26 @@ export async function fetchAdminAllData(): Promise<{
   const payments: PaymentReportDoc[] = [];
   paySnap.forEach((docSnap) => {
     const d = docSnap.data();
+    const montoUSD = Number(d.montoUSD) || 0;
+    const frozenBs = Number(d.amountBs ?? d.montoBs) || 0;
+    const storedRate = Number(d.exchangeRate) || 0;
+    const derivedRate =
+      storedRate > 0
+        ? storedRate
+        : montoUSD > 0 && frozenBs > 0
+          ? Number((frozenBs / montoUSD).toFixed(2))
+          : 0;
     payments.push({
       id: docSnap.id,
       cedula: String(d.cedula || ''),
       cedulaHash: String(d.cedulaHash || ''),
       nombre: String(d.nombre || ''),
       telefono: String(d.telefono || ''),
-      correo: String(d.correo || ''),
       numeros: Array.isArray(d.numeros) ? d.numeros.map(String) : [],
-      montoUSD: Number(d.montoUSD) || 0,
-      montoBs: Number(d.montoBs) || 0,
+      montoUSD,
+      montoBs: frozenBs,
+      amountBs: frozenBs,
+      exchangeRate: derivedRate,
       metodo: (d.metodo as PaymentMethodLabel) || 'Pago Móvil',
       referencia: String(d.referencia || ''),
       comprobante: String(d.comprobante || ''),
@@ -677,7 +676,6 @@ export async function fetchAdminAllData(): Promise<{
       cedulaHash: String(d.cedulaHash || ''),
       nombre: String(d.nombre || ''),
       telefono: String(d.telefono || ''),
-      correo: String(d.correo || ''),
       updatedAtMs: toMillis(d.updatedAt) || Date.now(),
     };
   });
@@ -762,7 +760,6 @@ export async function resolvePaymentInFirestore(
       cedulaHash: report.cedulaHash,
       nombre: report.nombre,
       telefono: report.telefono,
-      correo: report.correo,
       updatedAt: serverTimestamp(),
     });
   }
@@ -830,7 +827,6 @@ export async function resyncBoardInFirestore(): Promise<number> {
           cedulaHash: target.report.cedulaHash,
           nombre: target.report.nombre,
           telefono: target.report.telefono,
-          correo: target.report.correo,
           updatedAt: serverTimestamp(),
         });
         countInBatch += 2;
@@ -889,7 +885,6 @@ export async function editTicketInFirestore(params: {
   cedula: string;
   nombre: string;
   telefono: string;
-  correo: string;
 }): Promise<void> {
   if (params.estatus === 'DISPONIBLE') {
     await releaseSingleTicketInFirestore(params.numero);
@@ -899,11 +894,9 @@ export async function editTicketInFirestore(params: {
   const rawCed = normalizeDigits(params.cedula).slice(0, 20);
   const rawNom = clampStr(params.nombre, 100);
   const rawTel = clampStr(params.telefono, 25);
-  const rawCor = clampStr(params.correo, 120);
   const cedula = rawCed.length >= 4 ? rawCed : '0000';
   const nombre = rawNom.length >= 2 ? rawNom : 'Participante';
   const telefono = rawTel.length >= 7 ? rawTel : '0000000';
-  const correo = rawCor.length >= 5 ? rawCor : 'sin@correo.com';
   const cedulaHash = await sha256Hex(cedula);
 
   const batch = writeBatch(db);
@@ -922,7 +915,6 @@ export async function editTicketInFirestore(params: {
     cedulaHash,
     nombre,
     telefono,
-    correo,
     updatedAt: serverTimestamp(),
   });
 

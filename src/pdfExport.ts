@@ -1,10 +1,11 @@
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
-import type {
-  PaymentReportDoc,
-  RaffleConfigData,
-  TicketContactDoc,
-  TicketDoc,
+import {
+  getPaymentFrozenBs,
+  type PaymentReportDoc,
+  type RaffleConfigData,
+  type TicketContactDoc,
+  type TicketDoc,
 } from './raffleService';
 
 function fmtAmount(n: number): string {
@@ -86,7 +87,7 @@ export function exportPaymentsToPdf(params: {
   const pendientes = payments.filter((p) => p.estatus === 'PENDIENTE');
   const rechazados = payments.filter((p) => p.estatus === 'RECHAZADO');
   const totalUSD = aprobados.reduce((acc, p) => acc + p.montoUSD, 0);
-  const totalBs = totalUSD * effectiveRate;
+  const totalBs = aprobados.reduce((acc, p) => acc + getPaymentFrozenBs(p, effectiveRate), 0);
 
   // Summary strip
   const pageWidth = pdf.internal.pageSize.getWidth();
@@ -95,14 +96,14 @@ export function exportPaymentsToPdf(params: {
   pdf.roundedRect(14, 32, pageWidth - 28, 16, 2, 2, 'FD');
 
   const cols = [
-    { label: 'INGRESOS APROBADOS', val: `$${fmtAmount(totalUSD)} (Bs ${fmtAmount(totalBs)})` },
+    { label: 'TOTAL RECAUDADO (Bs)', val: `Bs ${fmtAmount(totalBs)}` },
+    { label: 'TOTAL RECAUDADO ($)', val: `$${fmtAmount(totalUSD)}` },
     { label: 'APROBADOS', val: String(aprobados.length) },
     { label: 'PENDIENTES', val: String(pendientes.length) },
     { label: 'RECHAZADOS', val: String(rechazados.length) },
-    { label: 'TOTAL REPORTES', val: String(payments.length) },
   ];
 
-  const colPositions = [18, 108, 152, 196, 240];
+  const colPositions = [18, 92, 152, 198, 242];
   cols.forEach((c, idx) => {
     const x = colPositions[idx];
     pdf.setFont('helvetica', 'bold');
@@ -122,20 +123,21 @@ export function exportPaymentsToPdf(params: {
     p.numeros.map((n) => `#${n}`).join(', '),
     p.metodo,
     p.referencia,
+    `Bs ${fmtAmount(getPaymentFrozenBs(p, effectiveRate))}`,
     `$${fmtAmount(p.montoUSD)}`,
     p.estatus,
   ]);
 
   autoTable(pdf, {
     startY: 53,
-    head: [['Fecha', 'Participante', 'Cédula', 'Teléfono', 'Boletos', 'Método', 'Ref.', 'Monto $', 'Estatus']],
+    head: [['Fecha', 'Participante', 'Cédula', 'Teléfono', 'Boletos', 'Método', 'Ref.', 'Monto Bs', 'Monto $', 'Estatus']],
     body: rows.length
       ? rows
-      : [['—', 'No hay pagos registrados.', '—', '—', '—', '—', '—', '—', '—']],
+      : [['—', 'No hay pagos registrados.', '—', '—', '—', '—', '—', '—', '—', '—']],
     theme: 'grid',
     styles: {
-      fontSize: 8,
-      cellPadding: 2.4,
+      fontSize: 7.8,
+      cellPadding: 2.2,
       textColor: [30, 41, 59],
       lineColor: [226, 232, 240],
       lineWidth: 0.2,
@@ -145,23 +147,24 @@ export function exportPaymentsToPdf(params: {
       fillColor: [15, 23, 42],
       textColor: [255, 255, 255],
       fontStyle: 'bold',
-      fontSize: 8,
+      fontSize: 7.8,
     },
     alternateRowStyles: {
       fillColor: [248, 250, 252],
     },
     columnStyles: {
-      0: { cellWidth: 30 },
-      2: { cellWidth: 22 },
-      3: { cellWidth: 28 },
-      4: { cellWidth: 46 },
-      5: { cellWidth: 24 },
-      6: { cellWidth: 18 },
-      7: { cellWidth: 22, halign: 'right', fontStyle: 'bold' },
-      8: { cellWidth: 24, halign: 'center', fontStyle: 'bold' },
+      0: { cellWidth: 26 },
+      2: { cellWidth: 20 },
+      3: { cellWidth: 26 },
+      4: { cellWidth: 38 },
+      5: { cellWidth: 22 },
+      6: { cellWidth: 17 },
+      7: { cellWidth: 28, halign: 'right', fontStyle: 'bold' },
+      8: { cellWidth: 20, halign: 'right', fontStyle: 'bold' },
+      9: { cellWidth: 22, halign: 'center', fontStyle: 'bold' },
     },
     didParseCell: (data) => {
-      if (data.section === 'body' && data.column.index === 8) {
+      if (data.section === 'body' && data.column.index === 9) {
         const val = String(data.cell.raw || '');
         if (val === 'APROBADO') {
           data.cell.styles.textColor = [4, 120, 87];
@@ -237,7 +240,6 @@ export function exportHistorialToPdf(params: {
       c?.nombre || t.displayName || 'Participante',
       c?.cedula || '—',
       c?.telefono || '—',
-      c?.correo || '—',
       fmtDateTime(t.reservedAtMs),
       fmtDateTime(t.paidAtMs),
     ];
@@ -245,10 +247,10 @@ export function exportHistorialToPdf(params: {
 
   autoTable(pdf, {
     startY: 53,
-    head: [['Boleto', 'Estatus', 'Participante', 'Cédula', 'Teléfono', 'Correo', 'Reservado', 'Pagado']],
+    head: [['Boleto', 'Estatus', 'Participante', 'Cédula', 'Teléfono', 'Reservado', 'Pagado']],
     body: rows.length
       ? rows
-      : [['—', '—', `Sin boletos para el filtro ${filtro}.`, '—', '—', '—', '—', '—']],
+      : [['—', '—', `Sin boletos para el filtro ${filtro}.`, '—', '—', '—', '—']],
     theme: 'grid',
     styles: {
       fontSize: 8,
@@ -268,12 +270,12 @@ export function exportHistorialToPdf(params: {
       fillColor: [248, 250, 252],
     },
     columnStyles: {
-      0: { cellWidth: 18, halign: 'center', fontStyle: 'bold' },
-      1: { cellWidth: 24, halign: 'center', fontStyle: 'bold' },
-      3: { cellWidth: 24 },
-      4: { cellWidth: 30 },
-      6: { cellWidth: 32 },
-      7: { cellWidth: 32 },
+      0: { cellWidth: 20, halign: 'center', fontStyle: 'bold' },
+      1: { cellWidth: 26, halign: 'center', fontStyle: 'bold' },
+      3: { cellWidth: 28 },
+      4: { cellWidth: 34 },
+      5: { cellWidth: 36 },
+      6: { cellWidth: 36 },
     },
     didParseCell: (data) => {
       if (data.section === 'body' && data.column.index === 1) {
